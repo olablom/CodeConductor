@@ -41,6 +41,17 @@ else:
         with col4:
             st.metric("Best Reward", f"{df['reward'].max():.2f}")
 
+        # Kreativitetsbonus sektion
+        col5, col6 = st.columns(2)
+        with col5:
+            # Räkna kreativa lösningar
+            creative_count = len(df[df["reward"] > df["reward"].mean() + 5])
+            st.metric("Creative Solutions", creative_count)
+        with col6:
+            # Visa högsta kreativitetsbonus
+            max_bonus = df["reward"].max() - 30  # Baserat på max reward
+            st.metric("Max Creativity Bonus", f"{max_bonus:.1f}")
+
         # Grafer
         st.subheader("📈 Learning Curves")
 
@@ -53,9 +64,12 @@ else:
             )
 
         with col2:
-            # Arm selection distribution
-            arm_counts = df["arm_selected"].value_counts()
-            st.bar_chart(arm_counts)
+            # Strategy evolution over time
+            st.subheader("Strategy Evolution")
+            strategy_evolution = (
+                df.groupby(["iteration", "arm_selected"]).size().unstack(fill_value=0)
+            )
+            st.area_chart(strategy_evolution)
 
         # Detaljerad tabell
         st.subheader("📋 Detailed Metrics")

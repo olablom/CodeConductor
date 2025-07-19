@@ -13,7 +13,7 @@ pipeline:
 
 # Bandit parameters
 bandit:
-  alpha: 2.0 # Öka exploration
+  alpha: 5.0 # Mycket exploration för att se variation
   feature_dim: 3
 
 # Database

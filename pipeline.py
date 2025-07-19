@@ -62,7 +62,23 @@ def run_tests(code_path: Path, prompt_path: Path) -> Tuple[bool, float]:
     # Bestäm vilken funktion vi testar baserat på prompt
     prompt_content = prompt_path.read_text().lower()
 
-    if "add_numbers" in prompt_content or "calculator" in prompt_content:
+    if "fizzbuzz" in prompt_content:
+        # Test för FizzBuzz
+        test_content = f'''
+import sys
+sys.path.insert(0, "{code_path.parent}")
+from {code_path.stem} import fizzbuzz
+
+def test_fizzbuzz_exists():
+    assert callable(fizzbuzz)
+
+def test_fizzbuzz_works():
+    assert fizzbuzz(3) == "Fizz"
+    assert fizzbuzz(5) == "Buzz"
+    assert fizzbuzz(15) == "FizzBuzz"
+    assert fizzbuzz(7) == "7"
+'''
+    elif "add_numbers" in prompt_content or "calculator" in prompt_content:
         # Test för calculator
         test_content = f'''
 import sys

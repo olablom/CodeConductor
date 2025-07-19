@@ -54,6 +54,16 @@ TEMPLATES_BY_STRATEGY = {
     """Return a greeting with emoji"""
     return "🎉 Hello, Explorer! 🚀"
 ''',
+        """def hello_world():
+    # TODO: implement this
+    raise NotImplementedError("Coming soon!")
+""",
+        """def hello_world():
+    return None  # Oops!
+""",
+        """def hello_world():
+    return 42  # Wrong type!
+""",
     ],
 }
 
@@ -68,7 +78,76 @@ def run(prompt_path: Path, out_path: Path, strategy: str = None) -> bool:
         strategy = random.choice(list(TEMPLATES_BY_STRATEGY.keys()))
 
     # Bestäm vilken typ av kod vi ska generera
-    if (
+    if "fizzbuzz" in prompt_content.lower():
+        # FizzBuzz templates
+        fizzbuzz_templates = {
+            "conservative": [
+                '''def fizzbuzz(n: int) -> str:
+    """FizzBuzz implementation"""
+    if n % 3 == 0 and n % 5 == 0:
+        return "FizzBuzz"
+    elif n % 3 == 0:
+        return "Fizz"
+    elif n % 5 == 0:
+        return "Buzz"
+    else:
+        return str(n)
+''',
+                """def fizzbuzz(n: int) -> str:
+    if n % 15 == 0:
+        return "FizzBuzz"
+    elif n % 3 == 0:
+        return "Fizz"
+    elif n % 5 == 0:
+        return "Buzz"
+    return str(n)
+""",
+            ],
+            "balanced": [
+                '''def fizzbuzz(n: int) -> str:
+    """FizzBuzz with clear logic"""
+    result = ""
+    if n % 3 == 0:
+        result += "Fizz"
+    if n % 5 == 0:
+        result += "Buzz"
+    return result if result else str(n)
+''',
+                """def fizzbuzz(n: int) -> str:
+    # FizzBuzz implementation
+    if n % 3 == 0 and n % 5 == 0:
+        return "FizzBuzz"
+    elif n % 3 == 0:
+        return "Fizz"
+    elif n % 5 == 0:
+        return "Buzz"
+    return str(n)
+""",
+            ],
+            "exploratory": [
+                '''def fizzbuzz(n: int) -> str:
+    """FizzBuzz with list comprehension"""
+    return "FizzBuzz" if n % 15 == 0 else "Fizz" if n % 3 == 0 else "Buzz" if n % 5 == 0 else str(n)
+''',
+                """def fizzbuzz(n: int) -> str:
+    # This will fail!
+    return "Fizz"
+""",
+                """def fizzbuzz(n: int) -> str:
+    raise NotImplementedError("Coming soon!")
+""",
+                '''def fizzbuzz(n: int) -> str:
+    """FizzBuzz with lambda"""
+    rules = [(15, "FizzBuzz"), (3, "Fizz"), (5, "Buzz")]
+    for divisor, word in rules:
+        if n % divisor == 0:
+            return word
+    return str(n)
+''',
+            ],
+        }
+        templates = fizzbuzz_templates.get(strategy, fizzbuzz_templates["balanced"])
+    elif (
         "add_numbers" in prompt_content.lower()
         or "calculator" in prompt_content.lower()
     ):
@@ -104,6 +183,12 @@ def run(prompt_path: Path, out_path: Path, strategy: str = None) -> bool:
 """,
                 """def add_numbers(a: int, b: int) -> int:
     return a * b  # Wrong operation!
+""",
+                """def add_numbers(a: int, b: int) -> int:
+    raise NotImplementedError("Coming soon!")
+""",
+                """def add_numbers(a: int, b: int) -> int:
+    return "wrong type"  # Wrong return type!
 """,
             ],
         }
