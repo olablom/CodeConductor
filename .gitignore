@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.db
+.streamlit/
+*.cast
+.DS_Store
+.env
+data/generated/
+data/*.db 

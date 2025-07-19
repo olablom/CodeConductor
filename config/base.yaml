@@ -1,0 +1,20 @@
+# Reward configuration
+rewards:
+  test_pass: 20
+  lint_score: 10
+  complexity: 10
+  human_feedback: 60
+
+# Pipeline settings
+pipeline:
+  max_iterations: 10
+  timeout_seconds: 30
+
+# Bandit parameters
+bandit:
+  alpha: 1.0
+  feature_dim: 3
+
+# Database
+database:
+  path: data/metrics.db
