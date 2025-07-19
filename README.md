@@ -10,10 +10,25 @@ CodeConductor orchestrates intelligent LLM agents to improve code generation thr
 
 ## 🚀 Quick Start
 
+### **Option 1: Docker (Recommended)**
+
+```bash
+# Clone and run with Docker
+git clone https://github.com/olablom/CodeConductor.git
+cd CodeConductor
+docker-compose up --build
+
+# Access the system:
+# 📊 API: http://localhost:8000
+# 🎨 GUI: http://localhost:8501
+```
+
+### **Option 2: Local Development**
+
 ```bash
 # Clone and setup
 git clone https://github.com/olablom/CodeConductor.git
-cd codeconductor
+cd CodeConductor
 python -m venv .venv
 source .venv/bin/activate  # På Windows: .venv\Scripts\activate
 pip install -r requirements.txt
@@ -22,7 +37,7 @@ pip install -r requirements.txt
 python pipeline.py --prompt prompts/hello_world.md --iters 10 --mock
 
 # View results
-streamlit run dashboard/app.py
+streamlit run app.py
 ```
 
 ## 📊 Architecture
@@ -145,10 +160,11 @@ sqlite3 data/metrics.db "SELECT iteration, optimizer_action, reward FROM metrics
 
 ## 🔮 Next Steps (Week 4-5)
 
+- [x] **Multi-file project support** - Complex project generation ✅
+- [x] **Docker deployment** - One-click deployment ✅
 - [ ] **Cursor IDE integration** - Direct IDE plugin
 - [ ] **SQLite persistence for RL history** - Advanced learning storage
 - [ ] **Advanced prompt optimization** - Temperature/stop-token tweaks
-- [ ] **Multi-file project support** - Complex project generation
 - [ ] **Advanced security rules** - Custom policy configuration
 
 ## 🎯 Gabriel's Vision Status
