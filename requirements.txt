@@ -5,4 +5,5 @@ radon>=6.0.0
 pytest>=8.0.0
 omegaconf>=2.3.0
 sqlalchemy>=2.0.0
-click>=8.1.0 
+click>=8.1.0
+requests<3 

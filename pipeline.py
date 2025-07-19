@@ -12,24 +12,37 @@ from radon.complexity import cc_visit
 
 from bandits.linucb import LinUCBBandit
 from mocks.cursor_cli import run as cursor_run
+from integrations.lm_studio import is_available, generate_code
 
 
 # Initiera databas
 def init_db(db_path: Path):
     """Skapa metrics-tabell om den inte finns"""
     conn = sqlite3.connect(db_path)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS metrics (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            iteration INTEGER,
-            timestamp DATETIME,
-            reward REAL,
-            pass_rate REAL,
-            complexity REAL,
-            arm_selected TEXT,
-            features TEXT
-        )
-    """)
+
+    # Kontrollera om tabellen finns
+    cursor = conn.execute("PRAGMA table_info(metrics)")
+    columns = [row[1] for row in cursor.fetchall()]
+
+    if not columns:
+        # Skapa ny tabell
+        conn.execute("""
+            CREATE TABLE metrics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                iteration INTEGER,
+                timestamp DATETIME,
+                reward REAL,
+                pass_rate REAL,
+                complexity REAL,
+                arm_selected TEXT,
+                features TEXT,
+                model_source TEXT DEFAULT 'mock'
+            )
+        """)
+    elif "model_source" not in columns:
+        # Lägg till model_source-kolumn till befintlig tabell
+        conn.execute("ALTER TABLE metrics ADD COLUMN model_source TEXT DEFAULT 'mock'")
+
     conn.commit()
     conn.close()
 
@@ -177,7 +190,8 @@ def calculate_reward(
 )
 @click.option("--iters", default=10, help="Number of iterations")
 @click.option("--mock", is_flag=True, help="Use mock Cursor CLI")
-def main(prompt, iters, mock):
+@click.option("--online", is_flag=True, help="Use local LM Studio instead of mock")
+def main(prompt, iters, mock, online):
     """Kör CodeConductor pipeline"""
     # Ladda config
     config = OmegaConf.load("config/base.yaml")
@@ -212,10 +226,18 @@ def main(prompt, iters, mock):
         output_path = Path(f"data/generated/iter_{i}.py")
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        if mock:
-            cursor_run(Path(prompt), output_path, strategy=arm)
+        # Bestäm kodkälla
+        model_source = "mock"
+        if online and is_available():
+            click.echo("Generating code via LM Studio...")
+            code = generate_code(Path(prompt), arm)
+            if code:
+                output_path.write_text(code)
+                model_source = "lm_studio"
+            else:
+                click.echo("LM Studio failed, falling back to mock...")
+                cursor_run(Path(prompt), output_path, strategy=arm)
         else:
-            # TODO: Implementera riktig Cursor-integration
             cursor_run(Path(prompt), output_path, strategy=arm)
 
         # 4. Kör tester
@@ -238,8 +260,8 @@ def main(prompt, iters, mock):
         conn = sqlite3.connect(db_path)
         conn.execute(
             """
-            INSERT INTO metrics (iteration, timestamp, reward, pass_rate, complexity, arm_selected, features)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO metrics (iteration, timestamp, reward, pass_rate, complexity, arm_selected, features, model_source)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 i,
@@ -249,6 +271,7 @@ def main(prompt, iters, mock):
                 complexity,
                 arm,
                 str(features.tolist()),
+                model_source,
             ),
         )
         conn.commit()
