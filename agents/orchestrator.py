@@ -7,6 +7,7 @@ Core component of Gabriels vision for CodeConductor.
 from typing import Dict, Any, List
 import json
 from pathlib import Path
+from datetime import datetime
 
 from agents.code_gen import CodeGenAgent
 from agents.architect import ArchitectAgent
@@ -202,7 +203,7 @@ Generate optimized implementation following the consensus.
         """Skapar final proposal för human approval."""
 
         return {
-            "proposal_id": f"proposal_{len(analyses)}_{int(consensus['confidence'] * 100)}",
+            "proposal_id": f"proposal_{len(analyses)}_{int(consensus['confidence'] * 100)}_{int(datetime.now().timestamp())}",
             "prompt": analyses.get("codegen", {}).get("approach", "Unknown"),
             "approach": consensus["synthesized_approach"],
             "confidence": consensus["confidence"],

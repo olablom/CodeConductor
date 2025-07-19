@@ -30,6 +30,10 @@ class HumanGate:
         Returns:
             Tuple av (approved, final_proposal)
         """
+        # Handle None proposal
+        if proposal is None:
+            proposal = {}
+
         print("\n" + "=" * 60)
         print("🤖 AI CONSENSUS PROPOSAL")
         print("=" * 60)
