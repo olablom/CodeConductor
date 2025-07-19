@@ -42,26 +42,54 @@ codeconductor/
 - [x] Complexity metrics with radon
 - [x] Real-time dashboard
 - [x] SQLite metrics storage
+- [x] LM Studio integration with fallback
+- [x] Multi-prompt support
+
+## 🔒 Week 2 Progress - PolicyAgent
+
+- [x] **PolicyAgent Security System**
+  - Dangerous system call detection (`os.system`, `subprocess`)
+  - File operation validation (secret files, write operations)
+  - Network access blocking (`requests`, `urllib`)
+  - License violation detection (GPL, AGPL headers)
+  - Forbidden import blocking (`torch`, `tensorflow`, etc.)
+  - Code size limits and syntax validation
+- [x] **Pipeline Integration**
+  - Automatic code validation after generation
+  - Negative rewards for blocked code (-20.0)
+  - Database tracking of violations
+  - Real-time blocking statistics
+- [x] **Dashboard Enhancements**
+  - Policy violation analysis tab
+  - Block reasons distribution charts
+  - Model source tracking (mock vs LM Studio)
+  - Security metrics overview
 
 ## 📈 Example Usage
 
-```python
-# Run with custom prompt
-python pipeline.py --prompt prompts/my_prompt.md --iters 20
+```bash
+# Run with mock generator
+python pipeline.py --prompt prompts/hello_world.md --iters 20 --mock
+
+# Run with LM Studio (if available)
+python pipeline.py --prompt prompts/calculator.md --iters 20 --online
 
 # Run tests
 pytest tests/ -v
 
 # View metrics
 sqlite3 data/metrics.db "SELECT * FROM metrics ORDER BY iteration DESC LIMIT 10"
+
+# View blocked code analysis
+sqlite3 data/metrics.db "SELECT iteration, block_reasons FROM metrics WHERE blocked = 1"
 ```
 
 ## 🔮 Next Steps
 
-- [ ] Real Cursor API integration
-- [ ] Policy agent for security checks
-- [ ] Human feedback loop
-- [ ] Multi-file project support
+- [ ] **PromptOptimizerAgent** - RL-based prompt optimization
+- [ ] **Human feedback loop** - Manual code quality ratings
+- [ ] **Multi-file project support** - Complex project generation
+- [ ] **Advanced security rules** - Custom policy configuration
 
 ## 🚀 CI/CD
 

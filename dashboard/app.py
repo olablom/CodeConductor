@@ -19,7 +19,8 @@ else:
     # Hämta data
     df = pd.read_sql(
         """
-        SELECT iteration, reward, pass_rate, complexity, arm_selected, timestamp
+        SELECT iteration, reward, pass_rate, complexity, arm_selected, timestamp, 
+               model_source, blocked, block_reasons
         FROM metrics
         ORDER BY iteration
     """,
@@ -52,6 +53,27 @@ else:
             max_bonus = df["reward"].max() - 30  # Baserat på max reward
             st.metric("Max Creativity Bonus", f"{max_bonus:.1f}")
 
+        # PolicyAgent sektion
+        st.subheader("🔒 PolicyAgent Security")
+        col7, col8, col9 = st.columns(3)
+
+        with col7:
+            blocked_count = len(df[df["blocked"] == 1])
+            st.metric(
+                "Blocked Code",
+                blocked_count,
+                delta=f"{blocked_count / len(df) * 100:.1f}%",
+            )
+        with col8:
+            safe_count = len(df[df["blocked"] == 0])
+            st.metric(
+                "Safe Code", safe_count, delta=f"{safe_count / len(df) * 100:.1f}%"
+            )
+        with col9:
+            if "model_source" in df.columns:
+                lm_studio_count = len(df[df["model_source"] == "lm_studio"])
+                st.metric("LM Studio Usage", lm_studio_count)
+
         # Grafer
         st.subheader("📈 Learning Curves")
 
@@ -71,12 +93,61 @@ else:
             )
             st.area_chart(strategy_evolution)
 
-        # Detaljerad tabell
-        st.subheader("📋 Detailed Metrics")
-        st.dataframe(
-            df[["iteration", "arm_selected", "reward", "pass_rate", "complexity"]],
-            use_container_width=True,
+        # Tabs för olika vyer
+        tab1, tab2, tab3 = st.tabs(
+            ["📊 Metrics", "🔒 Policy Violations", "🤖 Model Sources"]
         )
+
+        with tab1:
+            st.subheader("📋 Detailed Metrics")
+            st.dataframe(
+                df[
+                    [
+                        "iteration",
+                        "arm_selected",
+                        "reward",
+                        "pass_rate",
+                        "complexity",
+                        "blocked",
+                    ]
+                ],
+                use_container_width=True,
+            )
+
+        with tab2:
+            st.subheader("🚨 Blocked Code Analysis")
+            if blocked_count > 0:
+                blocked_df = df[df["blocked"] == 1].copy()
+                st.dataframe(
+                    blocked_df[
+                        ["iteration", "arm_selected", "block_reasons", "reward"]
+                    ],
+                    use_container_width=True,
+                )
+
+                # Analysera block-orsaker
+                if "block_reasons" in blocked_df.columns:
+                    reasons = []
+                    for reasons_str in blocked_df["block_reasons"].dropna():
+                        reasons.extend(reasons_str.split("; "))
+
+                    if reasons:
+                        st.subheader("Block Reasons Distribution")
+                        reason_counts = pd.Series(reasons).value_counts()
+                        st.bar_chart(reason_counts)
+            else:
+                st.success("🎉 No code has been blocked by PolicyAgent!")
+
+        with tab3:
+            st.subheader("🤖 Model Source Distribution")
+            if "model_source" in df.columns:
+                source_counts = df["model_source"].value_counts()
+                st.bar_chart(source_counts)
+
+                st.dataframe(
+                    df[["iteration", "model_source", "reward", "blocked"]],
+                    use_container_width=True,
+                )
 
         # Auto-refresh
         if st.sidebar.checkbox("Auto-refresh", value=False):
@@ -89,7 +160,8 @@ st.sidebar.markdown("""
 
 ### Komponenter:
 - **LinUCB Bandit**: Väljer strategi
-- **Mock Cursor**: Genererar kod
+- **PolicyAgent**: Säkerhetskontroller
+- **Mock Cursor/LM Studio**: Genererar kod
 - **Pytest**: Validerar output
 - **Radon**: Mäter komplexitet
 
@@ -97,6 +169,7 @@ st.sidebar.markdown("""
 ```bash
 python pipeline.py \\
   --prompt prompts/hello_world.md \\
-  --iters 10
+  --iters 10 \\
+  --online  # Använd LM Studio
 ```
 """)

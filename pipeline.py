@@ -13,6 +13,7 @@ from radon.complexity import cc_visit
 from bandits.linucb import LinUCBBandit
 from mocks.cursor_cli import run as cursor_run
 from integrations.lm_studio import is_available, generate_code
+from agents.policy_agent import validate_code_safety, PolicyViolation
 
 
 # Initiera databas
@@ -36,12 +37,21 @@ def init_db(db_path: Path):
                 complexity REAL,
                 arm_selected TEXT,
                 features TEXT,
-                model_source TEXT DEFAULT 'mock'
+                model_source TEXT DEFAULT 'mock',
+                blocked INTEGER DEFAULT 0,
+                block_reasons TEXT DEFAULT ''
             )
         """)
-    elif "model_source" not in columns:
-        # Lägg till model_source-kolumn till befintlig tabell
-        conn.execute("ALTER TABLE metrics ADD COLUMN model_source TEXT DEFAULT 'mock'")
+    else:
+        # Lägg till nya kolumner om de inte finns
+        if "model_source" not in columns:
+            conn.execute(
+                "ALTER TABLE metrics ADD COLUMN model_source TEXT DEFAULT 'mock'"
+            )
+        if "blocked" not in columns:
+            conn.execute("ALTER TABLE metrics ADD COLUMN blocked INTEGER DEFAULT 0")
+        if "block_reasons" not in columns:
+            conn.execute("ALTER TABLE metrics ADD COLUMN block_reasons TEXT DEFAULT ''")
 
     conn.commit()
     conn.close()
@@ -240,28 +250,50 @@ def main(prompt, iters, mock, online):
         else:
             cursor_run(Path(prompt), output_path, strategy=arm)
 
-        # 4. Kör tester
-        passed, pass_rate = run_tests(output_path, Path(prompt))
-        click.echo(f"Tests passed: {passed}")
-
-        # 5. Beräkna komplexitet
-        complexity = calculate_complexity(output_path)
-        click.echo(f"Complexity score: {complexity:.2f}")
-
-        # 6. Beräkna reward
+        # 4. PolicyAgent säkerhetskontroll
         code_content = output_path.read_text()
-        reward = calculate_reward(passed, complexity, config, code_content)
-        click.echo(f"Reward: {reward:.2f}")
+        is_safe, violations = validate_code_safety(code_content, prompt)
 
-        # 7. Uppdatera bandit
+        blocked = not is_safe
+        block_reasons = ""
+
+        if violations:
+            click.echo(f"🚨 Code blocked by PolicyAgent!")
+            for v in violations:
+                click.echo(f"  - {v.reason.value}: {v.description}")
+            block_reasons = "; ".join(
+                [f"{v.reason.value}:{v.line_number}" for v in violations]
+            )
+
+            # Ge negativ reward för blockerad kod
+            reward = -20.0
+            passed = False
+            pass_rate = 0.0
+            complexity = 0.0
+        else:
+            click.echo(f"✅ Code passed PolicyAgent safety check")
+
+            # 5. Kör tester
+            passed, pass_rate = run_tests(output_path, Path(prompt))
+            click.echo(f"Tests passed: {passed}")
+
+            # 6. Beräkna komplexitet
+            complexity = calculate_complexity(output_path)
+            click.echo(f"Complexity score: {complexity:.2f}")
+
+            # 7. Beräkna reward
+            reward = calculate_reward(passed, complexity, config, code_content)
+            click.echo(f"Reward: {reward:.2f}")
+
+        # 8. Uppdatera bandit
         bandit.update(arm, features, reward)
 
-        # 8. Spara till databas
+        # 9. Spara till databas
         conn = sqlite3.connect(db_path)
         conn.execute(
             """
-            INSERT INTO metrics (iteration, timestamp, reward, pass_rate, complexity, arm_selected, features, model_source)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO metrics (iteration, timestamp, reward, pass_rate, complexity, arm_selected, features, model_source, blocked, block_reasons)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 i,
@@ -272,13 +304,23 @@ def main(prompt, iters, mock, online):
                 arm,
                 str(features.tolist()),
                 model_source,
+                1 if blocked else 0,
+                block_reasons,
             ),
         )
         conn.commit()
         conn.close()
 
-        # 9. Uppdatera historik
-        history.append({"iteration": i, "passed": passed, "reward": reward, "arm": arm})
+        # 10. Uppdatera historik
+        history.append(
+            {
+                "iteration": i,
+                "passed": passed,
+                "reward": reward,
+                "arm": arm,
+                "blocked": blocked,
+            }
+        )
 
     click.echo("\n✅ Pipeline completed!")
     click.echo(f"📊 View results: streamlit run dashboard/app.py")
