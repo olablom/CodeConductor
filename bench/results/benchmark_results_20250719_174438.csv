@@ -1,0 +1,4 @@
+prompt,iterations,avg_reward,max_reward,min_reward,pass_rate,blocked_count,safe_count,avg_complexity,model_source,optimizer_actions,convergence,timestamp,experiment_id
+calculator.md,60,-61.88888888888889,-50.0,-75.0,0.9333333333333333,0,60,0.3944444444444445,mock,"{'no_change': 13, 'add_examples': 11, 'ask_for_oop': 10, 'simplify': 10, 'add_type_hints': 9, 'add_docstrings': 7}",-18.26666666666666,2025-07-19T17:44:37.971275,1
+fizzbuzz.md,60,-61.88888888888889,-50.0,-75.0,0.9333333333333333,0,60,0.3944444444444445,mock,"{'no_change': 13, 'add_examples': 11, 'ask_for_oop': 10, 'simplify': 10, 'add_type_hints': 9, 'add_docstrings': 7}",-18.26666666666666,2025-07-19T17:44:38.066884,2
+hello_world.md,60,-61.88888888888889,-50.0,-75.0,0.9333333333333333,0,60,0.3944444444444445,mock,"{'no_change': 13, 'add_examples': 11, 'ask_for_oop': 10, 'simplify': 10, 'add_type_hints': 9, 'add_docstrings': 7}",-18.26666666666666,2025-07-19T17:44:38.165054,3

@@ -292,14 +292,20 @@ def main(prompt, iters, mock, online):
 
         # Bestäm kodkälla
         model_source = "mock"
-        if online and is_available():
-            click.echo("Generating code via LM Studio...")
-            code = generate_code(prompt_to_use, arm)
-            if code:
-                output_path.write_text(code)
-                model_source = "lm_studio"
+        if online:
+            click.echo(f"Online mode: checking LM Studio availability...")
+            if is_available():
+                click.echo("Generating code via LM Studio...")
+                code = generate_code(prompt_to_use, arm)
+                if code:
+                    output_path.write_text(code)
+                    model_source = "lm_studio"
+                    click.echo(f"✅ LM Studio generated code: {len(code)} chars")
+                else:
+                    click.echo("LM Studio failed, falling back to mock...")
+                    cursor_run(prompt_to_use, output_path, strategy=arm)
             else:
-                click.echo("LM Studio failed, falling back to mock...")
+                click.echo("LM Studio not available, using mock...")
                 cursor_run(prompt_to_use, output_path, strategy=arm)
         else:
             cursor_run(prompt_to_use, output_path, strategy=arm)

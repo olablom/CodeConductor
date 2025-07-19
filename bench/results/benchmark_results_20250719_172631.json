@@ -1,0 +1,62 @@
+[
+  {
+    "prompt": "calculator.md",
+    "iterations": 163,
+    "avg_reward": 29.795501022494882,
+    "max_reward": 40.0,
+    "min_reward": 26.0,
+    "pass_rate": 1.0,
+    "blocked_count": 0,
+    "safe_count": 163,
+    "avg_complexity": 0.4513292433537832,
+    "model_source": "mock",
+    "optimizer_actions": {
+      "": 156,
+      "no_change": 5,
+      "simplify": 2
+    },
+    "convergence": -3.1999999999999993,
+    "timestamp": "2025-07-19T17:26:30.955240",
+    "experiment_id": 1
+  },
+  {
+    "prompt": "fizzbuzz.md",
+    "iterations": 163,
+    "avg_reward": 29.795501022494882,
+    "max_reward": 40.0,
+    "min_reward": 26.0,
+    "pass_rate": 1.0,
+    "blocked_count": 0,
+    "safe_count": 163,
+    "avg_complexity": 0.4513292433537832,
+    "model_source": "mock",
+    "optimizer_actions": {
+      "": 156,
+      "no_change": 5,
+      "simplify": 2
+    },
+    "convergence": -3.1999999999999993,
+    "timestamp": "2025-07-19T17:26:31.049970",
+    "experiment_id": 2
+  },
+  {
+    "prompt": "hello_world.md",
+    "iterations": 163,
+    "avg_reward": 29.795501022494882,
+    "max_reward": 40.0,
+    "min_reward": 26.0,
+    "pass_rate": 1.0,
+    "blocked_count": 0,
+    "safe_count": 163,
+    "avg_complexity": 0.4513292433537832,
+    "model_source": "mock",
+    "optimizer_actions": {
+      "": 156,
+      "no_change": 5,
+      "simplify": 2
+    },
+    "convergence": -3.1999999999999993,
+    "timestamp": "2025-07-19T17:26:31.146487",
+    "experiment_id": 3
+  }
+]

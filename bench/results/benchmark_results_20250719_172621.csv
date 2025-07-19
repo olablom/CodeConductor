@@ -1,0 +1,4 @@
+prompt,iterations,avg_reward,max_reward,min_reward,pass_rate,blocked_count,safe_count,avg_complexity,model_source,optimizer_actions,convergence,timestamp,experiment_id
+calculator.md,20,28.4,30.0,26.666666666666668,1.0,0,20,0.34,mock,{'': 20},-2.533333333333335,2025-07-19T17:26:21.526952,1
+fizzbuzz.md,20,28.4,30.0,26.666666666666668,1.0,0,20,0.34,mock,{'': 20},-2.533333333333335,2025-07-19T17:26:21.624853,2
+hello_world.md,20,28.4,30.0,26.666666666666668,1.0,0,20,0.34,mock,{'': 20},-2.533333333333335,2025-07-19T17:26:21.720708,3
