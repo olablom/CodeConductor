@@ -52,13 +52,16 @@ class TestAgent:
 
         return analysis
 
-    def run_tests(self, code: str, test_type: str = "basic") -> Dict[str, Any]:
+    def run_tests(
+        self, code: str, test_type: str = "basic", project_path: Path = None
+    ) -> Dict[str, Any]:
         """
         Run automated tests on generated code
 
         Args:
             code: Code to test
             test_type: Type of tests to run (basic, comprehensive, security)
+            project_path: Path to project directory (for multi-file projects)
 
         Returns:
             Dict with test results
@@ -75,21 +78,27 @@ class TestAgent:
         }
 
         try:
-            # Create temporary file for testing
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-                f.write(code)
-                temp_file = f.name
+            if project_path and project_path.is_dir():
+                # Multi-file project testing
+                test_results.update(self._run_project_tests(project_path, test_type))
+            else:
+                # Single file testing
+                with tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".py", delete=False
+                ) as f:
+                    f.write(code)
+                    temp_file = f.name
 
-            # Run different types of tests
-            if test_type == "basic":
-                test_results.update(self._run_basic_tests(temp_file))
-            elif test_type == "comprehensive":
-                test_results.update(self._run_comprehensive_tests(temp_file))
-            elif test_type == "security":
-                test_results.update(self._run_security_tests(temp_file))
+                # Run different types of tests
+                if test_type == "basic":
+                    test_results.update(self._run_basic_tests(temp_file))
+                elif test_type == "comprehensive":
+                    test_results.update(self._run_comprehensive_tests(temp_file))
+                elif test_type == "security":
+                    test_results.update(self._run_security_tests(temp_file))
 
-            # Cleanup
-            Path(temp_file).unlink()
+                # Cleanup
+                Path(temp_file).unlink()
 
         except Exception as e:
             test_results["errors"].append(f"Test execution failed: {str(e)}")
@@ -393,6 +402,94 @@ class TestAgent:
             results["errors"].append(f"Security test error: {str(e)}")
 
         return results
+
+    def _run_project_tests(self, project_path: Path, test_type: str) -> Dict[str, Any]:
+        """Run tests on multi-file project"""
+        results = {
+            "tests_run": 0,
+            "tests_passed": 0,
+            "tests_failed": 0,
+            "errors": [],
+            "warnings": [],
+        }
+
+        try:
+            # Check if tests directory exists
+            tests_dir = project_path / "tests"
+            if not tests_dir.exists():
+                results["warnings"].append("No tests directory found")
+                return results
+
+            # Run pytest on the project
+            result = subprocess.run(
+                ["python", "-m", "pytest", str(tests_dir), "-v"],
+                capture_output=True,
+                text=True,
+                cwd=str(project_path),
+                timeout=60,
+            )
+
+            # Parse pytest output
+            if result.returncode == 0:
+                # Count passed tests
+                passed_lines = [
+                    line for line in result.stdout.split("\n") if "PASSED" in line
+                ]
+                results["tests_passed"] = len(passed_lines)
+                results["tests_run"] = len(passed_lines)
+            else:
+                # Count failed tests
+                failed_lines = [
+                    line for line in result.stdout.split("\n") if "FAILED" in line
+                ]
+                results["tests_failed"] = len(failed_lines)
+                results["tests_run"] = len(failed_lines)
+                results["errors"].append(f"Tests failed: {result.stdout}")
+
+            # Run additional quality checks
+            self._run_project_quality_checks(project_path, results)
+
+        except subprocess.TimeoutExpired:
+            results["errors"].append("Project test timeout")
+        except Exception as e:
+            results["errors"].append(f"Project test error: {str(e)}")
+
+        return results
+
+    def _run_project_quality_checks(self, project_path: Path, results: Dict[str, Any]):
+        """Run quality checks on project files"""
+        try:
+            # Check all Python files for syntax
+            python_files = list(project_path.rglob("*.py"))
+
+            for py_file in python_files:
+                try:
+                    with open(py_file, "r") as f:
+                        code = f.read()
+
+                    # Check syntax
+                    ast.parse(code)
+                    results["tests_passed"] += 1
+                    results["tests_run"] += 1
+
+                except SyntaxError as e:
+                    results["tests_failed"] += 1
+                    results["tests_run"] += 1
+                    results["errors"].append(f"Syntax error in {py_file}: {e}")
+
+            # Check for required files
+            required_files = ["main.py", "requirements.txt", "README.md"]
+            for req_file in required_files:
+                if (project_path / req_file).exists():
+                    results["tests_passed"] += 1
+                    results["tests_run"] += 1
+                else:
+                    results["tests_failed"] += 1
+                    results["tests_run"] += 1
+                    results["warnings"].append(f"Missing required file: {req_file}")
+
+        except Exception as e:
+            results["errors"].append(f"Quality check error: {str(e)}")
 
     def get_test_summary(self) -> Dict[str, Any]:
         """Get summary of all test results"""

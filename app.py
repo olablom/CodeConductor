@@ -655,6 +655,27 @@ if __name__ == "__main__":
 
         st.code(mock_code, language="python")
 
+        # Project structure visualization
+        st.subheader("📁 Project Structure")
+
+        project_dir = Path("data/generated/iter_0_project")
+        if project_dir.exists():
+
+            def get_file_tree(path: Path, prefix: str = "") -> str:
+                tree = []
+                for item in sorted(path.iterdir()):
+                    if item.is_file():
+                        tree.append(f"{prefix}📄 {item.name}")
+                    elif item.is_dir():
+                        tree.append(f"{prefix}📁 {item.name}/")
+                        tree.append(get_file_tree(item, prefix + "  "))
+                return "\n".join(tree)
+
+            file_tree = get_file_tree(project_dir)
+            st.code(file_tree, language="text")
+        else:
+            st.info("📁 No multi-file project structure available")
+
         # Code metrics
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -666,13 +687,42 @@ if __name__ == "__main__":
         with col4:
             st.metric("Security Score", "A+")
 
-        # Download button
-        st.download_button(
-            label="⬇️ Download Generated Code",
-            data=mock_code,
-            file_name="generated_api.py",
-            mime="text/python",
-        )
+        # Download buttons
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.download_button(
+                label="⬇️ Download Single File",
+                data=mock_code,
+                file_name="generated_api.py",
+                mime="text/python",
+            )
+
+        with col2:
+            # Check if multi-file project exists
+            project_dir = Path("data/generated/iter_0_project")
+            if project_dir.exists():
+                import zipfile
+                import io
+
+                # Create ZIP file
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+                    for file_path in project_dir.rglob("*"):
+                        if file_path.is_file():
+                            zip_file.write(
+                                file_path, file_path.relative_to(project_dir)
+                            )
+
+                zip_buffer.seek(0)
+                st.download_button(
+                    label="📦 Download Full Project (ZIP)",
+                    data=zip_buffer.getvalue(),
+                    file_name="generated_project.zip",
+                    mime="application/zip",
+                )
+            else:
+                st.info("📦 No multi-file project available")
 
         # Implementation status
         st.success("✅ Code generated successfully! Ready for deployment.")
