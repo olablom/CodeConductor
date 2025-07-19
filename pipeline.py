@@ -4,6 +4,7 @@ import numpy as np
 import sqlite3
 import subprocess
 import sys
+import json
 from pathlib import Path
 from datetime import datetime
 from typing import Tuple
@@ -14,6 +15,7 @@ from bandits.linucb import LinUCBBandit
 from mocks.cursor_cli import run as cursor_run
 from integrations.lm_studio import is_available, generate_code
 from agents.policy_agent import validate_code_safety, PolicyViolation
+from agents.prompt_optimizer import prompt_optimizer, OptimizerState
 
 
 # Initiera databas
@@ -39,7 +41,9 @@ def init_db(db_path: Path):
                 features TEXT,
                 model_source TEXT DEFAULT 'mock',
                 blocked INTEGER DEFAULT 0,
-                block_reasons TEXT DEFAULT ''
+                block_reasons TEXT DEFAULT '',
+                optimizer_state TEXT DEFAULT '',
+                optimizer_action TEXT DEFAULT ''
             )
         """)
     else:
@@ -52,6 +56,14 @@ def init_db(db_path: Path):
             conn.execute("ALTER TABLE metrics ADD COLUMN blocked INTEGER DEFAULT 0")
         if "block_reasons" not in columns:
             conn.execute("ALTER TABLE metrics ADD COLUMN block_reasons TEXT DEFAULT ''")
+        if "optimizer_state" not in columns:
+            conn.execute(
+                "ALTER TABLE metrics ADD COLUMN optimizer_state TEXT DEFAULT ''"
+            )
+        if "optimizer_action" not in columns:
+            conn.execute(
+                "ALTER TABLE metrics ADD COLUMN optimizer_action TEXT DEFAULT ''"
+            )
 
     conn.commit()
     conn.close()
@@ -220,6 +232,11 @@ def main(prompt, iters, mock, online):
     # Historik
     history = []
 
+    # PromptOptimizerAgent state tracking
+    optimizer_state_prev = None
+    optimizer_action_prev = None
+    task_id = Path(prompt).stem
+
     click.echo(f"🚀 Starting CodeConductor pipeline with {iters} iterations...")
 
     for i in range(iters):
@@ -232,7 +249,44 @@ def main(prompt, iters, mock, online):
         arm = bandit.select_arm(arms, features)
         click.echo(f"Selected strategy: {arm}")
 
-        # 3. Generera kod
+        # 3. PromptOptimizerAgent - optimera prompt om tidigare försök misslyckades
+        original_prompt = Path(prompt).read_text()
+        optimized_prompt = original_prompt
+        optimizer_action = "no_change"
+
+        if i > 0 and history:  # Inte första iterationen
+            prev_result = history[-1]
+
+            # Skapa optimizer state från föregående resultat
+            optimizer_state_prev = prompt_optimizer.create_state(
+                task_id=task_id,
+                arm_prev=prev_result["arm"],
+                passed=prev_result["passed"],
+                blocked=prev_result["blocked"],
+                complexity=prev_result.get("complexity", 0.5),
+                model_source=prev_result.get("model_source", "mock"),
+            )
+
+            # Välj action och mutera prompt
+            optimizer_action = prompt_optimizer.select_action(optimizer_state_prev)
+            optimized_prompt = prompt_optimizer.mutate_prompt(
+                original_prompt, optimizer_action
+            )
+
+            if optimizer_action != "no_change":
+                click.echo(f"🤖 PromptOptimizer: {optimizer_action}")
+
+                # Skapa temporär optimerad prompt-fil
+                temp_prompt_path = Path(f"data/temp_prompt_{i}.md")
+                temp_prompt_path.parent.mkdir(parents=True, exist_ok=True)
+                temp_prompt_path.write_text(optimized_prompt)
+                prompt_to_use = temp_prompt_path
+            else:
+                prompt_to_use = Path(prompt)
+        else:
+            prompt_to_use = Path(prompt)
+
+        # 4. Generera kod
         output_path = Path(f"data/generated/iter_{i}.py")
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -240,19 +294,19 @@ def main(prompt, iters, mock, online):
         model_source = "mock"
         if online and is_available():
             click.echo("Generating code via LM Studio...")
-            code = generate_code(Path(prompt), arm)
+            code = generate_code(prompt_to_use, arm)
             if code:
                 output_path.write_text(code)
                 model_source = "lm_studio"
             else:
                 click.echo("LM Studio failed, falling back to mock...")
-                cursor_run(Path(prompt), output_path, strategy=arm)
+                cursor_run(prompt_to_use, output_path, strategy=arm)
         else:
-            cursor_run(Path(prompt), output_path, strategy=arm)
+            cursor_run(prompt_to_use, output_path, strategy=arm)
 
-        # 4. PolicyAgent säkerhetskontroll
+        # 5. PolicyAgent säkerhetskontroll
         code_content = output_path.read_text()
-        is_safe, violations = validate_code_safety(code_content, prompt)
+        is_safe, violations = validate_code_safety(code_content, str(prompt_to_use))
 
         blocked = not is_safe
         block_reasons = ""
@@ -273,27 +327,48 @@ def main(prompt, iters, mock, online):
         else:
             click.echo(f"✅ Code passed PolicyAgent safety check")
 
-            # 5. Kör tester
-            passed, pass_rate = run_tests(output_path, Path(prompt))
+            # 6. Kör tester
+            passed, pass_rate = run_tests(output_path, prompt_to_use)
             click.echo(f"Tests passed: {passed}")
 
-            # 6. Beräkna komplexitet
+            # 7. Beräkna komplexitet
             complexity = calculate_complexity(output_path)
             click.echo(f"Complexity score: {complexity:.2f}")
 
-            # 7. Beräkna reward
-            reward = calculate_reward(passed, complexity, config, code_content)
-            click.echo(f"Reward: {reward:.2f}")
+            # 8. Beräkna reward med PromptOptimizer-bonus
+            base_reward = calculate_reward(passed, complexity, config, code_content)
+            reward = prompt_optimizer.calculate_reward(
+                passed=passed,
+                blocked=blocked,
+                iterations=i + 1,
+                complexity=complexity,
+                base_reward=base_reward,
+            )
+            click.echo(f"Reward: {reward:.2f} (base: {base_reward:.2f})")
 
-        # 8. Uppdatera bandit
+        # 9. Uppdatera bandit
         bandit.update(arm, features, reward)
 
-        # 9. Spara till databas
+        # 10. Uppdatera PromptOptimizerAgent
+        if optimizer_state_prev and optimizer_action_prev:
+            current_state = prompt_optimizer.create_state(
+                task_id=task_id,
+                arm_prev=arm,
+                passed=passed,
+                blocked=blocked,
+                complexity=complexity,
+                model_source=model_source,
+            )
+            prompt_optimizer.update(
+                optimizer_state_prev, optimizer_action_prev, reward, current_state
+            )
+
+        # 11. Spara till databas
         conn = sqlite3.connect(db_path)
         conn.execute(
             """
-            INSERT INTO metrics (iteration, timestamp, reward, pass_rate, complexity, arm_selected, features, model_source, blocked, block_reasons)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO metrics (iteration, timestamp, reward, pass_rate, complexity, arm_selected, features, model_source, blocked, block_reasons, optimizer_state, optimizer_action)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 i,
@@ -306,12 +381,16 @@ def main(prompt, iters, mock, online):
                 model_source,
                 1 if blocked else 0,
                 block_reasons,
+                json.dumps(optimizer_state_prev.to_vector())
+                if optimizer_state_prev
+                else "",
+                optimizer_action_prev or "",
             ),
         )
         conn.commit()
         conn.close()
 
-        # 10. Uppdatera historik
+        # 12. Uppdatera historik
         history.append(
             {
                 "iteration": i,
@@ -319,8 +398,20 @@ def main(prompt, iters, mock, online):
                 "reward": reward,
                 "arm": arm,
                 "blocked": blocked,
+                "complexity": complexity,
+                "model_source": model_source,
             }
         )
+
+        # 13. Spara aktuell state/action för nästa iteration
+        optimizer_state_prev = prompt_optimizer.current_state
+        optimizer_action_prev = optimizer_action
+
+        # 14. Cleanup temporär prompt-fil
+        if optimizer_action != "no_change":
+            temp_prompt_path = Path(f"data/temp_prompt_{i}.md")
+            if temp_prompt_path.exists():
+                temp_prompt_path.unlink()
 
     click.echo("\n✅ Pipeline completed!")
     click.echo(f"📊 View results: streamlit run dashboard/app.py")

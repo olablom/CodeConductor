@@ -45,7 +45,9 @@ codeconductor/
 - [x] LM Studio integration with fallback
 - [x] Multi-prompt support
 
-## 🔒 Week 2 Progress - PolicyAgent
+## 🔒 Week 2 Progress - PolicyAgent & PromptOptimizer
+
+### **PolicyAgent Security System**
 
 - [x] **PolicyAgent Security System**
   - Dangerous system call detection (`os.system`, `subprocess`)
@@ -65,6 +67,25 @@ codeconductor/
   - Model source tracking (mock vs LM Studio)
   - Security metrics overview
 
+### **PromptOptimizerAgent Q-Learning System**
+
+- [x] **Q-Learning Agent**
+  - State vector: `(task_id, arm_prev, fail_bucket, complexity_bin, model_source)`
+  - 6 prompt mutation actions: type hints, OOP, docstrings, simplify, examples, no change
+  - ε-greedy exploration with configurable parameters
+  - Q-table persistence and analysis
+- [x] **Pipeline Integration**
+  - Automatic prompt optimization after failures
+  - Reward bonuses for green-on-first-retry (+10)
+  - Iteration penalties (-1 per additional iteration)
+  - Policy block penalties (-5)
+  - Complexity bonuses (+2 for good complexity)
+- [x] **Dashboard Enhancements**
+  - PromptOptimizer analysis tab
+  - Action distribution charts
+  - Optimization timeline visualization
+  - Q-table statistics and action usage
+
 ## 📈 Example Usage
 
 ```bash
@@ -82,14 +103,16 @@ sqlite3 data/metrics.db "SELECT * FROM metrics ORDER BY iteration DESC LIMIT 10"
 
 # View blocked code analysis
 sqlite3 data/metrics.db "SELECT iteration, block_reasons FROM metrics WHERE blocked = 1"
-```
+
+# View prompt optimization data
+sqlite3 data/metrics.db "SELECT iteration, optimizer_action, reward FROM metrics WHERE optimizer_action != 'no_change'"
 
 ## 🔮 Next Steps
 
-- [ ] **PromptOptimizerAgent** - RL-based prompt optimization
 - [ ] **Human feedback loop** - Manual code quality ratings
 - [ ] **Multi-file project support** - Complex project generation
 - [ ] **Advanced security rules** - Custom policy configuration
+- [ ] **Advanced prompt optimization** - Temperature/stop-token tweaks
 
 ## 🚀 CI/CD
 
@@ -102,3 +125,4 @@ This project uses GitHub Actions for continuous integration:
 ## 📝 License
 
 MIT
+```

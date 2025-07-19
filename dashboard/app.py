@@ -20,7 +20,7 @@ else:
     df = pd.read_sql(
         """
         SELECT iteration, reward, pass_rate, complexity, arm_selected, timestamp, 
-               model_source, blocked, block_reasons
+               model_source, blocked, block_reasons, optimizer_state, optimizer_action
         FROM metrics
         ORDER BY iteration
     """,
@@ -74,6 +74,28 @@ else:
                 lm_studio_count = len(df[df["model_source"] == "lm_studio"])
                 st.metric("LM Studio Usage", lm_studio_count)
 
+        # PromptOptimizer sektion
+        st.subheader("🤖 PromptOptimizer Agent")
+        col10, col11, col12 = st.columns(3)
+
+        with col10:
+            if "optimizer_action" in df.columns:
+                optimizer_actions = df["optimizer_action"].dropna()
+                no_change_count = len(
+                    optimizer_actions[optimizer_actions == "no_change"]
+                )
+                st.metric("No Changes", no_change_count)
+        with col11:
+            if "optimizer_action" in df.columns:
+                mutations_count = len(
+                    optimizer_actions[optimizer_actions != "no_change"]
+                )
+                st.metric("Prompt Mutations", mutations_count)
+        with col12:
+            if "optimizer_action" in df.columns:
+                unique_actions = optimizer_actions.nunique()
+                st.metric("Unique Actions", unique_actions)
+
         # Grafer
         st.subheader("📈 Learning Curves")
 
@@ -94,8 +116,13 @@ else:
             st.area_chart(strategy_evolution)
 
         # Tabs för olika vyer
-        tab1, tab2, tab3 = st.tabs(
-            ["📊 Metrics", "🔒 Policy Violations", "🤖 Model Sources"]
+        tab1, tab2, tab3, tab4 = st.tabs(
+            [
+                "📊 Metrics",
+                "🔒 Policy Violations",
+                "🤖 Model Sources",
+                "🧠 PromptOptimizer",
+            ]
         )
 
         with tab1:
@@ -149,6 +176,34 @@ else:
                     use_container_width=True,
                 )
 
+        with tab4:
+            st.subheader("🧠 PromptOptimizer Analysis")
+            if "optimizer_action" in df.columns:
+                # Action distribution
+                action_counts = df["optimizer_action"].value_counts()
+                st.subheader("Action Distribution")
+                st.bar_chart(action_counts)
+
+                # Action over time
+                st.subheader("Actions Over Time")
+                action_timeline = df[["iteration", "optimizer_action"]].copy()
+                action_timeline = action_timeline[
+                    action_timeline["optimizer_action"] != "no_change"
+                ]
+                if not action_timeline.empty:
+                    st.line_chart(action_timeline.set_index("iteration"))
+                else:
+                    st.info("No prompt mutations yet")
+
+                # Detailed table
+                st.subheader("Optimization Details")
+                optimizer_df = df[
+                    ["iteration", "optimizer_action", "reward", "passed", "blocked"]
+                ].copy()
+                st.dataframe(optimizer_df, use_container_width=True)
+            else:
+                st.info("No PromptOptimizer data available")
+
         # Auto-refresh
         if st.sidebar.checkbox("Auto-refresh", value=False):
             st.rerun()
@@ -161,6 +216,7 @@ st.sidebar.markdown("""
 ### Komponenter:
 - **LinUCB Bandit**: Väljer strategi
 - **PolicyAgent**: Säkerhetskontroller
+- **PromptOptimizerAgent**: Optimiserar prompts
 - **Mock Cursor/LM Studio**: Genererar kod
 - **Pytest**: Validerar output
 - **Radon**: Mäter komplexitet
