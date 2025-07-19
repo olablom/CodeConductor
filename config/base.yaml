@@ -1,21 +1,19 @@
-# Reward configuration
 rewards:
   test_pass: 20
   lint_score: 10
   complexity: 10
   human_feedback: 60
-  creativity_bonus: 15 # Bonus för kreativa lösningar
-
-# Pipeline settings
+  creativity_bonus: 15
 pipeline:
   max_iterations: 10
   timeout_seconds: 30
-
-# Bandit parameters
 bandit:
-  alpha: 5.0 # Mycket exploration för att se variation
+  alpha: 5.0
   feature_dim: 3
-
-# Database
 database:
   path: data/metrics.db
+llm:
+  server_url: http://localhost:1234
+  default_model: You
+  available_models:
+  - You

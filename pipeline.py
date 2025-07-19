@@ -13,7 +13,7 @@ from radon.complexity import cc_visit
 
 from bandits.linucb import LinUCBBandit
 from mocks.cursor_cli import run as cursor_run
-from integrations.lm_studio import is_available, generate_code
+from integrations.lm_studio import is_available, generate_code, ensure_models_ready
 from agents.policy_agent import validate_code_safety, PolicyViolation
 from agents.prompt_optimizer import prompt_optimizer, OptimizerState
 
@@ -514,6 +514,38 @@ def main(prompt, iters, mock, online, multi_file):
     db_path = Path(config.database.path)
     db_path.parent.mkdir(exist_ok=True)
     init_db(db_path)
+
+    # Initialize model manager if using online mode
+    if online:
+        try:
+            from integrations.model_manager_simple import SimpleModelManager
+
+            model_manager = SimpleModelManager()
+            print("🔍 Checking model availability...")
+            model_info = model_manager.get_model_info()
+            print(f"📊 Model Status:")
+            print(f"  Configured models: {len(model_info['configured_models'])}")
+            print(
+                f"  Available for installation: {len(model_info['available_for_installation'])}"
+            )
+            print(f"  Currently loaded: {len(model_info['currently_loaded'])}")
+            print(
+                f"  LM Studio CLI: {'✅' if model_info['lm_studio_cli_available'] else '❌'}"
+            )
+
+            # Ensure models are ready
+            if model_info["lm_studio_cli_available"]:
+                print("🔧 Ensuring models are ready...")
+                results = model_manager.ensure_models()
+                ready_count = sum(1 for ready in results.values() if ready)
+                print(f"✅ {ready_count}/{len(results)} models ready")
+            else:
+                print("⚠️ LM Studio CLI not available, skipping model setup")
+
+        except ImportError:
+            print("⚠️ ModelManager not available, continuing without model management")
+        except Exception as e:
+            print(f"⚠️ Model setup failed: {e}, continuing...")
 
     # Initiera bandit
     bandit = LinUCBBandit(d=config.bandit.feature_dim, alpha=config.bandit.alpha)

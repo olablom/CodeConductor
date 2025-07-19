@@ -1,8 +1,29 @@
 import requests
 import pathlib
+import logging
+from typing import Optional
+
+logger = logging.getLogger("LMStudio")
 
 _TEMP = {"conservative": 0.3, "balanced": 0.7, "exploratory": 1.2}
 _BASE = "http://localhost:1234"
+
+# Global model manager instance
+_model_manager = None
+
+
+def get_model_manager():
+    """Get or create model manager instance"""
+    global _model_manager
+    if _model_manager is None:
+        try:
+            from integrations.model_manager import ModelManager
+
+            _model_manager = ModelManager()
+        except ImportError:
+            logger.warning("ModelManager not available")
+            _model_manager = None
+    return _model_manager
 
 
 def is_available() -> bool:
@@ -12,7 +33,25 @@ def is_available() -> bool:
         return False
 
 
+def ensure_models_ready() -> bool:
+    """Ensure models are ready before generating code"""
+    model_manager = get_model_manager()
+    if model_manager:
+        logger.info("Checking model availability...")
+        results = model_manager.ensure_models()
+        ready_models = sum(1 for ready in results.values() if ready)
+        logger.info(f"✅ {ready_models}/{len(results)} models ready")
+        return ready_models > 0
+    else:
+        logger.warning("ModelManager not available, skipping model check")
+        return True
+
+
 def generate_code(prompt_path: pathlib.Path, strategy: str) -> str | None:
+    # Ensure models are ready before generating
+    if not ensure_models_ready():
+        logger.warning("Models not ready, but continuing...")
+
     prompt_content = prompt_path.read_text()
 
     # Bättre prompt-format för LM Studio

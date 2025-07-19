@@ -1,0 +1,150 @@
+# CodeConductor v2.0 - Plugin Configuration
+# This file defines available plugins and their configurations
+
+plugins:
+  security_agent:
+    name: "Security Agent"
+    version: "1.0.0"
+    description: "Advanced security analysis agent for code vulnerability detection"
+    author: "CodeConductor Team"
+    type: "agent"
+    entry_point: "plugins.security_agent:SecurityAgentPlugin"
+    dependencies:
+      - "bandit"
+      - "safety"
+    config_schema:
+      severity_threshold:
+        type: "string"
+        default: "medium"
+        required: false
+        description: "Minimum severity level to report"
+      enable_bandit:
+        type: "boolean"
+        default: true
+        required: false
+        description: "Enable bandit security analysis"
+      enable_safety:
+        type: "boolean"
+        default: true
+        required: false
+        description: "Enable safety dependency analysis"
+    tags:
+      - "security"
+      - "vulnerability"
+      - "analysis"
+    homepage: "https://github.com/codeconductor/plugins"
+    license: "MIT"
+    enabled: true
+    config:
+      severity_threshold: "medium"
+      enable_bandit: true
+      enable_safety: true
+
+  code_formatter:
+    name: "Code Formatter"
+    version: "1.0.0"
+    description: "Code formatting and style enforcement tool"
+    author: "CodeConductor Team"
+    type: "tool"
+    entry_point: "plugins.code_formatter:CodeFormatterPlugin"
+    dependencies:
+      - "black"
+      - "isort"
+      - "flake8"
+    config_schema:
+      formatter:
+        type: "string"
+        default: "black"
+        required: false
+        description: "Code formatter to use (black, autopep8, yapf)"
+      line_length:
+        type: "integer"
+        default: 88
+        required: false
+        description: "Maximum line length"
+      enable_isort:
+        type: "boolean"
+        default: true
+        required: false
+        description: "Enable import sorting"
+      style_guide:
+        type: "string"
+        default: "pep8"
+        required: false
+        description: "Style guide to follow (pep8, google, facebook)"
+    tags:
+      - "formatting"
+      - "style"
+      - "code-quality"
+    homepage: "https://github.com/codeconductor/plugins"
+    license: "MIT"
+    enabled: true
+    config:
+      formatter: "black"
+      line_length: 88
+      enable_isort: true
+      style_guide: "pep8"
+
+# Plugin discovery settings
+discovery:
+  # Directories to search for plugins
+  plugin_dirs:
+    - "plugins"
+    - "config/plugins"
+    - "~/.codeconductor/plugins"
+
+  # Enable automatic plugin discovery
+  auto_discover: true
+
+  # Enable entry point discovery (requires setuptools)
+  enable_entry_points: true
+
+  # Plugin loading timeout (seconds)
+  load_timeout: 30
+
+# Plugin management settings
+management:
+  # Allow plugin installation via pip
+  allow_pip_install: true
+
+  # Allow plugin updates
+  allow_updates: true
+
+  # Plugin isolation (run plugins in separate processes)
+  isolation: false
+
+  # Plugin sandboxing
+  sandbox: false
+
+# Plugin security settings
+security:
+  # Require plugin signature verification
+  require_signature: false
+
+  # Allowed plugin sources
+  allowed_sources:
+    - "local"
+    - "pypi"
+    - "github"
+
+  # Blocked plugin names (security measure)
+  blocked_plugins:
+    - "malicious_plugin"
+    - "test_plugin"
+
+  # Maximum plugin execution time (seconds)
+  max_execution_time: 300
+
+# Plugin performance settings
+performance:
+  # Enable plugin caching
+  enable_caching: true
+
+  # Cache expiration time (seconds)
+  cache_expiration: 3600
+
+  # Maximum number of concurrent plugins
+  max_concurrent: 10
+
+  # Plugin memory limit (MB)
+  memory_limit: 512

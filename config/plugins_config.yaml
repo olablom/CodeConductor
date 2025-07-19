@@ -1,0 +1,10 @@
+enabled_plugins: []
+plugin_settings:
+  code_formatter:
+    enable_isort: true
+    line_length: 88
+    style_guide: pep8
+  security_analyzer:
+    enable_bandit: true
+    enable_safety: true
+    severity_threshold: medium

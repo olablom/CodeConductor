@@ -3,13 +3,15 @@ PolicyAgent - Security and safety checks for generated code.
 
 This agent validates generated code against security policies before execution.
 Blocks dangerous operations, license violations, and other safety concerns.
+Now supports YAML-driven policy configuration for dynamic rule management.
 """
 
 import re
 import ast
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
+from integrations.policy_loader import PolicyLoader, PolicyViolation as YAMLViolation
 
 
 class BlockReason(Enum):
@@ -39,6 +41,7 @@ class PolicyAgent:
     """
     Security agent that validates generated code against safety policies.
 
+    Now supports both legacy hardcoded rules and YAML-driven dynamic policies.
     Checks for:
     - Dangerous system calls (os.system, subprocess, etc.)
     - File operations that could be harmful
@@ -47,13 +50,27 @@ class PolicyAgent:
     - Code size limits
     - Forbidden imports
     - Suspicious patterns
+    - Custom YAML-defined policies
     """
 
-    def __init__(self, config: Optional[Dict] = None):
-        """Initialize PolicyAgent with configuration."""
+    def __init__(
+        self, config: Optional[Dict] = None, policy_path: str = "config/policies.yaml"
+    ):
+        """Initialize PolicyAgent with configuration and YAML policies."""
         self.config = config or {}
+        self.policy_path = policy_path
 
-        # Security patterns
+        # Initialize YAML policy loader
+        try:
+            self.policy_loader = PolicyLoader(policy_path)
+            self.use_yaml_policies = True
+        except (FileNotFoundError, ValueError) as e:
+            print(f"Warning: Could not load YAML policies from {policy_path}: {e}")
+            print("Falling back to legacy hardcoded policies")
+            self.policy_loader = None
+            self.use_yaml_policies = False
+
+        # Legacy security patterns (fallback)
         self.dangerous_patterns = {
             BlockReason.DANGEROUS_SYSTEM_CALL: [
                 r"os\.system\s*\(",
@@ -134,24 +151,48 @@ class PolicyAgent:
         """
         violations = []
 
-        # Check code size limits
-        size_violations = self._check_size_limits(code)
-        violations.extend(size_violations)
+        # Use YAML policies if available, otherwise fall back to legacy
+        if self.use_yaml_policies and self.policy_loader:
+            yaml_result = self.policy_loader.analyze_code(code)
 
-        # Check for dangerous patterns
-        pattern_violations = self._check_dangerous_patterns(code)
-        violations.extend(pattern_violations)
+            # Convert YAML violations to legacy format for compatibility
+            for yaml_violation in yaml_result["violations"]:
+                # Map YAML rule names to legacy BlockReason
+                reason = self._map_yaml_rule_to_reason(yaml_violation.rule_name)
 
-        # Check for license violations
-        license_violations = self._check_license_violations(code)
-        violations.extend(license_violations)
+                violations.append(
+                    PolicyViolation(
+                        reason=reason,
+                        line_number=yaml_violation.line_number or 0,
+                        code_snippet=yaml_violation.code_snippet or "",
+                        severity=yaml_violation.severity.value,
+                        description=yaml_violation.description,
+                    )
+                )
 
-        # Check syntax (basic validation)
-        syntax_violations = self._check_syntax(code)
-        violations.extend(syntax_violations)
+            # Use YAML enforcement logic
+            is_safe = not yaml_result["should_block"]
 
-        # Code is safe if no violations (all violations should block)
-        is_safe = len(violations) == 0
+        else:
+            # Legacy validation logic
+            # Check code size limits
+            size_violations = self._check_size_limits(code)
+            violations.extend(size_violations)
+
+            # Check for dangerous patterns
+            pattern_violations = self._check_dangerous_patterns(code)
+            violations.extend(pattern_violations)
+
+            # Check for license violations
+            license_violations = self._check_license_violations(code)
+            violations.extend(license_violations)
+
+            # Check syntax (basic validation)
+            syntax_violations = self._check_syntax(code)
+            violations.extend(syntax_violations)
+
+            # Code is safe if no violations (all violations should block)
+            is_safe = len(violations) == 0
 
         return is_safe, violations
 
@@ -237,6 +278,17 @@ class PolicyAgent:
 
         return violations
 
+    def _map_yaml_rule_to_reason(self, rule_name: str) -> BlockReason:
+        """Map YAML rule names to legacy BlockReason enum."""
+        rule_mapping = {
+            "blocked_imports": BlockReason.FORBIDDEN_IMPORT,
+            "blocked_patterns": BlockReason.SUSPICIOUS_PATTERN,
+            "forbidden_functions": BlockReason.SUSPICIOUS_PATTERN,
+            "forbidden_variable_names": BlockReason.SUSPICIOUS_PATTERN,
+            "max_line_length": BlockReason.TOO_LARGE,
+        }
+        return rule_mapping.get(rule_name, BlockReason.SUSPICIOUS_PATTERN)
+
     def _check_syntax(self, code: str) -> List[PolicyViolation]:
         """Check basic Python syntax."""
         violations = []
@@ -255,6 +307,29 @@ class PolicyAgent:
             )
 
         return violations
+
+    def get_policy_summary(self) -> Dict[str, Any]:
+        """Get summary of current policies (YAML or legacy)."""
+        if self.use_yaml_policies and self.policy_loader:
+            return self.policy_loader.get_policy_summary()
+        else:
+            return {
+                "policy_type": "legacy",
+                "enforcement_mode": "strict",
+                "blocked_patterns_count": sum(
+                    len(patterns) for patterns in self.dangerous_patterns.values()
+                ),
+                "license_patterns_count": sum(
+                    len(patterns) for patterns in self.license_patterns.values()
+                ),
+                "max_lines": self.max_lines,
+                "max_characters": self.max_characters,
+            }
+
+    def reload_policies(self) -> None:
+        """Reload policies from YAML file."""
+        if self.use_yaml_policies and self.policy_loader:
+            self.policy_loader.reload()
 
     def get_block_summary(self, violations: List[PolicyViolation]) -> Dict:
         """Get a summary of blocked code for logging."""

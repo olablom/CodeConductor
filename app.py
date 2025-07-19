@@ -164,7 +164,7 @@ with st.sidebar:
             st.rerun()
 
 # Main Content Area
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs(
     [
         "🤖 Agent Discussion",
         "👤 Human Approval",
@@ -172,6 +172,8 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
         "💻 Generated Code",
         "📈 Project History",
         "💬 Feedback",
+        "⚙️ Policies",
+        "🔌 Plugins",
     ]
 )
 
@@ -857,6 +859,368 @@ with tab6:
     except Exception as e:
         st.error(f"Error loading feedback data: {e}")
         st.info("📊 Feedback system ready - submit your first feedback!")
+
+with tab7:
+    st.header("⚙️ Policy Configuration")
+
+    try:
+        from integrations.policy_loader import PolicyLoader
+        from pathlib import Path
+
+        # Initialize policy loader
+        policy_loader = PolicyLoader()
+
+        # Display current policy summary
+        st.subheader("📊 Current Policy Summary")
+        summary = policy_loader.get_policy_summary()
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Enforcement Mode", summary["enforcement_mode"].title())
+        with col2:
+            st.metric("Blocked Imports", summary["blocked_imports_count"])
+        with col3:
+            st.metric("Blocked Patterns", summary["blocked_patterns_count"])
+        with col4:
+            st.metric("Forbidden Functions", summary["forbidden_functions_count"])
+
+        # Policy editor
+        st.subheader("📝 Edit Policies")
+
+        # Load current YAML content
+        policy_path = Path("config/policies.yaml")
+        if policy_path.exists():
+            current_yaml = policy_path.read_text(encoding="utf-8")
+
+            # YAML editor
+            edited_yaml = st.text_area(
+                "Policy Configuration (YAML)",
+                value=current_yaml,
+                height=400,
+                help="Edit the policy configuration. Changes will be saved when you click 'Save Policies'.",
+            )
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("💾 Save Policies", type="primary"):
+                    try:
+                        policy_loader.save_policies(edited_yaml)
+                        st.success("✅ Policies saved successfully!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Failed to save policies: {e}")
+
+            with col2:
+                if st.button("🔄 Reload Policies"):
+                    try:
+                        policy_loader.reload()
+                        st.success("✅ Policies reloaded successfully!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Failed to reload policies: {e}")
+
+            # Policy testing
+            st.subheader("🧪 Test Policies")
+
+            test_code = st.text_area(
+                "Test Code",
+                value="""import os
+import subprocess
+
+def test_function():
+    os.system("rm -rf /")
+    print("Hello World")
+    x = 123
+    return x""",
+                height=150,
+                help="Enter code to test against current policies",
+            )
+
+            if st.button("🔍 Analyze Code"):
+                try:
+                    result = policy_loader.analyze_code(test_code)
+
+                    # Display results
+                    st.subheader("📊 Analysis Results")
+
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric(
+                            "Total Violations", result["summary"]["total_violations"]
+                        )
+                    with col2:
+                        st.metric("Critical", result["summary"]["critical"])
+                    with col3:
+                        st.metric("High", result["summary"]["high"])
+                    with col4:
+                        st.metric(
+                            "Should Block", "Yes" if result["should_block"] else "No"
+                        )
+
+                    # Show violations
+                    if result["violations"]:
+                        st.subheader("🚨 Policy Violations")
+                        for violation in result["violations"]:
+                            with st.expander(
+                                f"Line {violation.line_number}: {violation.description}"
+                            ):
+                                st.code(violation.code_snippet, language="python")
+                                st.info(f"💡 Suggestion: {violation.suggestion}")
+
+                    # Show recommendations
+                    if result["recommendations"]:
+                        st.subheader("💡 Recommendations")
+                        for rec in result["recommendations"]:
+                            st.info(rec)
+
+                except Exception as e:
+                    st.error(f"❌ Analysis failed: {e}")
+
+        else:
+            st.error("❌ Policy file not found!")
+
+    except Exception as e:
+        st.error(f"❌ Failed to load policy system: {e}")
+        st.info("Make sure config/policies.yaml exists and is valid YAML.")
+
+with tab8:
+    st.header("🔌 Plugin Management")
+
+    try:
+        from plugins.base import PluginManager, PluginType
+        from agents.orchestrator import AgentOrchestrator
+
+        # Initialize plugin manager
+        plugin_manager = PluginManager()
+
+        # Display plugin summary
+        st.subheader("📊 Plugin Summary")
+
+        discovered_plugins = plugin_manager.discover_plugins()
+        active_plugins = plugin_manager.list_plugins()
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Discovered Plugins", len(discovered_plugins))
+        with col2:
+            st.metric("Active Plugins", len(active_plugins))
+        with col3:
+            st.metric(
+                "Agent Plugins",
+                len(
+                    [
+                        p
+                        for p in discovered_plugins
+                        if p.metadata.plugin_type == PluginType.AGENT
+                    ]
+                ),
+            )
+        with col4:
+            st.metric(
+                "Tool Plugins",
+                len(
+                    [
+                        p
+                        for p in discovered_plugins
+                        if p.metadata.plugin_type == PluginType.TOOL
+                    ]
+                ),
+            )
+
+        # Plugin discovery
+        st.subheader("🔍 Plugin Discovery")
+
+        if discovered_plugins:
+            plugin_data = []
+            for plugin in discovered_plugins:
+                plugin_data.append(
+                    {
+                        "Name": plugin.metadata.name,
+                        "Type": plugin.metadata.plugin_type.value,
+                        "Version": plugin.metadata.version,
+                        "Author": plugin.metadata.author,
+                        "Status": plugin.status.value,
+                        "Enabled": "✅" if plugin.is_enabled else "❌",
+                    }
+                )
+
+            df = pd.DataFrame(plugin_data)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+        else:
+            st.info(
+                "🔍 No plugins discovered. Check plugin directories and configuration."
+            )
+
+        # Plugin management
+        st.subheader("⚙️ Plugin Management")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("🔄 Refresh Plugins", type="primary"):
+                try:
+                    discovered_plugins = plugin_manager.discover_plugins()
+                    st.success(f"✅ Refreshed! Found {len(discovered_plugins)} plugins")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"❌ Failed to refresh plugins: {e}")
+
+        with col2:
+            if st.button("💾 Save Plugin Config"):
+                try:
+                    plugin_manager.save_plugin_config()
+                    st.success("✅ Plugin configuration saved!")
+                except Exception as e:
+                    st.error(f"❌ Failed to save plugin config: {e}")
+
+        # Plugin details
+        if discovered_plugins:
+            st.subheader("📋 Plugin Details")
+
+            selected_plugin = st.selectbox(
+                "Select Plugin",
+                options=[p.metadata.name for p in discovered_plugins],
+                format_func=lambda x: f"{x} ({next(p.metadata.plugin_type.value for p in discovered_plugins if p.metadata.name == x)})",
+            )
+
+            if selected_plugin:
+                plugin = next(
+                    p for p in discovered_plugins if p.metadata.name == selected_plugin
+                )
+
+                col1, col2 = st.columns(2)
+
+                with col1:
+                    st.markdown(f"**Name:** {plugin.metadata.name}")
+                    st.markdown(f"**Version:** {plugin.metadata.version}")
+                    st.markdown(f"**Author:** {plugin.metadata.author}")
+                    st.markdown(f"**Type:** {plugin.metadata.plugin_type.value}")
+                    st.markdown(f"**Status:** {plugin.status.value}")
+
+                    if plugin.metadata.homepage:
+                        st.markdown(
+                            f"**Homepage:** [{plugin.metadata.homepage}]({plugin.metadata.homepage})"
+                        )
+
+                    if plugin.metadata.license:
+                        st.markdown(f"**License:** {plugin.metadata.license}")
+
+                with col2:
+                    st.markdown(f"**Description:** {plugin.metadata.description}")
+
+                    if plugin.metadata.tags:
+                        st.markdown(
+                            "**Tags:** "
+                            + ", ".join([f"`{tag}`" for tag in plugin.metadata.tags])
+                        )
+
+                    if plugin.metadata.dependencies:
+                        st.markdown(
+                            "**Dependencies:** "
+                            + ", ".join(
+                                [f"`{dep}`" for dep in plugin.metadata.dependencies]
+                            )
+                        )
+
+                # Plugin configuration
+                if plugin.metadata.config_schema:
+                    st.subheader("⚙️ Plugin Configuration")
+
+                    config_editor = {}
+                    for key, schema in plugin.metadata.config_schema.items():
+                        if schema.get("type") == "boolean":
+                            config_editor[key] = st.checkbox(
+                                key.replace("_", " ").title(),
+                                value=plugin.config.get(
+                                    key, schema.get("default", False)
+                                ),
+                                help=schema.get("description", ""),
+                            )
+                        elif schema.get("type") == "integer":
+                            config_editor[key] = st.number_input(
+                                key.replace("_", " ").title(),
+                                value=plugin.config.get(key, schema.get("default", 0)),
+                                help=schema.get("description", ""),
+                            )
+                        else:
+                            config_editor[key] = st.text_input(
+                                key.replace("_", " ").title(),
+                                value=plugin.config.get(key, schema.get("default", "")),
+                                help=schema.get("description", ""),
+                            )
+
+                    if st.button("💾 Update Plugin Config"):
+                        plugin.config.update(config_editor)
+                        st.success("✅ Plugin configuration updated!")
+
+                # Plugin actions
+                st.subheader("🎯 Plugin Actions")
+
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    if plugin.status.value == "inactive":
+                        if st.button("▶️ Load Plugin"):
+                            try:
+                                plugin_instance = plugin_manager.load_plugin(plugin)
+                                if plugin_instance:
+                                    st.success(
+                                        f"✅ Loaded plugin: {plugin.metadata.name}"
+                                    )
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Failed to load plugin")
+                            except Exception as e:
+                                st.error(f"❌ Failed to load plugin: {e}")
+                    else:
+                        if st.button("⏹️ Unload Plugin"):
+                            try:
+                                if plugin_manager.unload_plugin(plugin.metadata.name):
+                                    st.success(
+                                        f"✅ Unloaded plugin: {plugin.metadata.name}"
+                                    )
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Failed to unload plugin")
+                            except Exception as e:
+                                st.error(f"❌ Failed to unload plugin: {e}")
+
+                with col2:
+                    if plugin.is_enabled:
+                        if st.button("🚫 Disable Plugin"):
+                            plugin.is_enabled = False
+                            st.success(f"✅ Disabled plugin: {plugin.metadata.name}")
+                            st.rerun()
+                    else:
+                        if st.button("✅ Enable Plugin"):
+                            plugin.is_enabled = True
+                            st.success(f"✅ Enabled plugin: {plugin.metadata.name}")
+                            st.rerun()
+
+                with col3:
+                    if plugin.error_message:
+                        st.error(f"❌ Error: {plugin.error_message}")
+
+        # Test plugin system
+        st.subheader("🧪 Test Plugin System")
+
+        if st.button("🚀 Test Agent Orchestrator with Plugins"):
+            try:
+                orchestrator = AgentOrchestrator(enable_plugins=True)
+                plugin_info = orchestrator.get_plugin_info()
+
+                if plugin_info["plugins_enabled"]:
+                    st.success("✅ Plugin system is working!")
+                    st.json(plugin_info)
+                else:
+                    st.warning("⚠️ Plugin system is disabled")
+
+            except Exception as e:
+                st.error(f"❌ Plugin system test failed: {e}")
+
+    except Exception as e:
+        st.error(f"❌ Failed to load plugin system: {e}")
+        st.info("Make sure plugins are properly configured and installed.")
 
 # Footer
 st.markdown("---")

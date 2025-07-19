@@ -1,0 +1,146 @@
+# CodeConductor v2.0 - Policy Configuration
+# This file defines security, quality, and style policies for code generation
+
+security:
+  # Blocked imports that are considered dangerous
+  blocked_imports:
+    - "os"
+    - "subprocess"
+    - "eval"
+    - "exec"
+    - "globals"
+    - "locals"
+    - "compile"
+    - "input"
+
+  # Blocked patterns that indicate dangerous code
+  blocked_patterns:
+    - "rm -rf"
+    - "sudo"
+    - "chmod 777"
+    - "chmod 666"
+    - "rm -rf /"
+    - "format C:"
+    - "del /s /q"
+    - "shutdown"
+    - "reboot"
+    - "killall"
+
+  # File size limits
+  max_file_size_kb: 1000
+
+  # Authentication requirements
+  require_authentication: true
+
+  # Network access restrictions
+  blocked_network_imports:
+    - "urllib"
+    - "requests"
+    - "socket"
+    - "ftplib"
+    - "smtplib"
+
+quality:
+  # Test coverage requirements
+  min_test_coverage: 80
+
+  # Code complexity limits
+  max_complexity: 10
+  max_function_length: 50
+  max_class_length: 200
+
+  # Documentation requirements
+  require_docstrings: true
+  require_type_hints: true
+
+  # Forbidden functions that indicate poor practices
+  forbidden_functions:
+    - "print"
+    - "input"
+    - "raw_input"
+    - "exit"
+    - "quit"
+
+  # Required imports for good practices
+  recommended_imports:
+    - "typing"
+    - "logging"
+    - "pytest"
+
+style:
+  # Line length limits
+  max_line_length: 88
+
+  # Variable naming restrictions
+  forbidden_variable_names:
+    - "l" # Looks like 1
+    - "O" # Looks like 0
+    - "I" # Looks like l
+    - "i" # Too short
+    - "a" # Too short
+    - "b" # Too short
+    - "x" # Too generic
+    - "y" # Too generic
+    - "z" # Too generic
+
+  # Required naming conventions
+  require_snake_case: true
+  require_uppercase_constants: true
+
+  # Comment requirements
+  require_comments: false
+  min_comment_ratio: 0.1
+
+performance:
+  # Performance-related restrictions
+  max_nested_loops: 3
+  max_recursion_depth: 10
+  forbidden_algorithms:
+    - "bubble_sort"
+    - "selection_sort"
+
+  # Memory usage limits
+  max_memory_usage_mb: 100
+
+compliance:
+  # GDPR and privacy considerations
+  require_data_anonymization: false
+  block_personal_data_patterns:
+    - "\\b\\d{12}\\b" # Swedish personal number
+    - "\\b\\d{4}-\\d{2}-\\d{2}\\b" # Date patterns
+    - "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b" # Email
+
+  # License requirements
+  require_license_header: false
+  allowed_licenses:
+    - "MIT"
+    - "Apache-2.0"
+    - "GPL-3.0"
+
+# Policy severity levels
+severity_levels:
+  critical:
+    - "blocked_imports"
+    - "blocked_patterns"
+    - "blocked_network_imports"
+
+  high:
+    - "max_file_size_kb"
+    - "max_complexity"
+    - "forbidden_functions"
+
+  medium:
+    - "min_test_coverage"
+    - "require_docstrings"
+    - "max_line_length"
+
+  low:
+    - "require_type_hints"
+    - "forbidden_variable_names"
+    - "require_snake_case"
+
+# Policy enforcement modes
+enforcement:
+  mode: "strict" # Options: strict, warning, lenient
+  auto_fix: false # Attempt to automatically fix violations
+  max_violations: 5 # Maximum violations before blocking

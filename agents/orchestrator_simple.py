@@ -1,11 +1,10 @@
 """
-AgentOrchestrator - Coordinates multi-agent discussion system.
+Simplified AgentOrchestrator with Plugin Support
 
-Core component of Gabriels vision for CodeConductor.
-Now supports dynamic plugin loading for extensible agent system.
+Uses the user's elegant plugin architecture for CodeConductor v2.0.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 import json
 from pathlib import Path
 from datetime import datetime
@@ -14,11 +13,11 @@ from agents.code_gen import CodeGenAgent
 from agents.architect import ArchitectAgent
 from agents.reviewer import ReviewerAgent
 from agents.prompt_optimizer import prompt_optimizer
-from plugins.base import PluginManager, BaseAgentPlugin, PluginType
+from plugins.base_simple import PluginManager, BaseAgentPlugin
 
 
-class AgentOrchestrator:
-    """Koordinerar multi-agent diskussion och syntetiserar konsensus."""
+class SimpleAgentOrchestrator:
+    """Koordinerar multi-agent diskussion med plugin-stöd."""
 
     def __init__(self, enable_plugins: bool = True):
         self.codegen_agent = CodeGenAgent()
@@ -35,7 +34,7 @@ class AgentOrchestrator:
         # Plugin system
         self.enable_plugins = enable_plugins
         self.plugin_manager = None
-        self.plugin_agents = {}
+        self.plugin_agents = []
 
         if self.enable_plugins:
             self._initialize_plugins()
@@ -45,30 +44,12 @@ class AgentOrchestrator:
         try:
             self.plugin_manager = PluginManager()
 
-            # Discover and load plugins
-            discovered_plugins = self.plugin_manager.discover_plugins()
+            # Discover and activate plugins
+            self.plugin_manager.discover()
+            self.plugin_manager.activate_all()
 
-            # Load agent plugins
-            for plugin_info in discovered_plugins:
-                if (
-                    plugin_info.metadata.plugin_type == PluginType.AGENT
-                    and plugin_info.is_enabled
-                ):
-                    try:
-                        plugin_instance = self.plugin_manager.load_plugin(plugin_info)
-                        if plugin_instance and isinstance(
-                            plugin_instance, BaseAgentPlugin
-                        ):
-                            self.plugin_agents[plugin_info.metadata.name] = (
-                                plugin_instance
-                            )
-                            print(
-                                f"✅ Loaded plugin agent: {plugin_info.metadata.name}"
-                            )
-                    except Exception as e:
-                        print(
-                            f"❌ Failed to load plugin agent {plugin_info.metadata.name}: {e}"
-                        )
+            # Get agent plugins
+            self.plugin_agents = self.plugin_manager.get_agent_plugins()
 
             print(f"🎯 Loaded {len(self.plugin_agents)} plugin agents")
 
@@ -114,7 +95,8 @@ class AgentOrchestrator:
 
         # Plugin agents
         if self.enable_plugins and self.plugin_agents:
-            for plugin_name, plugin_agent in self.plugin_agents.items():
+            for plugin_agent in self.plugin_agents:
+                plugin_name = plugin_agent.name()
                 print(f"\n🔌 {plugin_name} analyzing...")
                 try:
                     plugin_context = {
@@ -124,7 +106,9 @@ class AgentOrchestrator:
                         "core_analyses": analyses,
                     }
 
-                    plugin_analysis = plugin_agent.analyze(plugin_context)
+                    plugin_analysis = plugin_agent.analyze(
+                        context.get("code", ""), plugin_context
+                    )
                     analyses[f"plugin_{plugin_name}"] = plugin_analysis
                     print(
                         f"✅ {plugin_name}: {plugin_analysis.get('description', 'analysis complete')}"
@@ -172,6 +156,22 @@ class AgentOrchestrator:
                 risks.extend(analysis["risks"])
             if "recommendation" in analysis:
                 recommendations.append(analysis["recommendation"])
+
+            # Handle plugin-specific analysis results
+            if agent_name.startswith("plugin_"):
+                if "security_score" in analysis:
+                    recommendations.append(
+                        f"Security score: {analysis['security_score']}"
+                    )
+                if "vulnerabilities" in analysis:
+                    risks.extend(
+                        [
+                            f"Security: {v.get('description', 'vulnerability')}"
+                            for v in analysis.get("vulnerabilities", [])
+                        ]
+                    )
+                if "recommendations" in analysis:
+                    recommendations.extend(analysis["recommendations"])
 
         # Skapa konsensus
         consensus = {
@@ -308,13 +308,13 @@ Generate optimized implementation following the consensus.
             }
 
         # Plugin agents
-        for name, plugin_agent in self.plugin_agents.items():
+        for plugin_agent in self.plugin_agents:
+            name = plugin_agent.name()
             summary["agents"][name] = {
-                "name": plugin_agent.metadata.name,
-                "role": plugin_agent.metadata.description,
+                "name": plugin_agent.name(),
+                "role": plugin_agent.description(),
                 "type": "plugin",
-                "version": plugin_agent.metadata.version,
-                "author": plugin_agent.metadata.author,
+                "version": plugin_agent.version(),
             }
 
         return summary
@@ -324,23 +324,9 @@ Generate optimized implementation following the consensus.
         if not self.plugin_manager:
             return {"plugins_enabled": False}
 
-        plugin_info = {
-            "plugins_enabled": True,
-            "total_plugins": len(self.plugin_manager.list_plugins()),
-            "active_plugins": len(self.plugin_agents),
-            "plugin_details": {},
-        }
+        return self.plugin_manager.get_plugin_info()
 
-        for plugin_name, plugin_agent in self.plugin_agents.items():
-            plugin_info["plugin_details"][plugin_name] = {
-                "name": plugin_agent.metadata.name,
-                "version": plugin_agent.metadata.version,
-                "description": plugin_agent.metadata.description,
-                "author": plugin_agent.metadata.author,
-                "type": plugin_agent.metadata.plugin_type.value,
-                "tags": plugin_agent.metadata.tags,
-                "homepage": plugin_agent.metadata.homepage,
-                "license": plugin_agent.metadata.license,
-            }
-
-        return plugin_info
+    def cleanup(self) -> None:
+        """Clean up orchestrator and plugins"""
+        if self.plugin_manager:
+            self.plugin_manager.deactivate_all()
