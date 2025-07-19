@@ -1,0 +1,324 @@
+# CodeConductor v2.0 Configuration
+# Multi-Agent AI Development Orchestrator
+
+# System Configuration
+system:
+  name: "CodeConductor"
+  version: "2.0.0"
+  environment: "development" # development, production, demo
+  debug_mode: true
+  log_level: "INFO"
+
+# Agent Configuration
+agents:
+  codegen_agent:
+    name: "CodeGenAgent"
+    description: "Specialized in implementation strategies and code generation"
+    confidence_threshold: 0.7
+    max_analysis_time: 30 # seconds
+
+  architect_agent:
+    name: "ArchitectAgent"
+    description: "Focuses on design patterns and system architecture"
+    confidence_threshold: 0.8
+    max_analysis_time: 45 # seconds
+
+  reviewer_agent:
+    name: "ReviewerAgent"
+    description: "Identifies potential issues and quality concerns"
+    confidence_threshold: 0.6
+    max_analysis_time: 25 # seconds
+
+  test_agent:
+    name: "TestAgent"
+    description: "Automated testing and code quality assessment"
+    test_types: ["basic", "comprehensive", "security"]
+    timeout: 60 # seconds
+
+  reward_agent:
+    name: "RewardAgent"
+    description: "Calculates RL rewards based on multiple factors"
+    reward_weights:
+      test_reward: 1.0
+      quality_reward: 1.0
+      human_reward: 1.5
+      efficiency_reward: 0.8
+      optimization_reward: 0.5
+
+# Reinforcement Learning Configuration
+reinforcement_learning:
+  enabled: true
+  algorithm: "q_learning" # q_learning, policy_gradient
+  learning_rate: 0.1
+  discount_factor: 0.9
+  exploration_rate: 0.1
+  exploration_decay: 0.995
+  min_exploration_rate: 0.01
+
+  # Q-Learning specific
+  q_learning:
+    state_size: 100
+    action_size: 10
+    memory_size: 1000
+
+  # Policy Gradient specific
+  policy_gradient:
+    hidden_size: 64
+    learning_rate: 0.001
+
+  # Optimization strategies
+  optimization_strategies:
+    - name: "add_examples"
+      description: "Add concrete examples to prompt"
+      confidence_boost: 0.1
+
+    - name: "clarify_requirements"
+      description: "Make requirements more specific"
+      confidence_boost: 0.15
+
+    - name: "add_context"
+      description: "Add relevant context and background"
+      confidence_boost: 0.05
+
+    - name: "simplify_language"
+      description: "Use simpler, clearer language"
+      confidence_boost: 0.08
+
+    - name: "add_constraints"
+      description: "Specify technical constraints"
+      confidence_boost: 0.12
+
+# Human-in-the-Loop Configuration
+human_gate:
+  enabled: true
+  require_approval: true
+  allow_editing: true
+  approval_threshold: 0.8 # Minimum confidence for auto-approval
+  log_decisions: true
+  log_file: "data/approval_log.json"
+
+# Cursor Integration Configuration
+cursor_integration:
+  enabled: true
+  cursor_path: "cursor" # Path to Cursor CLI
+  model: "gpt-4"
+  temperature: 0.1
+  max_tokens: 2000
+  timeout: 120 # seconds
+  fallback_to_mock: true
+
+  # Prompt templates
+  prompt_templates:
+    api_development: |
+      Create a {framework} API with the following requirements:
+      {requirements}
+
+      Include:
+      - Proper error handling
+      - Input validation
+      - Documentation
+      - Example usage
+
+    web_application: |
+      Build a {framework} web application with:
+      {requirements}
+
+      Include:
+      - User interface
+      - Backend logic
+      - Database integration
+      - Security measures
+
+    cli_tool: |
+      Create a command-line tool that:
+      {requirements}
+
+      Include:
+      - Argument parsing
+      - Help documentation
+      - Error handling
+      - Example usage
+
+# Database Configuration
+database:
+  type: "sqlite"
+  path: "data/rl_history.db"
+  backup_enabled: true
+  backup_interval: 24 # hours
+  max_backups: 7
+
+# Testing Configuration
+testing:
+  automated_tests: true
+  test_coverage_threshold: 80.0
+  security_scanning: true
+  performance_testing: true
+
+  # Test frameworks
+  frameworks:
+    - name: "pytest"
+      enabled: true
+      timeout: 30
+
+    - name: "black"
+      enabled: true
+      line_length: 88
+
+    - name: "pylint"
+      enabled: true
+      score_threshold: 8.0
+
+    - name: "mypy"
+      enabled: true
+      strict_mode: false
+
+    - name: "safety"
+      enabled: true
+      check_vulnerabilities: true
+
+# Use Case Profiles
+use_cases:
+  web_development:
+    name: "Web Development"
+    description: "Full-stack web applications"
+    agents:
+      - codegen_agent
+      - architect_agent
+      - reviewer_agent
+    rl_config:
+      learning_rate: 0.15
+      exploration_rate: 0.2
+    cursor_config:
+      model: "gpt-4"
+      temperature: 0.1
+
+  api_development:
+    name: "API Development"
+    description: "REST APIs and microservices"
+    agents:
+      - codegen_agent
+      - architect_agent
+      - reviewer_agent
+    rl_config:
+      learning_rate: 0.12
+      exploration_rate: 0.15
+    cursor_config:
+      model: "gpt-4"
+      temperature: 0.05
+
+  data_science:
+    name: "Data Science"
+    description: "ML models and data pipelines"
+    agents:
+      - codegen_agent
+      - architect_agent
+      - reviewer_agent
+      - test_agent
+    rl_config:
+      learning_rate: 0.1
+      exploration_rate: 0.25
+    cursor_config:
+      model: "gpt-4"
+      temperature: 0.2
+
+  automation:
+    name: "Automation"
+    description: "Scripts and automation tools"
+    agents:
+      - codegen_agent
+      - reviewer_agent
+    rl_config:
+      learning_rate: 0.08
+      exploration_rate: 0.1
+    cursor_config:
+      model: "gpt-3.5-turbo"
+      temperature: 0.1
+
+# Performance Configuration
+performance:
+  max_iterations: 5
+  timeout_per_iteration: 300 # seconds
+  memory_limit: "2GB"
+  cpu_limit: 4
+
+  # Caching
+  enable_caching: true
+  cache_ttl: 3600 # seconds
+  cache_size: 1000 # entries
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/codeconductor.log"
+  max_file_size: "10MB"
+  backup_count: 5
+
+  # Component-specific logging
+  components:
+    agents: "INFO"
+    rl_system: "DEBUG"
+    human_gate: "INFO"
+    cursor_integration: "INFO"
+    database: "WARNING"
+
+# Security Configuration
+security:
+  enable_security_scanning: true
+  check_dependencies: true
+  validate_inputs: true
+  sanitize_outputs: true
+
+  # Allowed file types for code generation
+  allowed_extensions:
+    - ".py"
+    - ".js"
+    - ".ts"
+    - ".html"
+    - ".css"
+    - ".json"
+    - ".yaml"
+    - ".yml"
+    - ".md"
+
+# Demo Configuration
+demo:
+  enabled: true
+  mock_data: true
+  sample_projects:
+    - name: "REST API"
+      description: "Create a FastAPI REST API with user authentication"
+      type: "api_development"
+
+    - name: "Web Dashboard"
+      description: "Build a React dashboard with data visualization"
+      type: "web_development"
+
+    - name: "ML Pipeline"
+      description: "Create a machine learning pipeline for data analysis"
+      type: "data_science"
+
+    - name: "CLI Tool"
+      description: "Build a command-line tool for file processing"
+      type: "automation"
+
+# Development Configuration
+development:
+  hot_reload: true
+  auto_test: true
+  debug_breakpoints: false
+  profile_performance: false
+
+  # Development tools
+  tools:
+    - name: "pytest"
+      command: "pytest tests/ -v"
+
+    - name: "lint"
+      command: "black . && pylint agents/ integrations/ storage/"
+
+    - name: "type_check"
+      command: "mypy agents/ integrations/ storage/"
+
+    - name: "security_check"
+      command: "safety check"
