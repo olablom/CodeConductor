@@ -284,6 +284,84 @@ class RLDatabase:
                 conn.commit()
                 return episode_data["episode_id"]
 
+    def store_human_feedback(
+        self,
+        episode_id: str,
+        approved: bool,
+        feedback_text: str = "",
+        feedback_score: int = 0,
+        comment: str = "",
+    ) -> bool:
+        """Store detailed human feedback with thumbs up/down"""
+        with self.lock:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+
+                cursor.execute(
+                    """
+                    INSERT INTO human_feedback (
+                        episode_id, approved, reason, feedback_text, edited_code, timestamp
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                    (
+                        episode_id,
+                        approved,
+                        f"Thumbs {'up' if approved else 'down'} - Score: {feedback_score}",
+                        feedback_text,
+                        comment,  # Store comment in edited_code field for now
+                        datetime.now().isoformat(),
+                    ),
+                )
+                conn.commit()
+                return True
+
+    def get_feedback_statistics(self) -> Dict[str, Any]:
+        """Get feedback statistics for dashboard"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            # Total feedback count
+            cursor.execute("SELECT COUNT(*) FROM human_feedback")
+            total_feedback = cursor.fetchone()[0]
+
+            # Positive vs negative
+            cursor.execute("SELECT COUNT(*) FROM human_feedback WHERE approved = 1")
+            positive_feedback = cursor.fetchone()[0]
+
+            cursor.execute("SELECT COUNT(*) FROM human_feedback WHERE approved = 0")
+            negative_feedback = cursor.fetchone()[0]
+
+            # Average comment length
+            cursor.execute("""
+                SELECT AVG(LENGTH(feedback_text)) 
+                FROM human_feedback 
+                WHERE feedback_text IS NOT NULL AND feedback_text != ''
+            """)
+            avg_comment_length = cursor.fetchone()[0] or 0
+
+            # Recent feedback (last 10)
+            cursor.execute("""
+                SELECT approved, feedback_text, timestamp 
+                FROM human_feedback 
+                ORDER BY timestamp DESC 
+                LIMIT 10
+            """)
+            recent_feedback = [
+                {"approved": bool(row[0]), "feedback_text": row[1], "timestamp": row[2]}
+                for row in cursor.fetchall()
+            ]
+
+            return {
+                "total_feedback": total_feedback,
+                "positive_feedback": positive_feedback,
+                "negative_feedback": negative_feedback,
+                "approval_rate": (positive_feedback / total_feedback * 100)
+                if total_feedback > 0
+                else 0,
+                "avg_comment_length": round(avg_comment_length, 1),
+                "recent_feedback": recent_feedback,
+            }
+
     def get_episode(self, episode_id: str) -> Optional[Dict[str, Any]]:
         """Retrieve a complete episode"""
         with sqlite3.connect(self.db_path) as conn:

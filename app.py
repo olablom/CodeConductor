@@ -164,13 +164,14 @@ with st.sidebar:
             st.rerun()
 
 # Main Content Area
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(
     [
         "🤖 Agent Discussion",
         "👤 Human Approval",
         "📊 Learning Metrics",
         "💻 Generated Code",
         "📈 Project History",
+        "💬 Feedback",
     ]
 )
 
@@ -363,8 +364,9 @@ with tab2:
 
             st.subheader("🎯 Decision")
 
-            # Approval buttons
-            col_approve, col_reject = st.columns(2)
+            # Approval buttons with feedback
+            col_approve, col_reject, col_feedback = st.columns(3)
+
             with col_approve:
                 if st.button("✅ Approve", type="primary", use_container_width=True):
                     st.success("🎉 Proposal approved! Moving to implementation...")
@@ -395,6 +397,59 @@ with tab2:
                                 "reason": "human_rejected",
                                 "feedback": feedback,
                             },
+                        )
+
+            with col_feedback:
+                if st.button("🔄 Request Changes", use_container_width=True):
+                    st.warning("🔄 Changes requested. Please provide feedback below.")
+
+            # Enhanced feedback section
+            st.subheader("💬 Detailed Feedback")
+
+            feedback_score = st.slider(
+                "Rate this proposal:",
+                -5,
+                5,
+                0,
+                help="Negative = Poor, Positive = Excellent",
+            )
+
+            feedback_comment = st.text_area(
+                "Additional comments (optional):",
+                placeholder="Share your thoughts about this proposal...",
+                help="Detailed feedback helps improve the system!",
+            )
+
+            if st.button("📤 Submit Feedback", use_container_width=True):
+                # Store feedback in database
+                if hasattr(st.session_state, "db"):
+                    feedback_data = {
+                        "approved": feedback_score >= 0,
+                        "feedback_score": feedback_score,
+                        "comment": feedback_comment,
+                        "feedback_text": f"Score: {feedback_score}, Comment: {feedback_comment}",
+                    }
+
+                    # Store in database
+                    episode_id = proposal.get(
+                        "proposal_id", f"feedback_{datetime.now().timestamp()}"
+                    )
+                    st.session_state.db.store_human_feedback(
+                        episode_id=episode_id,
+                        approved=feedback_data["approved"],
+                        feedback_text=feedback_data["feedback_text"],
+                        feedback_score=feedback_data["feedback_score"],
+                        comment=feedback_data["comment"],
+                    )
+
+                    st.success(f"📤 Feedback submitted! Score: {feedback_score}")
+
+                    # Update reward calculation
+                    if hasattr(st.session_state, "reward_agent"):
+                        st.session_state.reward_agent.calculate_reward(
+                            test_results={},
+                            human_feedback=feedback_data,
+                            iteration_count=1,
                         )
 
             # Edit option
@@ -679,6 +734,79 @@ with tab5:
     )
 
     st.line_chart(learning_data.set_index("Date"))
+
+with tab6:
+    st.header("💬 Human Feedback Analytics")
+
+    # Initialize database if not exists
+    if not hasattr(st.session_state, "db"):
+        from storage.rl_database import RLDatabase
+
+        st.session_state.db = RLDatabase()
+
+    # Get feedback statistics
+    try:
+        feedback_stats = st.session_state.db.get_feedback_statistics()
+
+        # Display feedback metrics
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric("Total Feedback", feedback_stats["total_feedback"])
+        with col2:
+            st.metric("👍 Positive", feedback_stats["positive_feedback"])
+        with col3:
+            st.metric("👎 Negative", feedback_stats["negative_feedback"])
+        with col4:
+            st.metric("Approval Rate", f"{feedback_stats['approval_rate']:.0%}")
+
+        # Feedback distribution
+        st.subheader("📊 Feedback Distribution")
+
+        if feedback_stats["total_feedback"] > 0:
+            feedback_data = pd.DataFrame(
+                {
+                    "Type": ["Positive", "Negative"],
+                    "Count": [
+                        feedback_stats["positive_feedback"],
+                        feedback_stats["negative_feedback"],
+                    ],
+                }
+            )
+
+            st.bar_chart(feedback_data.set_index("Type"))
+
+            # Average comment length
+            st.metric(
+                "Avg Comment Length",
+                f"{feedback_stats['avg_comment_length']:.1f} chars",
+            )
+
+            # Recent feedback
+            st.subheader("📝 Recent Feedback")
+
+            if feedback_stats["recent_feedback"]:
+                recent_df = pd.DataFrame(feedback_stats["recent_feedback"])
+                recent_df["Status"] = recent_df["approved"].map(
+                    {True: "👍", False: "👎"}
+                )
+                recent_df["Date"] = pd.to_datetime(recent_df["timestamp"]).dt.strftime(
+                    "%Y-%m-%d %H:%M"
+                )
+
+                st.dataframe(
+                    recent_df[["Date", "Status", "feedback_text"]].head(10),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+            else:
+                st.info("📝 No feedback submitted yet. Try rating a proposal!")
+        else:
+            st.info("📊 No feedback data yet. Submit your first feedback!")
+
+    except Exception as e:
+        st.error(f"Error loading feedback data: {e}")
+        st.info("📊 Feedback system ready - submit your first feedback!")
 
 # Footer
 st.markdown("---")

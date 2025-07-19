@@ -174,10 +174,22 @@ class RewardAgent:
         elif "human_rejected" in reason:
             reward -= 10.0  # Extra penalty for rejection
 
+        # NEW: Thumbs up/down feedback bonus
+        feedback_score = human_feedback.get("feedback_score", 0)
+        if feedback_score > 0:
+            reward += 15.0  # +15 bonus for positive feedback
+        elif feedback_score < 0:
+            reward -= 10.0  # -10 penalty for negative feedback
+
         # Feedback quality
         feedback_text = human_feedback.get("feedback", "")
         if feedback_text and len(feedback_text) > 10:
             reward += 2.0  # Small bonus for detailed feedback
+
+        # Comment quality bonus
+        comment = human_feedback.get("comment", "")
+        if comment and len(comment) > 20:
+            reward += 3.0  # Bonus for detailed comments
 
         return max(-50.0, min(50.0, reward))
 
