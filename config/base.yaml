@@ -4,6 +4,7 @@ rewards:
   lint_score: 10
   complexity: 10
   human_feedback: 60
+  creativity_bonus: 15 # Bonus för kreativa lösningar
 
 # Pipeline settings
 pipeline:
@@ -12,7 +13,7 @@ pipeline:
 
 # Bandit parameters
 bandit:
-  alpha: 1.0
+  alpha: 2.0 # Öka exploration
   feature_dim: 3
 
 # Database

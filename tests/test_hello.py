@@ -39,3 +39,31 @@ def hello_world():
     result = module.hello_world()
     assert isinstance(result, str)
     assert len(result) > 0
+
+
+def test_add_numbers_exists(tmp_path):
+    """Testa att add_numbers funktionen existerar"""
+    code_file = tmp_path / "generated.py"
+    code_file.write_text("""
+def add_numbers(a: int, b: int) -> int:
+    \"\"\"Add two numbers\"\"\"
+    return a + b
+""")
+
+    module = load_module_from_file(code_file)
+    assert hasattr(module, "add_numbers")
+    assert callable(module.add_numbers)
+
+
+def test_add_numbers_works(tmp_path):
+    """Testa att add_numbers fungerar korrekt"""
+    code_file = tmp_path / "generated.py"
+    code_file.write_text("""
+def add_numbers(a: int, b: int) -> int:
+    \"\"\"Add two numbers\"\"\"
+    return a + b
+""")
+
+    module = load_module_from_file(code_file)
+    result = module.add_numbers(5, 3)
+    assert result == 8

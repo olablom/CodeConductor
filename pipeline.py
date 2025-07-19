@@ -55,12 +55,30 @@ def extract_features(prompt_path: Path, iteration: int, history: list) -> np.nda
     return features
 
 
-def run_tests(code_path: Path) -> Tuple[bool, float]:
-    """Kör pytest på genererad kod"""
+def run_tests(code_path: Path, prompt_path: Path) -> Tuple[bool, float]:
+    """Kör pytest på genererad kod baserat på prompt"""
     test_file = Path("tests/test_generated.py")
 
-    # Skapa temporär testfil
-    test_content = f'''
+    # Bestäm vilken funktion vi testar baserat på prompt
+    prompt_content = prompt_path.read_text().lower()
+
+    if "add_numbers" in prompt_content or "calculator" in prompt_content:
+        # Test för calculator
+        test_content = f'''
+import sys
+sys.path.insert(0, "{code_path.parent}")
+from {code_path.stem} import add_numbers
+
+def test_add_numbers_exists():
+    assert callable(add_numbers)
+
+def test_add_numbers_works():
+    result = add_numbers(5, 3)
+    assert result == 8
+'''
+    else:
+        # Default test för hello_world
+        test_content = f'''
 import sys
 sys.path.insert(0, "{code_path.parent}")
 from {code_path.stem} import hello_world
@@ -108,17 +126,33 @@ def calculate_complexity(code_path: Path) -> float:
     return complexity_score
 
 
-def calculate_reward(passed: bool, complexity: float, config: dict) -> float:
+def calculate_reward(
+    passed: bool, complexity: float, config: dict, code_content: str = ""
+) -> float:
     """Beräkna total reward"""
     rewards = config.rewards
 
-    reward = (
+    base_reward = (
         passed * rewards.test_pass
         + complexity * rewards.complexity
         + 0.5 * rewards.lint_score  # Mock lint score
     )
 
-    return reward
+    # Kreativitetsbonus för intressanta lösningar
+    creativity_bonus = 0
+    if passed and code_content:
+        if (
+            "emoji" in code_content.lower()
+            or "🎉" in code_content
+            or "🚀" in code_content
+        ):
+            creativity_bonus = rewards.creativity_bonus
+        elif "import" in code_content and "time" in code_content:
+            creativity_bonus = rewards.creativity_bonus * 0.5
+        elif "random" in code_content:
+            creativity_bonus = rewards.creativity_bonus * 0.3
+
+    return base_reward + creativity_bonus
 
 
 @click.command()
@@ -163,13 +197,13 @@ def main(prompt, iters, mock):
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         if mock:
-            cursor_run(Path(prompt), output_path)
+            cursor_run(Path(prompt), output_path, strategy=arm)
         else:
             # TODO: Implementera riktig Cursor-integration
-            cursor_run(Path(prompt), output_path)
+            cursor_run(Path(prompt), output_path, strategy=arm)
 
         # 4. Kör tester
-        passed, pass_rate = run_tests(output_path)
+        passed, pass_rate = run_tests(output_path, Path(prompt))
         click.echo(f"Tests passed: {passed}")
 
         # 5. Beräkna komplexitet
@@ -177,7 +211,8 @@ def main(prompt, iters, mock):
         click.echo(f"Complexity score: {complexity:.2f}")
 
         # 6. Beräkna reward
-        reward = calculate_reward(passed, complexity, config)
+        code_content = output_path.read_text()
+        reward = calculate_reward(passed, complexity, config, code_content)
         click.echo(f"Reward: {reward:.2f}")
 
         # 7. Uppdatera bandit
