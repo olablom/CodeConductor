@@ -505,7 +505,10 @@ def calculate_reward(
 @click.option(
     "--multi-file", is_flag=True, help="Generate multi-file project structure"
 )
-def main(prompt, iters, mock, online, multi_file):
+@click.option(
+    "--distributed", is_flag=True, help="Use distributed execution with Celery"
+)
+def main(prompt, iters, mock, online, multi_file, distributed):
     """Kör CodeConductor pipeline"""
     # Ladda config
     config = OmegaConf.load("config/base.yaml")
@@ -546,6 +549,34 @@ def main(prompt, iters, mock, online, multi_file):
             print("⚠️ ModelManager not available, continuing without model management")
         except Exception as e:
             print(f"⚠️ Model setup failed: {e}, continuing...")
+
+    # Initialize distributed orchestrator if requested
+    orchestrator = None
+    if distributed:
+        try:
+            from agents.orchestrator_distributed import DistributedAgentOrchestrator
+
+            orchestrator = DistributedAgentOrchestrator(enable_plugins=True)
+            print("🚀 Distributed execution enabled with Celery")
+
+            # Check distributed stats
+            stats = orchestrator.get_distributed_stats()
+            if stats.get("distributed_enabled"):
+                print(
+                    f"✅ Celery broker available: {stats.get('broker_available', False)}"
+                )
+                print(
+                    f"🔧 Worker concurrency: {stats.get('worker_concurrency', 'Unknown')}"
+                )
+            else:
+                print(
+                    "⚠️ Distributed mode not available, falling back to local execution"
+                )
+                orchestrator = None
+        except Exception as e:
+            print(f"⚠️ Failed to initialize distributed orchestrator: {e}")
+            print("🔄 Falling back to local execution")
+            orchestrator = None
 
     # Initiera bandit
     bandit = LinUCBBandit(d=config.bandit.feature_dim, alpha=config.bandit.alpha)
@@ -610,7 +641,69 @@ def main(prompt, iters, mock, online, multi_file):
         else:
             prompt_to_use = Path(prompt)
 
-        # 4. Generera kod
+        # 4. ML Quality Prediction
+        ml_prediction = None
+        try:
+            from analytics.ml_predictor import create_predictor
+
+            predictor = create_predictor()
+            prediction_context = {
+                "strategy": arm,
+                "prev_pass_rate": np.mean([h["passed"] for h in history[-5:]])
+                if history
+                else 0.5,
+                "complexity_avg": np.mean(
+                    [h.get("complexity", 0.5) for h in history[-5:]]
+                )
+                if history
+                else 0.5,
+                "reward_avg": np.mean([h.get("reward", 30.0) for h in history[-5:]])
+                if history
+                else 30.0,
+                "iteration_count": i + 1,
+                "model_source": model_source,
+            }
+
+            ml_prediction = predictor.predict_quality(
+                prompt_to_use.read_text(), prediction_context
+            )
+
+            if "error" not in ml_prediction:
+                click.echo(
+                    f"🤖 ML Prediction: Quality {ml_prediction['quality_score']:.2f}, Success {ml_prediction['success_probability']:.2f}"
+                )
+
+                # Show warnings
+                for warning in ml_prediction.get("warnings", []):
+                    click.echo(f"  {warning}")
+            else:
+                click.echo(f"⚠️ ML prediction failed: {ml_prediction['error']}")
+
+        except Exception as e:
+            click.echo(f"⚠️ ML prediction not available: {e}")
+
+        # 5. Use distributed orchestrator if available
+        if orchestrator:
+            click.echo("🤖 Using distributed orchestrator for code generation...")
+            try:
+                discussion_result = orchestrator.facilitate_discussion(
+                    prompt_to_use.read_text(),
+                    {"strategy": arm, "iteration": i, "multi_file": multi_file},
+                )
+
+                # Extract consensus approach from discussion
+                consensus = discussion_result.get("consensus", {})
+                approach = consensus.get("synthesized_approach", "standard")
+                click.echo(f"🎯 Consensus approach: {approach}")
+
+                # Use the consensus approach for generation
+                arm = approach if approach in arms else arm
+
+            except Exception as e:
+                click.echo(f"⚠️ Distributed orchestrator failed: {e}")
+                click.echo("🔄 Falling back to standard generation...")
+
+        # 5. Generera kod
         if multi_file:
             # Multi-file project generation
             project_dir = Path(f"data/generated/iter_{i}_project")
@@ -672,7 +765,7 @@ def main(prompt, iters, mock, online, multi_file):
             else:
                 cursor_run(prompt_to_use, output_path, strategy=arm)
 
-        # 5. PolicyAgent säkerhetskontroll
+        # 6. PolicyAgent säkerhetskontroll
         code_content = output_path.read_text()
         is_safe, violations = validate_code_safety(code_content, str(prompt_to_use))
 
@@ -695,7 +788,7 @@ def main(prompt, iters, mock, online, multi_file):
         else:
             click.echo(f"✅ Code passed PolicyAgent safety check")
 
-            # 6. Kör tester
+            # 7. Kör tester
             if multi_file:
                 # Test multi-file project
                 from agents.test_agent import TestAgent
@@ -714,11 +807,11 @@ def main(prompt, iters, mock, online, multi_file):
                 passed, pass_rate = run_tests(output_path, prompt_to_use)
                 click.echo(f"Tests passed: {passed}")
 
-            # 7. Beräkna komplexitet
+            # 8. Beräkna komplexitet
             complexity = calculate_complexity(output_path)
             click.echo(f"Complexity score: {complexity:.2f}")
 
-            # 8. Beräkna reward med PromptOptimizer-bonus
+            # 9. Beräkna reward med PromptOptimizer-bonus
             base_reward = calculate_reward(passed, complexity, config, code_content)
             reward = prompt_optimizer.calculate_reward(
                 passed=passed,
@@ -729,10 +822,10 @@ def main(prompt, iters, mock, online, multi_file):
             )
             click.echo(f"Reward: {reward:.2f} (base: {base_reward:.2f})")
 
-        # 9. Uppdatera bandit
+        # 10. Uppdatera bandit
         bandit.update(arm, features, reward)
 
-        # 10. Uppdatera PromptOptimizerAgent
+        # 11. Uppdatera PromptOptimizerAgent
         if optimizer_state_prev and optimizer_action_prev:
             current_state = prompt_optimizer.create_state(
                 task_id=task_id,
