@@ -1,449 +1,481 @@
 """
-Tests for RewardAgent class.
-
-This module tests the reward calculation logic and ensures proper
-handling of different metrics and scenarios.
+Unit tests for RewardAgent reward calculation functionality
 """
 
-import pytest
-from agents.reward_agent import RewardAgent, TestResults, CodeMetrics
+import unittest
+from unittest.mock import patch, MagicMock
+import sys
+import os
+
+# Add the parent directory to the path to import the agents module
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from agents.reward_agent import (
+    RewardAgent,
+    TestResult,
+    CodeQualityMetrics,
+    HumanFeedback,
+    PolicyResult,
+)
 
 
-class TestTestResults:
-    """Test cases for TestResults dataclass."""
+class TestRewardAgent(unittest.TestCase):
+    """Test cases for RewardAgent reward calculation"""
 
-    def test_test_results_creation(self):
-        """Test creating TestResults instance."""
-        results = TestResults(
-            passed=8,
-            failed=2,
-            total=10,
-            execution_time=5.5,
-            coverage=0.85,
-            lint_score=9.2,
+    def setUp(self):
+        """Set up test fixtures"""
+        self.agent = RewardAgent("TestRewardAgent")
+
+        # Sample test data
+        self.sample_test_result = TestResult(
+            passed=True,
+            total_tests=10,
+            passed_tests=9,
+            failed_tests=1,
+            coverage_percentage=85.0,
+            execution_time=2.5,
+            error_messages=[],
         )
 
-        assert results.passed == 8
-        assert results.failed == 2
-        assert results.total == 10
-        assert results.execution_time == 5.5
-        assert results.coverage == 0.85
-        assert results.lint_score == 9.2
-
-    def test_pass_rate_calculation(self):
-        """Test pass rate calculation."""
-        results = TestResults(passed=8, failed=2, total=10, execution_time=5.0)
-        assert results.pass_rate == 0.8
-
-    def test_pass_rate_zero_total(self):
-        """Test pass rate with zero total tests."""
-        results = TestResults(passed=0, failed=0, total=0, execution_time=0.0)
-        assert results.pass_rate == 0.0
-
-
-class TestCodeMetrics:
-    """Test cases for CodeMetrics dataclass."""
-
-    def test_code_metrics_creation(self):
-        """Test creating CodeMetrics instance."""
-        metrics = CodeMetrics(
-            complexity=8.5,
-            lines_of_code=150,
-            function_count=12,
-            class_count=3,
-            comment_ratio=0.15,
+        self.sample_code_quality = CodeQualityMetrics(
+            quality_score=0.8,
+            complexity_score=0.7,
+            maintainability_score=0.8,
+            documentation_score=0.9,
+            style_score=0.8,
+            security_score=0.9,
         )
 
-        assert metrics.complexity == 8.5
-        assert metrics.lines_of_code == 150
-        assert metrics.function_count == 12
-        assert metrics.class_count == 3
-        assert metrics.comment_ratio == 0.15
-
-    def test_complexity_score_low(self):
-        """Test complexity score for low complexity."""
-        metrics = CodeMetrics(
-            complexity=5.0, lines_of_code=100, function_count=5, class_count=1
-        )
-        assert metrics.complexity_score == 1.0
-
-    def test_complexity_score_high(self):
-        """Test complexity score for high complexity."""
-        metrics = CodeMetrics(
-            complexity=25.0, lines_of_code=200, function_count=20, class_count=5
-        )
-        # Should be penalized: 1.0 - (25-10)/20 = 1.0 - 0.75 = 0.25
-        assert metrics.complexity_score == 0.25
-
-    def test_complexity_score_boundary(self):
-        """Test complexity score at boundary."""
-        metrics = CodeMetrics(
-            complexity=10.0, lines_of_code=100, function_count=5, class_count=1
-        )
-        assert metrics.complexity_score == 1.0
-
-
-class TestRewardAgent:
-    """Test cases for RewardAgent class."""
-
-    def test_reward_agent_initialization(self):
-        """Test RewardAgent initialization."""
-        agent = RewardAgent("test_reward_agent")
-
-        assert agent.name == "test_reward_agent"
-        assert agent.config["test_weight"] == 0.4
-        assert agent.config["complexity_weight"] == 0.2
-        assert agent.config["policy_weight"] == 0.2
-        assert agent.config["feedback_weight"] == 0.2
-
-    def test_reward_agent_with_custom_config(self):
-        """Test RewardAgent with custom configuration."""
-        config = {
-            "test_weight": 0.5,
-            "complexity_weight": 0.3,
-            "policy_weight": 0.1,
-            "feedback_weight": 0.1,
-        }
-        agent = RewardAgent("custom_agent", config)
-
-        assert agent.config["test_weight"] == 0.5
-        assert agent.config["complexity_weight"] == 0.3
-        assert agent.config["policy_weight"] == 0.1
-        assert agent.config["feedback_weight"] == 0.1
-
-    def test_analyze_method(self):
-        """Test analyze method."""
-        agent = RewardAgent("test_agent")
-
-        context = {
-            "test_results": TestResults(
-                passed=8, failed=2, total=10, execution_time=5.0
-            ),
-            "code_metrics": CodeMetrics(
-                complexity=8.0, lines_of_code=100, function_count=5, class_count=1
-            ),
-            "policy_violations": [],
-            "human_feedback": {"rating": 0.8},
-        }
-
-        analysis = agent.analyze(context)
-
-        assert "metrics_available" in analysis
-        assert "data_quality" in analysis
-        assert "recommendations" in analysis
-        assert len(analysis["metrics_available"]) == 4
-        assert analysis["data_quality"] == "good"
-
-    def test_analyze_method_poor_data(self):
-        """Test analyze method with poor data quality."""
-        agent = RewardAgent("test_agent")
-
-        context = {
-            "test_results": TestResults(
-                passed=5, failed=5, total=10, execution_time=5.0
-            )
-        }
-
-        analysis = agent.analyze(context)
-
-        assert len(analysis["metrics_available"]) == 1
-        assert analysis["data_quality"] == "poor"
-        assert len(analysis["recommendations"]) > 0
-
-    def test_propose_method(self):
-        """Test propose method."""
-        agent = RewardAgent("test_agent")
-
-        analysis = {
-            "metrics_available": ["test_results", "code_metrics", "policy_violations"]
-        }
-
-        proposal = agent.propose(analysis)
-
-        assert "approach" in proposal
-        assert "weights" in proposal
-        assert "confidence" in proposal
-        assert proposal["approach"] == "weighted_combination"
-        assert proposal["confidence"] == 0.8
-
-    def test_review_method(self):
-        """Test review method."""
-        agent = RewardAgent("test_agent")
-
-        code = "def hello_world():\n    print('Hello, World!')"
-        review = agent.review(code)
-
-        assert "quality_score" in review
-        assert "issues" in review
-        assert "recommendations" in review
-        assert "reward_potential" in review
-        assert review["quality_score"] == 0.8
-
-
-class TestRewardCalculation:
-    """Test cases for reward calculation methods."""
-
-    def test_calculate_reward_all_metrics(self):
-        """Test reward calculation with all metrics."""
-        agent = RewardAgent("test_agent")
-
-        test_results = TestResults(
-            passed=9,
-            failed=1,
-            total=10,
-            execution_time=3.0,
-            coverage=0.9,
-            lint_score=9.5,
-        )
-        code_metrics = CodeMetrics(
-            complexity=8.0,
-            lines_of_code=100,
-            function_count=5,
-            class_count=1,
-            comment_ratio=0.2,
-        )
-        policy_violations = []
-        human_feedback = {
-            "thumbs_up": 3,
-            "thumbs_down": 0,
-            "rating": 0.9,
-            "comments": ["Great code!"],
-        }
-
-        reward = agent.calculate_reward(
-            test_results=test_results,
-            code_metrics=code_metrics,
-            policy_violations=policy_violations,
-            human_feedback=human_feedback,
+        self.sample_human_feedback = HumanFeedback(
+            overall_rating=0.8,
+            usefulness_rating=0.9,
+            correctness_rating=0.8,
+            completeness_rating=0.7,
+            comments="Good code, well structured",
+            approved=True,
         )
 
-        assert "total_reward" in reward
-        assert "components" in reward
-        assert "weights" in reward
-        assert "metadata" in reward
-
-        # Check components
-        components = reward["components"]
-        assert "test" in components
-        assert "complexity" in components
-        assert "policy" in components
-        assert "feedback" in components
-
-        # Total reward should be positive
-        assert reward["total_reward"] > 0.0
-
-    def test_calculate_reward_partial_metrics(self):
-        """Test reward calculation with partial metrics."""
-        agent = RewardAgent("test_agent")
-
-        test_results = TestResults(passed=5, failed=5, total=10, execution_time=5.0)
-        policy_violations = ["deprecated_function_used"]
-
-        reward = agent.calculate_reward(
-            test_results=test_results, policy_violations=policy_violations
+        self.sample_policy_result = PolicyResult(
+            safe=True,
+            decision="pass",
+            risk_level="low",
+            violations_count=0,
+            critical_violations=0,
+            high_violations=0,
         )
 
-        assert "total_reward" in reward
-        assert "test" in reward["components"]
-        assert "policy" in reward["components"]
-        assert "complexity" not in reward["components"]
-        assert "feedback" not in reward["components"]
+    def test_init(self):
+        """Test RewardAgent initialization"""
+        agent = RewardAgent("TestAgent")
+        self.assertEqual(agent.name, "TestAgent")
+        self.assertIn("test_results", agent.weights)
+        self.assertIn("code_quality", agent.weights)
+        self.assertIn("human_feedback", agent.weights)
+        self.assertIn("policy_compliance", agent.weights)
+        self.assertIn("performance", agent.weights)
 
-    def test_calculate_reward_no_metrics(self):
-        """Test reward calculation with no metrics."""
-        agent = RewardAgent("test_agent")
+    def test_calculate_reward_basic(self):
+        """Test basic reward calculation"""
+        result = self.agent.calculate_reward(
+            self.sample_test_result,
+            self.sample_code_quality,
+            self.sample_human_feedback,
+            self.sample_policy_result,
+        )
 
-        reward = agent.calculate_reward()
+        self.assertIn("total_reward", result)
+        self.assertIn("reward_level", result)
+        self.assertIn("breakdown", result)
+        self.assertIn("recommendations", result)
+        self.assertIn("weights", result)
+        self.assertIn("thresholds", result)
+        self.assertIn("metadata", result)
 
-        assert reward["total_reward"] == 0.0
-        assert len(reward["components"]) == 0
+        self.assertIsInstance(result["total_reward"], float)
+        self.assertGreaterEqual(result["total_reward"], 0.0)
+        self.assertLessEqual(result["total_reward"], 1.0)
 
-    def test_test_reward_calculation(self):
-        """Test test reward calculation."""
-        agent = RewardAgent("test_agent")
+    def test_calculate_reward_perfect_score(self):
+        """Test reward calculation with perfect scores"""
+        perfect_test = TestResult(
+            passed=True,
+            total_tests=10,
+            passed_tests=10,
+            failed_tests=0,
+            coverage_percentage=100.0,
+            execution_time=1.0,
+            error_messages=[],
+        )
 
-        # Perfect test results
-        perfect_results = TestResults(
-            passed=10,
-            failed=0,
-            total=10,
+        perfect_quality = CodeQualityMetrics(
+            quality_score=1.0,
+            complexity_score=1.0,
+            maintainability_score=1.0,
+            documentation_score=1.0,
+            style_score=1.0,
+            security_score=1.0,
+        )
+
+        perfect_feedback = HumanFeedback(
+            overall_rating=1.0,
+            usefulness_rating=1.0,
+            correctness_rating=1.0,
+            completeness_rating=1.0,
+            comments="Perfect!",
+            approved=True,
+        )
+
+        perfect_policy = PolicyResult(
+            safe=True,
+            decision="pass",
+            risk_level="low",
+            violations_count=0,
+            critical_violations=0,
+            high_violations=0,
+        )
+
+        result = self.agent.calculate_reward(
+            perfect_test, perfect_quality, perfect_feedback, perfect_policy
+        )
+
+        self.assertGreater(result["total_reward"], 0.9)
+        self.assertEqual(result["reward_level"], "excellent")
+
+    def test_calculate_reward_poor_score(self):
+        """Test reward calculation with poor scores"""
+        poor_test = TestResult(
+            passed=False,
+            total_tests=10,
+            passed_tests=2,
+            failed_tests=8,
+            coverage_percentage=20.0,
+            execution_time=15.0,
+            error_messages=["Test failed", "Syntax error"],
+        )
+
+        poor_quality = CodeQualityMetrics(
+            quality_score=0.2,
+            complexity_score=0.1,
+            maintainability_score=0.2,
+            documentation_score=0.1,
+            style_score=0.3,
+            security_score=0.2,
+        )
+
+        poor_feedback = HumanFeedback(
+            overall_rating=0.2,
+            usefulness_rating=0.1,
+            correctness_rating=0.2,
+            completeness_rating=0.1,
+            comments="This is terrible",
+            approved=False,
+        )
+
+        poor_policy = PolicyResult(
+            safe=False,
+            decision="block",
+            risk_level="critical",
+            violations_count=5,
+            critical_violations=2,
+            high_violations=3,
+        )
+
+        result = self.agent.calculate_reward(
+            poor_test, poor_quality, poor_feedback, poor_policy
+        )
+
+        self.assertLess(result["total_reward"], 0.3)
+        self.assertIn(result["reward_level"], ["poor", "needs_improvement"])
+
+    def test_calculate_test_reward(self):
+        """Test test reward calculation"""
+        # Good test results
+        good_test = TestResult(
+            passed=True,
+            total_tests=10,
+            passed_tests=9,
+            failed_tests=1,
+            coverage_percentage=90.0,
             execution_time=2.0,
-            coverage=0.95,
-            lint_score=10.0,
+            error_messages=[],
         )
-        perfect_reward = agent._calculate_test_reward(perfect_results)
-        assert perfect_reward > 0.9
+
+        good_reward = self.agent._calculate_test_reward(good_test)
+        self.assertGreater(good_reward, 0.8)
 
         # Poor test results
-        poor_results = TestResults(
-            passed=2,
-            failed=8,
-            total=10,
-            execution_time=15.0,
-            coverage=0.3,
-            lint_score=5.0,
+        poor_test = TestResult(
+            passed=False,
+            total_tests=10,
+            passed_tests=3,
+            failed_tests=7,
+            coverage_percentage=30.0,
+            execution_time=20.0,
+            error_messages=["Error 1", "Error 2", "Error 3"],
         )
-        poor_reward = agent._calculate_test_reward(poor_results)
-        assert poor_reward < 0.5
 
-    def test_complexity_reward_calculation(self):
-        """Test complexity reward calculation."""
-        agent = RewardAgent("test_agent")
+        poor_reward = self.agent._calculate_test_reward(poor_test)
+        self.assertLess(poor_reward, 0.5)
 
-        # Good complexity
-        good_metrics = CodeMetrics(
-            complexity=5.0,
-            lines_of_code=50,
-            function_count=3,
-            class_count=1,
-            comment_ratio=0.25,
+    def test_calculate_quality_reward(self):
+        """Test quality reward calculation"""
+        # Good quality
+        good_quality = CodeQualityMetrics(
+            quality_score=0.9,
+            complexity_score=0.8,
+            maintainability_score=0.9,
+            documentation_score=0.9,
+            style_score=0.8,
+            security_score=0.9,
         )
-        good_reward = agent._calculate_complexity_reward(good_metrics)
-        assert good_reward > 0.8
 
-        # Poor complexity
-        poor_metrics = CodeMetrics(
-            complexity=25.0,
-            lines_of_code=500,
-            function_count=50,
-            class_count=10,
-            comment_ratio=0.05,
+        good_reward = self.agent._calculate_quality_reward(good_quality)
+        self.assertGreater(good_reward, 0.8)
+
+        # Poor quality
+        poor_quality = CodeQualityMetrics(
+            quality_score=0.3,
+            complexity_score=0.2,
+            maintainability_score=0.3,
+            documentation_score=0.2,
+            style_score=0.4,
+            security_score=0.3,
         )
-        poor_reward = agent._calculate_complexity_reward(poor_metrics)
-        assert poor_reward < 0.5
 
-    def test_policy_reward_calculation(self):
-        """Test policy reward calculation."""
-        agent = RewardAgent("test_agent")
+        poor_reward = self.agent._calculate_quality_reward(poor_quality)
+        self.assertLess(poor_reward, 0.4)
 
-        # No violations
-        no_violations = []
-        perfect_reward = agent._calculate_policy_reward(no_violations)
-        assert perfect_reward == 1.0
-
-        # Minor violations
-        minor_violations = ["deprecated_function_used", "missing_docstring"]
-        minor_reward = agent._calculate_policy_reward(minor_violations)
-        assert 0.5 < minor_reward < 1.0
-
-        # Severe violations
-        severe_violations = ["security_vulnerability", "dangerous_code_pattern"]
-        severe_reward = agent._calculate_policy_reward(severe_violations)
-        assert severe_reward < 0.5
-
-    def test_feedback_reward_calculation(self):
-        """Test feedback reward calculation."""
-        agent = RewardAgent("test_agent")
-
-        # Positive feedback
-        positive_feedback = {
-            "thumbs_up": 5,
-            "thumbs_down": 0,
-            "rating": 0.9,
-            "comments": ["Excellent work!", "Great code quality!"],
-        }
-        positive_reward = agent._calculate_feedback_reward(positive_feedback)
-        assert positive_reward > 0.8
-
-        # Negative feedback
-        negative_feedback = {
-            "thumbs_up": 0,
-            "thumbs_down": 3,
-            "rating": 0.2,
-            "comments": ["Poor code", "Bad implementation"],
-        }
-        negative_reward = agent._calculate_feedback_reward(negative_feedback)
-        assert negative_reward < 0.5
-
-    def test_reward_normalization(self):
-        """Test that rewards are properly normalized."""
-        agent = RewardAgent("test_agent", {"min_reward": -1.0, "max_reward": 1.0})
-
-        # Test with very high rewards
-        test_results = TestResults(
-            passed=10,
-            failed=0,
-            total=10,
-            execution_time=1.0,
-            coverage=1.0,
-            lint_score=10.0,
+    def test_calculate_feedback_reward(self):
+        """Test feedback reward calculation"""
+        # Good feedback
+        good_feedback = HumanFeedback(
+            overall_rating=0.9,
+            usefulness_rating=0.9,
+            correctness_rating=0.9,
+            completeness_rating=0.8,
+            comments="Excellent work!",
+            approved=True,
         )
-        code_metrics = CodeMetrics(
-            complexity=1.0,
-            lines_of_code=10,
-            function_count=1,
-            class_count=0,
-            comment_ratio=0.5,
+
+        good_reward = self.agent._calculate_feedback_reward(good_feedback)
+        self.assertGreater(good_reward, 0.9)
+
+        # Poor feedback
+        poor_feedback = HumanFeedback(
+            overall_rating=0.2,
+            usefulness_rating=0.1,
+            correctness_rating=0.2,
+            completeness_rating=0.1,
+            comments="This is bad",
+            approved=False,
         )
-        policy_violations = []
-        human_feedback = {
-            "thumbs_up": 10,
-            "thumbs_down": 0,
-            "rating": 1.0,
-            "comments": ["Perfect!"],
+
+        poor_reward = self.agent._calculate_feedback_reward(poor_feedback)
+        self.assertLess(poor_reward, 0.4)
+
+    def test_calculate_policy_reward(self):
+        """Test policy reward calculation"""
+        # Good policy compliance
+        good_policy = PolicyResult(
+            safe=True,
+            decision="pass",
+            risk_level="low",
+            violations_count=0,
+            critical_violations=0,
+            high_violations=0,
+        )
+
+        good_reward = self.agent._calculate_policy_reward(good_policy)
+        self.assertEqual(good_reward, 1.0)
+
+        # Poor policy compliance
+        poor_policy = PolicyResult(
+            safe=False,
+            decision="block",
+            risk_level="critical",
+            violations_count=5,
+            critical_violations=2,
+            high_violations=3,
+        )
+
+        poor_reward = self.agent._calculate_policy_reward(poor_policy)
+        self.assertEqual(poor_reward, 0.0)
+
+    def test_calculate_performance_reward(self):
+        """Test performance reward calculation"""
+        # Good performance
+        good_performance = {
+            "response_time": 0.5,
+            "memory_usage": 50.0,
+            "cpu_usage": 30.0,
         }
 
-        reward = agent.calculate_reward(
-            test_results=test_results,
-            code_metrics=code_metrics,
-            policy_violations=policy_violations,
-            human_feedback=human_feedback,
-        )
+        good_reward = self.agent._calculate_performance_reward(good_performance)
+        self.assertGreater(good_reward, 0.8)
 
-        # Should be clamped to max_reward
-        assert reward["total_reward"] <= 1.0
-
-
-class TestRewardAgentIntegration:
-    """Integration tests for RewardAgent."""
-
-    def test_full_workflow(self):
-        """Test complete reward calculation workflow."""
-        agent = RewardAgent("workflow_agent")
-
-        # Step 1: Analyze context
-        context = {
-            "test_results": TestResults(
-                passed=8, failed=2, total=10, execution_time=4.0
-            ),
-            "code_metrics": CodeMetrics(
-                complexity=7.0, lines_of_code=80, function_count=4, class_count=1
-            ),
-            "policy_violations": ["missing_docstring"],
-            "human_feedback": {
-                "thumbs_up": 2,
-                "thumbs_down": 0,
-                "rating": 0.8,
-                "comments": ["Good work"],
-            },
+        # Poor performance
+        poor_performance = {
+            "response_time": 15.0,
+            "memory_usage": 1000.0,
+            "cpu_usage": 90.0,
         }
 
-        analysis = agent.analyze(context)
-        assert analysis["data_quality"] == "good"
+        poor_reward = self.agent._calculate_performance_reward(poor_performance)
+        self.assertLess(poor_reward, 0.3)
 
-        # Step 2: Propose strategy
-        proposal = agent.propose(analysis)
-        assert proposal["approach"] == "weighted_combination"
+        # No performance metrics
+        no_performance = None
+        neutral_reward = self.agent._calculate_performance_reward(no_performance)
+        self.assertEqual(neutral_reward, 0.5)
 
-        # Step 3: Calculate reward
-        reward = agent.calculate_reward(
-            test_results=context["test_results"],
-            code_metrics=context["code_metrics"],
-            policy_violations=context["policy_violations"],
-            human_feedback=context["human_feedback"],
+    def test_apply_penalties(self):
+        """Test penalty application"""
+        base_reward = 0.8
+
+        # Test failure penalty
+        test_failure = TestResult(
+            passed=False,
+            total_tests=10,
+            passed_tests=5,
+            failed_tests=5,
+            coverage_percentage=50.0,
+            execution_time=5.0,
+            error_messages=[],
         )
 
-        assert reward["total_reward"] > 0.0
-        assert len(reward["components"]) == 4
+        policy_pass = PolicyResult(
+            safe=True,
+            decision="pass",
+            risk_level="low",
+            violations_count=0,
+            critical_violations=0,
+            high_violations=0,
+        )
 
-    def test_reward_statistics(self):
-        """Test reward statistics functionality."""
-        agent = RewardAgent("stats_agent")
+        feedback_approve = HumanFeedback(
+            overall_rating=0.8,
+            usefulness_rating=0.8,
+            correctness_rating=0.8,
+            completeness_rating=0.8,
+            comments="Good",
+            approved=True,
+        )
 
-        stats = agent.get_reward_statistics()
+        penalized_reward = self.agent._apply_penalties(
+            base_reward, test_failure, policy_pass, feedback_approve
+        )
 
-        assert "agent_name" in stats
-        assert "config" in stats
-        assert "total_calculations" in stats
-        assert "average_reward" in stats
-        assert stats["agent_name"] == "stats_agent"
+        self.assertLess(penalized_reward, base_reward)
+
+    def test_generate_recommendations(self):
+        """Test recommendation generation"""
+        # All good scores
+        good_scores = (0.9, 0.9, 0.9, 0.9, 0.9)
+        good_recs = self.agent._generate_recommendations(*good_scores)
+        self.assertIn("Excellent performance", good_recs[0])
+
+        # Poor scores
+        poor_scores = (0.3, 0.4, 0.5, 0.6, 0.7)
+        poor_recs = self.agent._generate_recommendations(*poor_scores)
+        self.assertGreater(len(poor_recs), 1)
+        self.assertTrue(any("test coverage" in rec.lower() for rec in poor_recs))
+
+    def test_determine_reward_level(self):
+        """Test reward level determination"""
+        self.assertEqual(self.agent._determine_reward_level(0.95), "excellent")
+        self.assertEqual(self.agent._determine_reward_level(0.85), "good")
+        self.assertEqual(self.agent._determine_reward_level(0.65), "acceptable")
+        self.assertEqual(self.agent._determine_reward_level(0.45), "needs_improvement")
+        self.assertEqual(self.agent._determine_reward_level(0.25), "poor")
+
+    def test_calculate_reward_with_error(self):
+        """Test reward calculation when an error occurs"""
+        with patch.object(
+            self.agent, "_calculate_test_reward", side_effect=Exception("Test error")
+        ):
+            result = self.agent.calculate_reward(
+                self.sample_test_result,
+                self.sample_code_quality,
+                self.sample_human_feedback,
+                self.sample_policy_result,
+            )
+
+            self.assertEqual(result["total_reward"], 0.0)
+            self.assertEqual(result["reward_level"], "error")
+            self.assertIn("error", result)
+
+    def test_dataclass_creation(self):
+        """Test dataclass creation"""
+        # Test TestResult
+        test_result = TestResult(
+            passed=True,
+            total_tests=5,
+            passed_tests=4,
+            failed_tests=1,
+            coverage_percentage=80.0,
+            execution_time=1.5,
+            error_messages=["Minor issue"],
+        )
+
+        self.assertTrue(test_result.passed)
+        self.assertEqual(test_result.total_tests, 5)
+        self.assertEqual(test_result.passed_tests, 4)
+        self.assertEqual(test_result.failed_tests, 1)
+        self.assertEqual(test_result.coverage_percentage, 80.0)
+        self.assertEqual(test_result.execution_time, 1.5)
+        self.assertEqual(test_result.error_messages, ["Minor issue"])
+
+        # Test CodeQualityMetrics
+        quality = CodeQualityMetrics(
+            quality_score=0.8,
+            complexity_score=0.7,
+            maintainability_score=0.8,
+            documentation_score=0.9,
+            style_score=0.8,
+            security_score=0.9,
+        )
+
+        self.assertEqual(quality.quality_score, 0.8)
+        self.assertEqual(quality.complexity_score, 0.7)
+        self.assertEqual(quality.maintainability_score, 0.8)
+        self.assertEqual(quality.documentation_score, 0.9)
+        self.assertEqual(quality.style_score, 0.8)
+        self.assertEqual(quality.security_score, 0.9)
+
+        # Test HumanFeedback
+        feedback = HumanFeedback(
+            overall_rating=0.8,
+            usefulness_rating=0.9,
+            correctness_rating=0.8,
+            completeness_rating=0.7,
+            comments="Good work",
+            approved=True,
+        )
+
+        self.assertEqual(feedback.overall_rating, 0.8)
+        self.assertEqual(feedback.usefulness_rating, 0.9)
+        self.assertEqual(feedback.correctness_rating, 0.8)
+        self.assertEqual(feedback.completeness_rating, 0.7)
+        self.assertEqual(feedback.comments, "Good work")
+        self.assertTrue(feedback.approved)
+
+        # Test PolicyResult
+        policy = PolicyResult(
+            safe=True,
+            decision="pass",
+            risk_level="low",
+            violations_count=0,
+            critical_violations=0,
+            high_violations=0,
+        )
+
+        self.assertTrue(policy.safe)
+        self.assertEqual(policy.decision, "pass")
+        self.assertEqual(policy.risk_level, "low")
+        self.assertEqual(policy.violations_count, 0)
+        self.assertEqual(policy.critical_violations, 0)
+        self.assertEqual(policy.high_violations, 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

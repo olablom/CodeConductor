@@ -29,6 +29,12 @@ from agents.orchestrator import AgentOrchestrator
 from agents.codegen_agent import CodeGenAgent
 from cli.human_approval import HumanApprovalCLI
 from integrations.llm_client import LLMClient
+from agents.reward_agent import (
+    TestResult,
+    CodeQualityMetrics,
+    HumanFeedback,
+    PolicyResult,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -51,6 +57,14 @@ class CodeConductorPipeline:
         from agents.architect_agent import ArchitectAgent
         from agents.review_agent import ReviewAgent
         from agents.policy_agent import PolicyAgent
+        from agents.reward_agent import (
+            RewardAgent,
+            TestResult,
+            CodeQualityMetrics,
+            HumanFeedback,
+            PolicyResult,
+        )
+        from agents.qlearning_agent import QLearningAgent
 
         # Create agents for orchestrator
         agents = [ArchitectAgent(), ReviewAgent(), CodeGenAgent()]
@@ -59,6 +73,8 @@ class CodeConductorPipeline:
         self.codegen_agent = CodeGenAgent()
         self.review_agent = ReviewAgent()
         self.policy_agent = PolicyAgent()
+        self.reward_agent = RewardAgent()
+        self.qlearning_agent = QLearningAgent()
         self.approval_cli = HumanApprovalCLI()
 
         # Initialize LLM client if online
@@ -170,7 +186,94 @@ class CodeConductorPipeline:
         code_result["review"] = review_result
         code_result["policy_check"] = policy_result
 
-        # Step 5: Save generated code
+        # Step 5: Run tests and calculate reward (RL)
+        if hasattr(self, "reward_agent") and hasattr(self, "qlearning_agent"):
+            logger.info("Step 5: Running tests and calculating reward")
+
+            # Run tests on generated code
+            test_result = self._run_tests(code_result["code"])
+
+            # Create reward inputs
+            code_quality = CodeQualityMetrics(
+                quality_score=review_result.get("quality_score", 0.5),
+                complexity_score=1.0
+                - review_result.get("complexity_metrics", {}).get(
+                    "complexity_per_line", 0.5
+                ),
+                maintainability_score=0.8,
+                documentation_score=1.0
+                if review_result.get("compliance_status", {}).get(
+                    "documentation", False
+                )
+                else 0.5,
+                style_score=0.9
+                if review_result.get("compliance_status", {}).get("pep8", True)
+                else 0.6,
+                security_score=1.0 if policy_result.get("safe", False) else 0.3,
+            )
+
+            human_feedback = HumanFeedback(
+                overall_rating=0.8 if approval_result.approved else 0.3,
+                usefulness_rating=0.8,
+                correctness_rating=0.8,
+                completeness_rating=0.7,
+                comments=approval_result.comments or "",
+                approved=approval_result.approved,
+            )
+
+            policy_result_obj = PolicyResult(
+                safe=policy_result.get("safe", False),
+                decision=policy_result.get("decision", "block"),
+                risk_level=policy_result.get("risk_level", "high"),
+                violations_count=policy_result.get("total_violations", 0),
+                critical_violations=policy_result.get("critical_violations", 0),
+                high_violations=policy_result.get("high_violations", 0),
+            )
+
+            # Calculate reward
+            reward_result = self.reward_agent.calculate_reward(
+                test_result, code_quality, human_feedback, policy_result_obj
+            )
+
+            # Update Q-learning
+            current_state = self.qlearning_agent.get_state(context)
+            next_state = self.qlearning_agent.get_state(
+                {
+                    **context,
+                    "iteration": self.iteration + 1,
+                    "reward": reward_result["total_reward"],
+                }
+            )
+
+            # Create action from current iteration
+            current_action = self.qlearning_agent.get_actions(current_state)[
+                0
+            ]  # Use first action for now
+
+            # Update Q-value
+            self.qlearning_agent.update_q_value(
+                current_state, current_action, reward_result["total_reward"], next_state
+            )
+
+            # Add reward results to code_result
+            code_result["reward"] = reward_result
+            code_result["test_result"] = test_result
+
+            logger.info(
+                f"Reward calculated: {reward_result['total_reward']:.3f} ({reward_result['reward_level']})"
+            )
+
+            # Check if we should continue learning
+            if (
+                reward_result["total_reward"] < 0.7
+                and self.iteration < self.max_iterations
+            ):
+                logger.info(
+                    "Low reward detected, continuing to next iteration for learning"
+                )
+                return self._run_iteration(context, self.iteration + 1)
+
+        # Step 6: Save generated code
         logger.info("Step 5: Save generated code")
         filename = f"iter_{self.iteration}.py"
         filepath = self.output_dir / filename
@@ -203,6 +306,103 @@ class CodeConductorPipeline:
         logger.info(f"Iteration {self.iteration} completed successfully")
 
         return result
+
+    def _run_tests(self, code: str) -> TestResult:
+        """
+        Run tests on generated code.
+
+        Args:
+            code: Generated code to test
+
+        Returns:
+            TestResult with test execution results
+        """
+        try:
+            import tempfile
+            import subprocess
+            import time
+            import ast
+
+            # Create temporary file with generated code
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+                f.write(code)
+                temp_file = f.name
+
+            # Test 1: Syntax check
+            syntax_errors = []
+            try:
+                ast.parse(code)
+                syntax_passed = True
+            except SyntaxError as e:
+                syntax_passed = False
+                syntax_errors.append(f"Syntax error: {e}")
+
+            # Test 2: Basic execution test
+            execution_errors = []
+            execution_passed = False
+            try:
+                # Try to import the module (basic test)
+                import importlib.util
+
+                spec = importlib.util.spec_from_file_location("test_module", temp_file)
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                execution_passed = True
+            except Exception as e:
+                execution_errors.append(f"Execution error: {e}")
+
+            # Test 3: Check for basic functionality
+            functionality_passed = False
+            if "def " in code or "class " in code:
+                functionality_passed = True
+
+            # Calculate test results
+            total_tests = 3
+            passed_tests = sum([syntax_passed, execution_passed, functionality_passed])
+            failed_tests = total_tests - passed_tests
+
+            # Calculate coverage (simplified)
+            lines = code.split("\n")
+            non_empty_lines = [line for line in lines if line.strip()]
+            coverage_percentage = min(
+                100.0, len(non_empty_lines) / max(len(lines), 1) * 100
+            )
+
+            # Execution time (simplified)
+            execution_time = 0.1  # Mock execution time
+
+            # Combine error messages
+            error_messages = syntax_errors + execution_errors
+
+            # Overall test result
+            test_passed = passed_tests >= 2  # At least 2 out of 3 tests must pass
+
+            # Clean up
+            import os
+
+            os.unlink(temp_file)
+
+            return TestResult(
+                passed=test_passed,
+                total_tests=total_tests,
+                passed_tests=passed_tests,
+                failed_tests=failed_tests,
+                coverage_percentage=coverage_percentage,
+                execution_time=execution_time,
+                error_messages=error_messages,
+            )
+
+        except Exception as e:
+            logger.error(f"Error running tests: {e}")
+            return TestResult(
+                passed=False,
+                total_tests=1,
+                passed_tests=0,
+                failed_tests=1,
+                coverage_percentage=0.0,
+                execution_time=0.0,
+                error_messages=[f"Test execution error: {e}"],
+            )
 
     def run(self, prompt_file: str, iterations: int = 1) -> Dict[str, Any]:
         """Run the complete pipeline."""
