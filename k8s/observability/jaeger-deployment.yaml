@@ -1,0 +1,210 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jaeger-config
+  namespace: observability
+data:
+  jaeger-config.yml: |
+    sampling:
+      default_strategy:
+        type: probabilistic
+        param: 0.1
+      per_operation_strategies:
+        - operation: /api/v1/agent/generate
+          type: probabilistic
+          param: 1.0
+        - operation: /api/v1/orchestrator/process
+          type: probabilistic
+          param: 1.0
+
+    storage:
+      type: memory
+      options:
+        memory:
+          max_trace_age: 24h
+
+    ingester:
+      deadlockInterval: 0s
+
+    metrics:
+      backend: prometheus
+      prometheus:
+        endpoint: http://prometheus:9090
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+  namespace: observability
+  labels:
+    app: jaeger
+    component: tracing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      labels:
+        app: jaeger
+        component: tracing
+    spec:
+      containers:
+        - name: jaeger
+          image: jaegertracing/all-in-one:1.48
+          ports:
+            - containerPort: 16686
+              name: ui
+            - containerPort: 14268
+              name: http
+            - containerPort: 14250
+              name: grpc
+            - containerPort: 6831
+              name: udp
+            - containerPort: 6832
+              name: udp-compact
+          env:
+            - name: COLLECTOR_OTLP_ENABLED
+              value: "true"
+            - name: COLLECTOR_ZIPKIN_HOST_PORT
+              value: ":9411"
+            - name: SPAN_STORAGE_TYPE
+              value: "memory"
+            - name: METRICS_STORAGE_TYPE
+              value: "prometheus"
+            - name: PROMETHEUS_SERVER_URL
+              value: "http://prometheus:9090"
+            - name: SAMPLING_STRATEGIES_FILE
+              value: "/etc/jaeger/sampling/sampling.json"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/jaeger
+            - name: storage
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 16686
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 16686
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: config
+          configMap:
+            name: jaeger-config
+        - name: storage
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+  namespace: observability
+  labels:
+    app: jaeger
+    component: tracing
+spec:
+  type: ClusterIP
+  ports:
+    - port: 16686
+      targetPort: 16686
+      protocol: TCP
+      name: ui
+    - port: 14268
+      targetPort: 14268
+      protocol: TCP
+      name: http
+    - port: 14250
+      targetPort: 14250
+      protocol: TCP
+      name: grpc
+    - port: 6831
+      targetPort: 6831
+      protocol: UDP
+      name: udp
+    - port: 6832
+      targetPort: 6832
+      protocol: UDP
+      name: udp-compact
+  selector:
+    app: jaeger
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: jaeger-ingress
+  namespace: observability
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: jaeger.codeconductor.local # Change to your domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: jaeger
+                port:
+                  number: 16686
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jaeger-sampling
+  namespace: observability
+data:
+  sampling.json: |
+    {
+      "default_strategy": {
+        "type": "probabilistic",
+        "param": 0.1
+      },
+      "per_operation_strategies": [
+        {
+          "operation": "/api/v1/agent/generate",
+          "type": "probabilistic",
+          "param": 1.0
+        },
+        {
+          "operation": "/api/v1/orchestrator/process",
+          "type": "probabilistic",
+          "param": 1.0
+        },
+        {
+          "operation": "/api/v1/auth/login",
+          "type": "probabilistic",
+          "param": 0.5
+        },
+        {
+          "operation": "/api/v1/data/query",
+          "type": "probabilistic",
+          "param": 0.3
+        }
+      ]
+    }
