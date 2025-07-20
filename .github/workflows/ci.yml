@@ -49,6 +49,11 @@ jobs:
           echo "Number of test files: $(find tests/ -name 'test_*.py' | wc -l)"
           echo "Test files:"
           find tests/ -name 'test_*.py' | head -10
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
+          echo "Tests directory contents:"
+          ls -la tests/ | head -10
 
       - name: Lint with flake8
         run: |
@@ -66,7 +71,9 @@ jobs:
           PYTHONIOENCODING: utf-8
           PYTHONUNBUFFERED: 1
         run: |
+          echo "Starting pytest..."
           pytest tests/ -v --cov=agents --cov-report=xml --cov-report=html --tb=short --disable-warnings
+          echo "Pytest completed with exit code: $?"
 
       - name: Show test summary
         run: |
