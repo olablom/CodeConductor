@@ -2,7 +2,8 @@
 
 > **Self-Learning Multi-Agent AI System for Intelligent Code Generation**
 
-[![CI](https://github.com/olablom/CodeConductor/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/olablom/CodeConductor/actions/workflows/ci.yml)
+[![Main CI](https://github.com/olablom/CodeConductor/actions/workflows/main-ci.yml/badge.svg?branch=main)](https://github.com/olablom/CodeConductor/actions/workflows/main-ci.yml)
+[![Microservices CI/CD](https://github.com/olablom/CodeConductor/actions/workflows/microservices-ci-cd.yml/badge.svg?branch=main)](https://github.com/olablom/CodeConductor/actions/workflows/microservices-ci-cd.yml)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Tests](https://img.shields.io/badge/Tests-275%2F336%20passing-brightgreen.svg)](tests/)
@@ -10,8 +11,10 @@
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://github.com/olablom/CodeConductor/pkgs/container/codeconductor)
 [![PyPI](https://img.shields.io/badge/PyPI-v2.0.0-orange.svg)](https://pypi.org/project/codeconductor/)
 [![RL](https://img.shields.io/badge/RL-Q--Learning-purple.svg)](agents/qlearning_agent.py)
+[![Microservices](https://img.shields.io/badge/Microservices-5%20Services-blue.svg)](services/)
+[![Integration Tests](https://img.shields.io/badge/Integration%20Tests-92%25%20Passing-brightgreen.svg)](services/test_full_stack.py)
 
-**CodeConductor** är ett revolutionerande AI-system som kombinerar multi-agent diskussion, mänsklig godkännande och reinforcement learning för att generera högkvalitativ kod. Systemet lär sig kontinuerligt från feedback och optimerar sig själv över tid.
+**CodeConductor** är ett revolutionerande AI-system som kombinerar multi-agent diskussion, mänsklig godkännande och reinforcement learning för att generera högkvalitativ kod. Systemet lär sig kontinuerligt från feedback och optimerar sig själv över tid. Nu med fullständig microservices-arkitektur för skalbarhet och robusthet.
 
 ## 🚀 Live Demo
 
