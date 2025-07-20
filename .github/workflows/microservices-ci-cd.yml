@@ -196,15 +196,26 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+        continue-on-error: true
 
       - name: Build and push Docker images
         run: |
           cd services
-          for service in gateway_service agent_service orchestrator_service auth_service data_service; do
-            echo "Building and pushing $service..."
-            docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/codeconductor-$service:latest -f $service/Dockerfile .
-            docker push ${{ secrets.DOCKERHUB_USERNAME }}/codeconductor-$service:latest
-          done
+          if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] && [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "Pushing to Docker Hub..."
+            for service in gateway_service agent_service orchestrator_service auth_service data_service; do
+              echo "Building and pushing $service..."
+              docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/codeconductor-$service:latest -f $service/Dockerfile .
+              docker push ${{ secrets.DOCKERHUB_USERNAME }}/codeconductor-$service:latest
+            done
+          else
+            echo "⚠️ Docker Hub credentials not configured, skipping push"
+            echo "Building images locally only..."
+            for service in gateway_service agent_service orchestrator_service auth_service data_service; do
+              echo "Building $service..."
+              docker build -t codeconductor-$service:latest -f $service/Dockerfile .
+            done
+          fi
 
       - name: Deploy to staging (placeholder)
         run: |
@@ -218,6 +229,10 @@ jobs:
 
   security-scan:
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
