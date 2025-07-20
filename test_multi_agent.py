@@ -4,6 +4,9 @@ Test script for multi-agent system.
 """
 
 from agents.orchestrator import AgentOrchestrator
+from agents.codegen_agent import CodeGenAgent
+from agents.architect_agent import ArchitectAgent
+from agents.review_agent import ReviewAgent
 
 
 def test_multi_agent():
@@ -12,31 +15,35 @@ def test_multi_agent():
     print("🚀 Testing Multi-Agent Discussion System")
     print("=" * 50)
 
-    # Skapa orchestrator
-    orchestrator = AgentOrchestrator()
+    # Skapa agents och orchestrator
+    codegen_agent = CodeGenAgent()
+    architect_agent = ArchitectAgent()
+    review_agent = ReviewAgent()
+
+    orchestrator = AgentOrchestrator([codegen_agent, architect_agent, review_agent])
 
     # Test prompt
     prompt = "Write a Python function that calculates the factorial of a number"
 
     # Facilitera diskussion
-    result = orchestrator.facilitate_discussion(prompt)
+    task_context = {"task_type": "code_generation", "prompt": prompt}
+    result = orchestrator.run_discussion(task_context)
+    proposal = result.get("consensus", {})
 
     # Visa resultat
     print("\n🎯 Final Proposal:")
-    print(f"Proposal ID: {result['proposal_id']}")
-    print(f"Approach: {result['approach']}")
-    print(f"Confidence: {result['confidence']:.2f}")
-    print(f"Patterns: {result['patterns']}")
-    print(f"Risks: {result['risks']}")
-    print(f"RL Score: {result['rl_score']:.2f}")
-    print(f"Optimization: {result['optimization']}")
+    if proposal:
+        print(f"Approach: {proposal.get('approach', 'Unknown')}")
+        print(f"Confidence: {proposal.get('confidence', 0):.2f}")
+        print(f"Status: {proposal.get('status', 'Unknown')}")
+    else:
+        print("No consensus reached")
 
-    # Visa agent summary
-    summary = orchestrator.get_agent_summary()
-    print(f"\n🤖 Agent Summary:")
-    print(f"Total Agents: {summary['total_agents']}")
-    for name, agent_info in summary["agents"].items():
-        print(f"  - {agent_info['name']}: {agent_info['role']}")
+    # Visa agent statistics
+    stats = orchestrator.get_agent_statistics()
+    print(f"\n🤖 Agent Statistics:")
+    print(f"Total Agents: {stats['total_agents']}")
+    print(f"Agent Names: {stats['agent_names']}")
 
 
 if __name__ == "__main__":

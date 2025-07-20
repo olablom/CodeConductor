@@ -4,6 +4,9 @@ Test script for complete CodeConductor system with multi-agent discussion and hu
 """
 
 from agents.orchestrator import AgentOrchestrator
+from agents.codegen_agent import CodeGenAgent
+from agents.architect_agent import ArchitectAgent
+from agents.review_agent import ReviewAgent
 from integrations.human_gate import HumanGate
 
 
@@ -17,8 +20,12 @@ def test_complete_system(monkeypatch):
     print("🚀 Testing Complete CodeConductor System")
     print("=" * 60)
 
-    # Skapa orchestrator och human gate
-    orchestrator = AgentOrchestrator()
+    # Skapa agents och orchestrator
+    codegen_agent = CodeGenAgent()
+    architect_agent = ArchitectAgent()
+    review_agent = ReviewAgent()
+
+    orchestrator = AgentOrchestrator([codegen_agent, architect_agent, review_agent])
     human_gate = HumanGate()
 
     # Test prompt
@@ -29,7 +36,9 @@ def test_complete_system(monkeypatch):
 
     # Steg 1: Multi-agent diskussion
     print("\n🤖 Step 1: Multi-Agent Discussion")
-    proposal = orchestrator.facilitate_discussion(prompt)
+    task_context = {"task_type": "code_generation", "prompt": prompt}
+    result = orchestrator.run_discussion(task_context)
+    proposal = result.get("consensus", {})
 
     # Steg 2: Human approval
     print("\n👤 Step 2: Human-in-the-Loop Approval")
@@ -37,12 +46,12 @@ def test_complete_system(monkeypatch):
 
     # Steg 3: Resultat
     print("\n📊 Step 3: Results")
-    if approved:
+    if approved and proposal:
         print("✅ System: Proposal approved and ready for implementation!")
-        print(f"🎯 Final Approach: {final_proposal.get('approach', 'Unknown')}")
-        print(f"📊 Confidence: {final_proposal.get('confidence', 0):.1%}")
+        print(f"🎯 Final Approach: {proposal.get('approach', 'Unknown')}")
+        print(f"📊 Confidence: {proposal.get('confidence', 0):.1%}")
     else:
-        print("❌ System: Proposal rejected - will need revision")
+        print("❌ System: Proposal rejected or no consensus reached")
 
     # Visa approval-statistik
     stats = human_gate.get_approval_stats()
