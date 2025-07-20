@@ -26,7 +26,7 @@ class TestAgentOrchestrator:
         assert hasattr(self.orchestrator, "reviewer_agent")
         assert hasattr(self.orchestrator, "agents")
 
-        # Check agent registry
+        # Check agent registry (core agents only)
         assert len(self.orchestrator.agents) == 3
         assert "codegen" in self.orchestrator.agents
         assert "architect" in self.orchestrator.agents
@@ -54,9 +54,9 @@ class TestAgentOrchestrator:
         """Test that consensus is built from all agent analyses."""
         result = self.orchestrator.facilitate_discussion("Test prompt")
 
-        # Check that all agents contributed
+        # Check that all agents contributed (core + plugins)
         agent_analyses = result["agent_analyses"]
-        assert len(agent_analyses) == 3
+        assert len(agent_analyses) >= 3  # At least core agents
 
         # Check consensus structure
         consensus = result["consensus"]
@@ -103,7 +103,7 @@ class TestAgentOrchestrator:
         # Verify synthesize was called with all analyses
         mock_synthesize.assert_called_once()
         call_args = mock_synthesize.call_args[0][0]
-        assert len(call_args) == 3
+        assert len(call_args) >= 3  # At least core agents
         assert all(key in call_args for key in ["codegen", "architect", "reviewer"])
 
     @patch.object(AgentOrchestrator, "_optimize_with_rl")
@@ -187,10 +187,10 @@ class TestAgentOrchestrator:
         assert "total_agents" in summary
         assert "agents" in summary
 
-        assert summary["total_agents"] == 3
+        assert summary["total_agents"] >= 3  # At least core agents
 
         agents = summary["agents"]
-        assert len(agents) == 3
+        assert len(agents) >= 3  # At least core agents
 
         for agent_name, agent_info in agents.items():
             assert "name" in agent_info
@@ -300,7 +300,7 @@ class TestOrchestratorIntegration:
 
         # Verify agent analyses
         agent_analyses = result["agent_analyses"]
-        assert len(agent_analyses) == 3
+        assert len(agent_analyses) >= 3  # At least core agents
 
         # Verify consensus
         consensus = result["consensus"]

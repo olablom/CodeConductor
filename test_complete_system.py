@@ -7,8 +7,12 @@ from agents.orchestrator import AgentOrchestrator
 from integrations.human_gate import HumanGate
 
 
-def test_complete_system():
+def test_complete_system(monkeypatch):
     """Test the complete system with multi-agent discussion and human approval."""
+
+    # Mock user input to avoid stdin capture issues
+    inputs = iter(["y", "n", "y"])  # Simulate user responses
+    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
     print("🚀 Testing Complete CodeConductor System")
     print("=" * 60)
