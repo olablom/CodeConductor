@@ -1,377 +1,377 @@
 """
-RewardAgent - Reinforcement Learning Reward Calculation
+RewardAgent - Calculates rewards for reinforcement learning
 
-Calculates rewards for the RL system based on:
-- Test results from TestAgent
-- Human feedback from HumanGate
-- Code quality metrics
-- Iteration efficiency
+This module implements the reward calculation logic for the RL system.
+Rewards are based on test results, code complexity, policy violations,
+and human feedback to guide the learning process.
 """
 
-import time
+import math
+import logging
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from dataclasses import dataclass
+from agents.base_agent import BaseAgent
+
+logger = logging.getLogger(__name__)
 
 
-class RewardAgent:
-    """Agent responsible for calculating RL rewards"""
+@dataclass
+class TestResults:
+    """Container for test execution results."""
 
-    def __init__(self):
-        self.reward_history = []
-        self.episode_rewards = {}
-        self.learning_curves = []
+    passed: int
+    failed: int
+    total: int
+    execution_time: float
+    coverage: Optional[float] = None
+    lint_score: Optional[float] = None
+
+    @property
+    def pass_rate(self) -> float:
+        """Calculate test pass rate."""
+        return self.passed / self.total if self.total > 0 else 0.0
+
+
+@dataclass
+class CodeMetrics:
+    """Container for code quality metrics."""
+
+    complexity: float  # Cyclomatic complexity
+    lines_of_code: int
+    function_count: int
+    class_count: int
+    comment_ratio: float = 0.0
+
+    @property
+    def complexity_score(self) -> float:
+        """Calculate normalized complexity score (0-1, lower is better)."""
+        # Normalize complexity: 1-10 = good, 10+ = penalized
+        if self.complexity <= 10:
+            return 1.0
+        else:
+            return max(0.0, 1.0 - (self.complexity - 10) / 20)
+
+
+class RewardAgent(BaseAgent):
+    """
+    Agent responsible for calculating rewards for the RL system.
+
+    This agent analyzes various metrics and calculates a reward that
+    guides the learning process toward better code generation.
+    """
+
+    def __init__(
+        self, name: str = "reward_agent", config: Optional[Dict[str, Any]] = None
+    ):
+        """Initialize the reward agent."""
+        default_config = {
+            "test_weight": 0.4,  # Weight for test results
+            "complexity_weight": 0.2,  # Weight for code complexity
+            "policy_weight": 0.2,  # Weight for policy compliance
+            "feedback_weight": 0.2,  # Weight for human feedback
+            "complexity_threshold": 10.0,  # Threshold for complexity penalty
+            "min_reward": -1.0,  # Minimum possible reward
+            "max_reward": 1.0,  # Maximum possible reward
+        }
+
+        if config:
+            default_config.update(config)
+
+        super().__init__(name, default_config)
+
+        logger.info(f"Initialized RewardAgent with config: {self.config}")
+
+    def analyze(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze the context to understand what metrics are available.
+
+        Args:
+            context: Dictionary containing test results, code metrics, etc.
+
+        Returns:
+            Analysis of available metrics and their quality
+        """
+        analysis = {
+            "metrics_available": [],
+            "data_quality": "unknown",
+            "recommendations": [],
+        }
+
+        # Check what metrics are available
+        if "test_results" in context:
+            analysis["metrics_available"].append("test_results")
+        if "code_metrics" in context:
+            analysis["metrics_available"].append("code_metrics")
+        if "policy_violations" in context:
+            analysis["metrics_available"].append("policy_violations")
+        if "human_feedback" in context:
+            analysis["metrics_available"].append("human_feedback")
+
+        # Assess data quality
+        if len(analysis["metrics_available"]) >= 3:
+            analysis["data_quality"] = "good"
+        elif len(analysis["metrics_available"]) >= 2:
+            analysis["data_quality"] = "fair"
+        else:
+            analysis["data_quality"] = "poor"
+            analysis["recommendations"].append(
+                "More metrics needed for accurate reward calculation"
+            )
+
+        return analysis
+
+    def propose(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Propose reward calculation strategy based on available metrics.
+
+        Args:
+            analysis: Analysis results from analyze()
+
+        Returns:
+            Proposed reward calculation approach
+        """
+        available_metrics = analysis.get("metrics_available", [])
+
+        strategy = {
+            "approach": "weighted_combination",
+            "weights": {},
+            "confidence": 0.8,
+        }
+
+        # Adjust weights based on available metrics
+        if "test_results" in available_metrics:
+            strategy["weights"]["test"] = self.config["test_weight"]
+        if "code_metrics" in available_metrics:
+            strategy["weights"]["complexity"] = self.config["complexity_weight"]
+        if "policy_violations" in available_metrics:
+            strategy["weights"]["policy"] = self.config["policy_weight"]
+        if "human_feedback" in available_metrics:
+            strategy["weights"]["feedback"] = self.config["feedback_weight"]
+
+        return strategy
+
+    def review(self, code: str) -> Dict[str, Any]:
+        """
+        Review code and provide reward-related insights.
+
+        Args:
+            code: Code string to review
+
+        Returns:
+            Review results with reward-related recommendations
+        """
+        # This is a placeholder - in practice, this would analyze the code
+        # and provide specific recommendations for improving rewards
+
+        return {
+            "quality_score": 0.8,
+            "issues": [],
+            "recommendations": [
+                "Add more comprehensive tests to improve reward calculation",
+                "Consider code complexity optimization",
+                "Ensure policy compliance for better rewards",
+            ],
+            "reward_potential": "high",
+        }
 
     def calculate_reward(
         self,
-        test_results: Dict[str, Any],
+        test_results: Optional[TestResults] = None,
+        code_metrics: Optional[CodeMetrics] = None,
+        policy_violations: Optional[List[str]] = None,
         human_feedback: Optional[Dict[str, Any]] = None,
-        code_quality: Optional[Dict[str, Any]] = None,
-        iteration_count: int = 1,
-        execution_time: float = 0.0,
-        prompt_optimization: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        Calculate comprehensive reward for RL system
+        Calculate reward based on various metrics.
 
         Args:
-            test_results: Results from TestAgent
-            human_feedback: Feedback from HumanGate
-            code_quality: Quality metrics from TestAgent
-            iteration_count: Number of iterations needed
-            execution_time: Time taken for generation
-            prompt_optimization: RL optimization details
+            test_results: Test execution results
+            code_metrics: Code quality metrics
+            policy_violations: List of policy violations
+            human_feedback: Human feedback scores and comments
 
         Returns:
-            Dict with reward breakdown and total
+            Dictionary containing reward value and breakdown
         """
+        reward_components = {}
+        total_reward = 0.0
 
-        reward_components = {
-            "test_reward": self._calculate_test_reward(test_results),
-            "quality_reward": self._calculate_quality_reward(code_quality),
-            "human_reward": self._calculate_human_reward(human_feedback),
-            "efficiency_reward": self._calculate_efficiency_reward(
-                iteration_count, execution_time
-            ),
-            "optimization_reward": self._calculate_optimization_reward(
-                prompt_optimization
-            ),
-        }
+        # 1. Test Results Reward
+        if test_results:
+            test_reward = self._calculate_test_reward(test_results)
+            reward_components["test"] = test_reward
+            total_reward += test_reward * self.config["test_weight"]
 
-        # Calculate total reward
-        total_reward = sum(reward_components.values())
+        # 2. Complexity Reward
+        if code_metrics:
+            complexity_reward = self._calculate_complexity_reward(code_metrics)
+            reward_components["complexity"] = complexity_reward
+            total_reward += complexity_reward * self.config["complexity_weight"]
 
-        # Create reward record
-        reward_record = {
-            "timestamp": datetime.now().isoformat(),
+        # 3. Policy Compliance Reward
+        if policy_violations is not None:
+            policy_reward = self._calculate_policy_reward(policy_violations)
+            reward_components["policy"] = policy_reward
+            total_reward += policy_reward * self.config["policy_weight"]
+
+        # 4. Human Feedback Reward
+        if human_feedback:
+            feedback_reward = self._calculate_feedback_reward(human_feedback)
+            reward_components["feedback"] = feedback_reward
+            total_reward += feedback_reward * self.config["feedback_weight"]
+
+        # Normalize reward to configured range
+        total_reward = max(
+            self.config["min_reward"], min(self.config["max_reward"], total_reward)
+        )
+
+        result = {
             "total_reward": total_reward,
             "components": reward_components,
-            "metadata": {
-                "iteration_count": iteration_count,
-                "execution_time": execution_time,
-                "test_results": test_results,
-                "human_feedback": human_feedback,
-                "code_quality": code_quality,
+            "weights": {
+                "test": self.config["test_weight"],
+                "complexity": self.config["complexity_weight"],
+                "policy": self.config["policy_weight"],
+                "feedback": self.config["feedback_weight"],
             },
+            "metadata": {"agent": self.name, "timestamp": self._get_timestamp()},
         }
 
-        # Store reward history
-        self.reward_history.append(reward_record)
+        logger.info(
+            f"Calculated reward: {total_reward:.3f} with components: {reward_components}"
+        )
+        return result
 
-        return reward_record
-
-    def _calculate_test_reward(self, test_results: Dict[str, Any]) -> float:
-        """Calculate reward based on test results"""
-        if not test_results:
-            return 0.0
-
-        reward = 0.0
-
-        # Base reward for tests passing
-        tests_run = test_results.get("tests_run", 0)
-        tests_passed = test_results.get("tests_passed", 0)
-
-        if tests_run > 0:
-            pass_rate = tests_passed / tests_run
-            reward += pass_rate * 20.0  # Up to 20 points for test success
-
-        # Penalty for errors
-        errors = test_results.get("errors", [])
-        reward -= len(errors) * 5.0  # -5 points per error
-
-        # Penalty for warnings
-        warnings = test_results.get("warnings", [])
-        reward -= len(warnings) * 1.0  # -1 point per warning
+    def _calculate_test_reward(self, test_results: TestResults) -> float:
+        """Calculate reward based on test results."""
+        # Base reward on pass rate
+        pass_rate = test_results.pass_rate
 
         # Bonus for high coverage
-        coverage = test_results.get("coverage", 0.0)
-        if coverage > 80:
-            reward += 10.0  # Bonus for high coverage
-        elif coverage > 60:
-            reward += 5.0  # Bonus for medium coverage
+        coverage_bonus = 0.0
+        if test_results.coverage:
+            if test_results.coverage >= 0.9:
+                coverage_bonus = 0.2
+            elif test_results.coverage >= 0.8:
+                coverage_bonus = 0.1
+            elif test_results.coverage >= 0.7:
+                coverage_bonus = 0.05
 
-        return max(-50.0, min(50.0, reward))  # Clamp between -50 and 50
+        # Bonus for good lint score
+        lint_bonus = 0.0
+        if test_results.lint_score:
+            if test_results.lint_score >= 9.0:
+                lint_bonus = 0.1
+            elif test_results.lint_score >= 8.0:
+                lint_bonus = 0.05
 
-    def _calculate_quality_reward(
-        self, code_quality: Optional[Dict[str, Any]]
-    ) -> float:
-        """Calculate reward based on code quality metrics"""
-        if not code_quality:
-            return 0.0
+        # Penalty for slow execution
+        time_penalty = 0.0
+        if test_results.execution_time > 10.0:  # More than 10 seconds
+            time_penalty = -0.1
 
-        reward = 0.0
+        reward = pass_rate + coverage_bonus + lint_bonus + time_penalty
+        return max(0.0, min(1.0, reward))  # Clamp to [0, 1]
 
-        # Overall quality score (0-10)
-        overall_score = code_quality.get("overall_score", 0.0)
-        reward += overall_score * 3.0  # Up to 30 points for quality
+    def _calculate_complexity_reward(self, code_metrics: CodeMetrics) -> float:
+        """Calculate reward based on code complexity."""
+        # Base reward on complexity score
+        complexity_score = code_metrics.complexity_score
 
-        # Syntax validity
-        if code_quality.get("syntax_valid", False):
-            reward += 10.0  # Bonus for valid syntax
-        else:
-            reward -= 20.0  # Heavy penalty for syntax errors
+        # Bonus for good comment ratio
+        comment_bonus = 0.0
+        if code_metrics.comment_ratio >= 0.2:
+            comment_bonus = 0.1
+        elif code_metrics.comment_ratio >= 0.1:
+            comment_bonus = 0.05
 
-        # Complexity penalty
-        complexity = code_quality.get("complexity_score", 0.0)
-        if complexity > 7:
-            reward -= 10.0  # Penalty for high complexity
-        elif complexity < 3:
-            reward += 5.0  # Bonus for low complexity
+        # Bonus for reasonable function/class count
+        structure_bonus = 0.0
+        if 1 <= code_metrics.function_count <= 20:
+            structure_bonus = 0.05
+        if 0 <= code_metrics.class_count <= 5:
+            structure_bonus += 0.05
 
-        # Security issues penalty
-        security_issues = code_quality.get("security_issues", [])
-        reward -= len(security_issues) * 8.0  # Heavy penalty for security issues
+        reward = complexity_score + comment_bonus + structure_bonus
+        return max(0.0, min(1.0, reward))  # Clamp to [0, 1]
 
-        # Best practices
-        best_practices = code_quality.get("best_practices", [])
-        reward -= (
-            len(best_practices) * 2.0
-        )  # Small penalty for best practice violations
+    def _calculate_policy_reward(self, policy_violations: List[str]) -> float:
+        """Calculate reward based on policy compliance."""
+        if not policy_violations:
+            return 1.0  # Perfect compliance
 
-        return max(-50.0, min(50.0, reward))
+        # Penalty based on number and severity of violations
+        base_penalty = len(policy_violations) * 0.15  # Reduced from 0.2
 
-    def _calculate_human_reward(
-        self, human_feedback: Optional[Dict[str, Any]]
-    ) -> float:
-        """Calculate reward based on human feedback"""
-        if not human_feedback:
-            return 0.0
+        # Additional penalty for severe violations
+        severe_penalties = 0.0
+        for violation in policy_violations:
+            if any(
+                severe in violation.lower()
+                for severe in ["security", "dangerous", "unsafe"]
+            ):
+                severe_penalties += 0.3
+            elif any(
+                moderate in violation.lower() for moderate in ["deprecated", "warning"]
+            ):
+                severe_penalties += 0.05  # Reduced from 0.1
 
-        reward = 0.0
+        total_penalty = base_penalty + severe_penalties
+        reward = max(0.0, 1.0 - total_penalty)  # Clamp to [0, 1]
 
-        # Approval status
-        approved = human_feedback.get("approved", False)
-        if approved:
-            reward += 30.0  # High reward for approval
-        else:
-            reward -= 20.0  # Penalty for rejection
+        return reward
 
-        # Feedback reason
-        reason = human_feedback.get("reason", "")
-        if "human_approved" in reason:
-            reward += 10.0  # Extra bonus for direct approval
-        elif "human_edited" in reason:
-            reward += 5.0  # Small bonus for edits (shows engagement)
-        elif "human_rejected" in reason:
-            reward -= 10.0  # Extra penalty for rejection
+    def _calculate_feedback_reward(self, human_feedback: Dict[str, Any]) -> float:
+        """Calculate reward based on human feedback."""
+        # Extract feedback scores
+        thumbs_up = human_feedback.get("thumbs_up", 0)
+        thumbs_down = human_feedback.get("thumbs_down", 0)
+        rating = human_feedback.get("rating", 0.5)  # 0-1 scale
+        comments = human_feedback.get("comments", [])
 
-        # NEW: Thumbs up/down feedback bonus
-        feedback_score = human_feedback.get("feedback_score", 0)
-        if feedback_score > 0:
-            reward += 15.0  # +15 bonus for positive feedback
-        elif feedback_score < 0:
-            reward -= 10.0  # -10 penalty for negative feedback
+        # Calculate base reward from rating
+        base_reward = rating
 
-        # Feedback quality
-        feedback_text = human_feedback.get("feedback", "")
-        if feedback_text and len(feedback_text) > 10:
-            reward += 2.0  # Small bonus for detailed feedback
+        # Adjust based on thumbs up/down ratio
+        if thumbs_up + thumbs_down > 0:
+            ratio = thumbs_up / (thumbs_up + thumbs_down)
+            base_reward = (base_reward + ratio) / 2
 
-        # Comment quality bonus
-        comment = human_feedback.get("comment", "")
-        if comment and len(comment) > 20:
-            reward += 3.0  # Bonus for detailed comments
+        # Bonus for positive comments
+        comment_bonus = 0.0
+        positive_keywords = ["good", "great", "excellent", "perfect", "nice", "clean"]
+        negative_keywords = ["bad", "poor", "terrible", "ugly", "messy", "broken"]
 
-        return max(-50.0, min(50.0, reward))
-
-    def _calculate_efficiency_reward(
-        self, iteration_count: int, execution_time: float
-    ) -> float:
-        """Calculate reward based on efficiency metrics"""
-        reward = 0.0
-
-        # Iteration efficiency
-        if iteration_count == 1:
-            reward += 15.0  # High reward for first-try success
-        elif iteration_count <= 3:
-            reward += 10.0  # Good reward for few iterations
-        elif iteration_count <= 5:
-            reward += 5.0  # Moderate reward
-        else:
-            reward -= (iteration_count - 5) * 2.0  # Penalty for many iterations
-
-        # Execution time efficiency
-        if execution_time < 30:  # Less than 30 seconds
-            reward += 5.0
-        elif execution_time < 60:  # Less than 1 minute
-            reward += 2.0
-        elif execution_time > 300:  # More than 5 minutes
-            reward -= 5.0
-
-        return max(-30.0, min(30.0, reward))
-
-    def _calculate_optimization_reward(
-        self, prompt_optimization: Optional[Dict[str, Any]]
-    ) -> float:
-        """Calculate reward based on RL optimization effectiveness"""
-        if not prompt_optimization:
-            return 0.0
-
-        reward = 0.0
-
-        # Optimization type effectiveness
-        optimization_type = prompt_optimization.get("type", "")
-        if optimization_type == "add_examples":
-            reward += 3.0
-        elif optimization_type == "clarify_requirements":
-            reward += 2.0
-        elif optimization_type == "add_context":
-            reward += 1.0
-
-        # Optimization confidence
-        confidence = prompt_optimization.get("confidence", 0.0)
-        reward += confidence * 5.0  # Up to 5 points for high confidence
-
-        # Previous performance improvement
-        improvement = prompt_optimization.get("improvement", 0.0)
-        reward += improvement * 10.0  # Up to 10 points for improvement
-
-        return max(-20.0, min(20.0, reward))
-
-    def get_episode_reward(self, episode_id: str) -> Optional[Dict[str, Any]]:
-        """Get reward for a specific episode"""
-        return self.episode_rewards.get(episode_id)
-
-    def get_learning_curve(self, window_size: int = 10) -> List[Dict[str, Any]]:
-        """Get learning curve data for visualization"""
-        if len(self.reward_history) < window_size:
-            return []
-
-        learning_curve = []
-        for i in range(window_size, len(self.reward_history)):
-            window_rewards = [
-                r["total_reward"] for r in self.reward_history[i - window_size : i]
-            ]
-            avg_reward = sum(window_rewards) / len(window_rewards)
-
-            learning_curve.append(
-                {
-                    "episode": i,
-                    "average_reward": avg_reward,
-                    "window_size": window_size,
-                    "timestamp": self.reward_history[i]["timestamp"],
-                }
+        for comment in comments:
+            comment_lower = comment.lower()
+            positive_count = sum(
+                1 for keyword in positive_keywords if keyword in comment_lower
+            )
+            negative_count = sum(
+                1 for keyword in negative_keywords if keyword in comment_lower
             )
 
-        return learning_curve
+            if positive_count > negative_count:
+                comment_bonus += 0.1
+            elif negative_count > positive_count:
+                comment_bonus -= 0.1
+
+        reward = base_reward + comment_bonus
+        return max(0.0, min(1.0, reward))  # Clamp to [0, 1]
+
+    def _get_timestamp(self) -> str:
+        """Get current timestamp for logging."""
+        from datetime import datetime
+
+        return datetime.now().isoformat()
 
     def get_reward_statistics(self) -> Dict[str, Any]:
-        """Get comprehensive reward statistics"""
-        if not self.reward_history:
-            return {
-                "total_episodes": 0,
-                "average_reward": 0.0,
-                "best_reward": 0.0,
-                "worst_reward": 0.0,
-                "reward_trend": "stable",
-            }
-
-        rewards = [r["total_reward"] for r in self.reward_history]
-
-        # Calculate trend
-        if len(rewards) >= 10:
-            recent_avg = sum(rewards[-10:]) / 10
-            earlier_avg = (
-                sum(rewards[-20:-10]) / 10 if len(rewards) >= 20 else rewards[0]
-            )
-
-            if recent_avg > earlier_avg + 5:
-                trend = "improving"
-            elif recent_avg < earlier_avg - 5:
-                trend = "declining"
-            else:
-                trend = "stable"
-        else:
-            trend = "insufficient_data"
-
+        """Get statistics about reward calculations."""
         return {
-            "total_episodes": len(self.reward_history),
-            "average_reward": sum(rewards) / len(rewards),
-            "best_reward": max(rewards),
-            "worst_reward": min(rewards),
-            "reward_trend": trend,
-            "recent_performance": rewards[-5:] if len(rewards) >= 5 else rewards,
+            "agent_name": self.name,
+            "config": self.config,
+            "total_calculations": getattr(self, "_total_calculations", 0),
+            "average_reward": getattr(self, "_average_reward", 0.0),
+            "min_reward": getattr(self, "_min_reward", 0.0),
+            "max_reward": getattr(self, "_max_reward", 0.0),
         }
-
-    def get_component_analysis(self) -> Dict[str, Any]:
-        """Analyze which reward components are most important"""
-        if not self.reward_history:
-            return {}
-
-        component_totals = {
-            "test_reward": 0.0,
-            "quality_reward": 0.0,
-            "human_reward": 0.0,
-            "efficiency_reward": 0.0,
-            "optimization_reward": 0.0,
-        }
-
-        for record in self.reward_history:
-            for component, value in record["components"].items():
-                component_totals[component] += value
-
-        # Calculate averages
-        episode_count = len(self.reward_history)
-        component_averages = {
-            component: total / episode_count
-            for component, total in component_totals.items()
-        }
-
-        # Find most important component
-        most_important = max(component_averages.items(), key=lambda x: abs(x[1]))
-
-        return {
-            "component_averages": component_averages,
-            "most_important_component": most_important[0],
-            "most_important_value": most_important[1],
-            "total_episodes": episode_count,
-        }
-
-    def reset_episode(self, episode_id: str):
-        """Reset episode-specific data"""
-        if episode_id in self.episode_rewards:
-            del self.episode_rewards[episode_id]
-
-    def export_reward_data(self, file_path: str):
-        """Export reward history to JSON file"""
-        import json
-
-        export_data = {
-            "reward_history": self.reward_history,
-            "statistics": self.get_reward_statistics(),
-            "component_analysis": self.get_component_analysis(),
-            "export_timestamp": datetime.now().isoformat(),
-        }
-
-        with open(file_path, "w") as f:
-            json.dump(export_data, f, indent=2)
-
-    def import_reward_data(self, file_path: str):
-        """Import reward history from JSON file"""
-        import json
-
-        with open(file_path, "r") as f:
-            import_data = json.load(f)
-
-        self.reward_history = import_data.get("reward_history", [])
-        # Note: episode_rewards and learning_curves would need to be reconstructed
-        # from the reward_history if needed
