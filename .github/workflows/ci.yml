@@ -62,8 +62,11 @@ jobs:
           black --check --diff agents/ tests/
 
       - name: Run tests with pytest
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUNBUFFERED: 1
         run: |
-          pytest tests/ -v --cov=agents --cov-report=xml --cov-report=html --tb=short
+          pytest tests/ -v --cov=agents --cov-report=xml --cov-report=html --tb=short --disable-warnings
 
       - name: Show test summary
         run: |
