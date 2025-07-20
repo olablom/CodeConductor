@@ -27,10 +27,9 @@ jobs:
       - name: Run CodeConductor Analysis
         run: |
           python pipeline.py \
-            --prompt prompts/analysis_request.md \
-            --iters 3 \
-            --distributed \
-            --mock
+            --prompt prompts/simple_api.md \
+            --iters 1 \
+            --offline
 
       - name: Upload analysis results
         uses: actions/upload-artifact@v4
