@@ -1,0 +1,147 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-service
+  namespace: codeconductor
+  labels:
+    app: codeconductor
+    component: data
+    version: v1
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: codeconductor
+      component: data
+  template:
+    metadata:
+      labels:
+        app: codeconductor
+        component: data
+        version: v1
+    spec:
+      containers:
+        - name: data
+          image: your-username/codeconductor-data:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8004
+              name: http
+              protocol: TCP
+          env:
+            - name: DATA_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: DATA_HOST
+            - name: DATA_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: DATA_PORT
+            - name: DATA_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: DATA_LOG_LEVEL
+            - name: DATA_DB_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: DATA_DB_PATH
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: ENVIRONMENT
+            - name: LOG_FORMAT
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: LOG_FORMAT
+            - name: METRICS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: METRICS_ENABLED
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false # Need write access for database
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: data-storage
+              mountPath: /app/data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data-storage
+          persistentVolumeClaim:
+            claimName: data-pvc
+        - name: tmp
+          emptyDir: {}
+      imagePullSecrets:
+        - name: dockerhub-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: data-service
+  namespace: codeconductor
+  labels:
+    app: codeconductor
+    component: data
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8004
+      targetPort: 8004
+      protocol: TCP
+      name: http
+  selector:
+    app: codeconductor
+    component: data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-pvc
+  namespace: codeconductor
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard # Change based on your cluster

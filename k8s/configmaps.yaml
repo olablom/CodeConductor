@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: codeconductor-config
+  namespace: codeconductor
+data:
+  # Gateway Service Configuration
+  GATEWAY_HOST: "0.0.0.0"
+  GATEWAY_PORT: "9000"
+  GATEWAY_LOG_LEVEL: "INFO"
+
+  # Service URLs for internal communication
+  AGENT_SERVICE_URL: "http://agent-service:8001"
+  ORCHESTRATOR_SERVICE_URL: "http://orchestrator-service:8002"
+  AUTH_SERVICE_URL: "http://auth-service:8003"
+  DATA_SERVICE_URL: "http://data-service:8004"
+
+  # Agent Service Configuration
+  AGENT_HOST: "0.0.0.0"
+  AGENT_PORT: "8001"
+  AGENT_LOG_LEVEL: "INFO"
+  AGENT_MODEL_PROVIDER: "mock" # mock, ollama, lmstudio
+
+  # Orchestrator Service Configuration
+  ORCHESTRATOR_HOST: "0.0.0.0"
+  ORCHESTRATOR_PORT: "8002"
+  ORCHESTRATOR_LOG_LEVEL: "INFO"
+  ORCHESTRATOR_MAX_ROUNDS: "5"
+
+  # Auth Service Configuration
+  AUTH_HOST: "0.0.0.0"
+  AUTH_PORT: "8003"
+  AUTH_LOG_LEVEL: "INFO"
+  AUTH_SECRET_KEY: "your-secret-key-change-in-production"
+  AUTH_TOKEN_EXPIRE_MINUTES: "60"
+
+  # Data Service Configuration
+  DATA_HOST: "0.0.0.0"
+  DATA_PORT: "8004"
+  DATA_LOG_LEVEL: "INFO"
+  DATA_DB_PATH: "/app/data/codeconductor.db"
+
+  # Common Configuration
+  ENVIRONMENT: "production"
+  LOG_FORMAT: "json"
+  METRICS_ENABLED: "true"
+  HEALTH_CHECK_INTERVAL: "30"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: codeconductor-prompts
+  namespace: codeconductor
+data:
+  # Prompt templates for agents
+  codegen_prompt: |
+    You are a CodeGenAgent. Generate high-quality code based on the requirements.
+    Focus on:
+    - Clean, maintainable code
+    - Proper error handling
+    - Documentation and comments
+    - Security best practices
+
+  architect_prompt: |
+    You are an ArchitectAgent. Design scalable and robust architectures.
+    Consider:
+    - Performance requirements
+    - Scalability needs
+    - Security implications
+    - Technology stack compatibility
+
+  reviewer_prompt: |
+    You are a ReviewerAgent. Review code for quality and security.
+    Check for:
+    - Code quality issues
+    - Security vulnerabilities
+    - Performance bottlenecks
+    - Maintainability concerns

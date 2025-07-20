@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orchestrator-service
+  namespace: codeconductor
+  labels:
+    app: codeconductor
+    component: orchestrator
+    version: v1
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: codeconductor
+      component: orchestrator
+  template:
+    metadata:
+      labels:
+        app: codeconductor
+        component: orchestrator
+        version: v1
+    spec:
+      containers:
+        - name: orchestrator
+          image: your-username/codeconductor-orchestrator:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8002
+              name: http
+              protocol: TCP
+          env:
+            - name: ORCHESTRATOR_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: ORCHESTRATOR_HOST
+            - name: ORCHESTRATOR_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: ORCHESTRATOR_PORT
+            - name: ORCHESTRATOR_LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: ORCHESTRATOR_LOG_LEVEL
+            - name: ORCHESTRATOR_MAX_ROUNDS
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: ORCHESTRATOR_MAX_ROUNDS
+            - name: AGENT_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: AGENT_SERVICE_URL
+            - name: ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: ENVIRONMENT
+            - name: LOG_FORMAT
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: LOG_FORMAT
+            - name: METRICS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: codeconductor-config
+                  key: METRICS_ENABLED
+          resources:
+            requests:
+              cpu: 150m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8002
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      imagePullSecrets:
+        - name: dockerhub-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orchestrator-service
+  namespace: codeconductor
+  labels:
+    app: codeconductor
+    component: orchestrator
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8002
+      targetPort: 8002
+      protocol: TCP
+      name: http
+  selector:
+    app: codeconductor
+    component: orchestrator
