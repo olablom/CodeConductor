@@ -88,7 +88,7 @@ jobs:
 
       - name: Start services with Docker Compose
         run: |
-          docker-compose up -d
+          docker compose up -d
           sleep 30  # Wait for services to start
 
       - name: Debug environment
@@ -114,7 +114,7 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: docker-compose down
+        run: docker compose down
 
   deploy:
     needs: [build-and-test, integration-test]
