@@ -2,10 +2,8 @@
 Celery tasks for agent operations in CodeConductor
 """
 
-import json
 import logging
 from typing import Dict, Any
-from celery import current_task
 
 from integrations.celery_app import celery_app
 from agents.code_gen import CodeGenAgent

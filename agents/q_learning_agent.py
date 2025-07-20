@@ -10,7 +10,7 @@ import json
 import sqlite3
 import logging
 import random
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from agents.base_agent import BaseAgent
 

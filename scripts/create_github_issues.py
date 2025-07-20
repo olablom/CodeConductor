@@ -5,7 +5,6 @@ Automatically creates issues from project roadmap
 """
 
 import json
-import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
 

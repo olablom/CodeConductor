@@ -53,15 +53,18 @@ class BaseAgent(ABC):
         pass
 
     @abstractmethod
-    def propose(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
+    def propose(
+        self, analysis: Dict[str, Any], context: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
-        Generate a proposal based on the analysis.
+        Generate a proposal based on the analysis and context.
 
-        This method should use the analysis results to create a concrete
+        This method should use the analysis results and original context to create a concrete
         proposal for how to proceed (e.g., code structure, architecture).
 
         Args:
             analysis: Dictionary containing analysis results from analyze()
+            context: Dictionary containing original context information
 
         Returns:
             Dictionary containing the proposal and supporting information
@@ -69,15 +72,18 @@ class BaseAgent(ABC):
         pass
 
     @abstractmethod
-    def review(self, code: str) -> Dict[str, Any]:
+    def review(
+        self, proposal: Dict[str, Any], context: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
-        Review code and provide feedback on quality and safety.
+        Review a proposal and provide feedback on quality and safety.
 
-        This method should examine generated code and provide feedback
+        This method should examine the proposal and provide feedback
         on various aspects like quality, security, performance, etc.
 
         Args:
-            code: String containing the code to review
+            proposal: Dictionary containing the proposal to review
+            context: Dictionary containing original context information
 
         Returns:
             Dictionary containing review results and recommendations

@@ -8,9 +8,8 @@ LLM providers (Ollama, LM Studio, etc.) with caching and retry logic.
 import json
 import time
 import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 import requests
-from requests.exceptions import RequestException
 
 logger = logging.getLogger(__name__)
 

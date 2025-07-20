@@ -5,9 +5,6 @@ This module tests the Q-learning implementation and ensures proper
 state-action management and learning behavior.
 """
 
-import pytest
-import tempfile
-import os
 from agents.q_learning_agent import QLearningAgent, State, Action
 
 

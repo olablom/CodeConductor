@@ -13,7 +13,6 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from agents.reward_agent import RewardAgent, TestResults, CodeMetrics
 from agents.q_learning_agent import QLearningAgent, State, Action
-from typing import Dict, Any
 
 
 def demo_reward_calculation():
@@ -129,13 +128,13 @@ def demo_q_learning():
     # Step 4: Update Q-value
     q_agent.update_q(state, action, reward, next_state)
 
-    print(f"📈 Updated Q-value for state-action pair")
+    print("📈 Updated Q-value for state-action pair")
     print(f"Reward received: {reward}")
     print(f"New epsilon: {q_agent.config['epsilon']:.3f}")
 
     # Step 5: Show learning statistics
     stats = q_agent.get_learning_statistics()
-    print(f"\n📊 Learning Statistics:")
+    print("\n📊 Learning Statistics:")
     print(f"Episode count: {stats['episode_count']}")
     print(f"Total rewards: {stats['total_rewards']:.3f}")
     print(f"Average reward: {stats['average_reward']:.3f}")
@@ -202,7 +201,7 @@ def demo_agent_integration():
         human_feedback=human_feedback,
     )
 
-    print(f"3. Results:")
+    print("3. Results:")
     print(f"   Test pass rate: {test_results.pass_rate:.1%}")
     print(f"   Code complexity: {code_metrics.complexity}")
     print(f"   Policy violations: {len(policy_violations)}")
@@ -218,9 +217,9 @@ def demo_agent_integration():
 
     q_agent.update_q(state, action, reward_result["total_reward"], next_state)
 
-    print(f"4. Learning Update:")
+    print("4. Learning Update:")
     print(f"   Reward: {reward_result['total_reward']:.3f}")
-    print(f"   Q-value updated for state-action pair")
+    print("   Q-value updated for state-action pair")
     print(f"   Episode count: {q_agent.episode_count}")
 
 

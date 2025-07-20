@@ -160,11 +160,11 @@ def demo_llm_client_features():
 
     prompt = "performance test"
     start_time = time.time()
-    response1 = client.complete(prompt)
+    client.complete(prompt)
     first_call = time.time() - start_time
 
     start_time = time.time()
-    response2 = client.complete(prompt)
+    client.complete(prompt)
     second_call = time.time() - start_time
 
     print(f"   First call: {first_call:.3f}s")

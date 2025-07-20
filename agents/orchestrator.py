@@ -1,346 +1,488 @@
 """
-AgentOrchestrator - Coordinates multi-agent discussion system.
+AgentOrchestrator - Coordinates multi-agent discussions
 
-Core component of Gabriels vision for CodeConductor.
-Now supports dynamic plugin loading for extensible agent system.
+This module implements the orchestrator that manages discussions between
+different agents, collects their analyses and proposals, and reaches
+consensus on the best approach.
 """
 
+import logging
 from typing import Dict, Any, List, Optional
-import json
-from pathlib import Path
-from datetime import datetime
+from dataclasses import dataclass
+from agents.base_agent import BaseAgent
 
-from agents.code_gen import CodeGenAgent
-from agents.architect import ArchitectAgent
-from agents.reviewer import ReviewerAgent
-from agents.prompt_optimizer import prompt_optimizer
-from plugins.base import PluginManager, BaseAgentPlugin, PluginType
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class DiscussionRound:
+    """Represents a single round of agent discussion."""
+
+    round_id: int
+    task_context: Dict[str, Any]
+    analyses: List[Dict[str, Any]]
+    proposals: List[Dict[str, Any]]
+    consensus: Optional[Dict[str, Any]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class AgentOrchestrator:
-    """Koordinerar multi-agent diskussion och syntetiserar konsensus."""
+    """
+    Orchestrator for multi-agent discussions.
 
-    def __init__(self, enable_plugins: bool = True):
-        self.codegen_agent = CodeGenAgent()
-        self.architect_agent = ArchitectAgent()
-        self.reviewer_agent = ReviewerAgent()
+    This class coordinates discussions between different agents,
+    collects their analyses and proposals, and reaches consensus
+    on the best approach for a given task.
+    """
 
-        # Agent registry
-        self.agents = {
-            "codegen": self.codegen_agent,
-            "architect": self.architect_agent,
-            "reviewer": self.reviewer_agent,
-        }
-
-        # Plugin system
-        self.enable_plugins = enable_plugins
-        self.plugin_manager = None
-        self.plugin_agents = {}
-
-        if self.enable_plugins:
-            self._initialize_plugins()
-
-    def _initialize_plugins(self) -> None:
-        """Initialize plugin system and load agent plugins"""
-        try:
-            self.plugin_manager = PluginManager()
-
-            # Discover and load plugins
-            discovered_plugins = self.plugin_manager.discover_plugins()
-
-            # Load agent plugins
-            for plugin_info in discovered_plugins:
-                if (
-                    plugin_info.metadata.plugin_type == PluginType.AGENT
-                    and plugin_info.is_enabled
-                ):
-                    try:
-                        plugin_instance = self.plugin_manager.load_plugin(plugin_info)
-                        if plugin_instance and isinstance(
-                            plugin_instance, BaseAgentPlugin
-                        ):
-                            self.plugin_agents[plugin_info.metadata.name] = (
-                                plugin_instance
-                            )
-                            print(
-                                f"✅ Loaded plugin agent: {plugin_info.metadata.name}"
-                            )
-                    except Exception as e:
-                        print(
-                            f"❌ Failed to load plugin agent {plugin_info.metadata.name}: {e}"
-                        )
-
-            print(f"🎯 Loaded {len(self.plugin_agents)} plugin agents")
-
-        except Exception as e:
-            print(f"⚠️ Plugin system initialization failed: {e}")
-            self.enable_plugins = False
-
-    def facilitate_discussion(
-        self, prompt: str, context: Dict[str, Any] = None
-    ) -> Dict[str, Any]:
+    def __init__(
+        self, agents: List[BaseAgent], config: Optional[Dict[str, Any]] = None
+    ):
         """
-        Facilitarar multi-agent diskussion och syntetiserar konsensus.
+        Initialize the agent orchestrator.
 
         Args:
-            prompt: Kodkravet att diskutera
-            context: Ytterligare kontext (valfritt)
+            agents: List of agents to coordinate
+            config: Configuration for consensus and discussion logic
+        """
+        self.agents = agents
+        self.discussion_history: List[DiscussionRound] = []
+
+        # Default configuration
+        default_config = {
+            "consensus_strategy": "weighted_majority",  # "majority", "weighted_majority", "unanimous"
+            "max_rounds": 3,  # Maximum discussion rounds
+            "consensus_threshold": 0.7,  # Minimum agreement for consensus
+            "agent_weights": {},  # Custom weights for agents
+            "enable_voting": True,  # Enable voting mechanism
+            "enable_feedback": True,  # Enable inter-agent feedback
+            "timeout_seconds": 30,  # Timeout for discussion rounds
+        }
+
+        if config:
+            default_config.update(config)
+
+        self.config = default_config
+
+        # Initialize agent weights if not provided
+        if not self.config["agent_weights"]:
+            self.config["agent_weights"] = {agent.name: 1.0 for agent in self.agents}
+
+        logger.info(f"Initialized AgentOrchestrator with {len(self.agents)} agents")
+        logger.info(f"Agents: {[agent.name for agent in self.agents]}")
+
+    def run_discussion(
+        self, task_context: Dict[str, Any], max_rounds: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """
+        Run a multi-agent discussion for the given task.
+
+        Args:
+            task_context: Context and requirements for the task
+            max_rounds: Maximum number of discussion rounds (overrides config)
 
         Returns:
-            Dictionary med konsensus och optimerad approach
+            Final consensus result with discussion metadata
         """
-        if context is None:
-            context = {}
+        if max_rounds is None:
+            max_rounds = self.config["max_rounds"]
 
-        print("🤖 Starting multi-agent discussion...")
-        print(f"📝 Prompt: {prompt}")
-        print("=" * 60)
+        logger.info(f"Starting discussion with {len(self.agents)} agents")
+        logger.info(f"Task context: {task_context.get('task_type', 'unknown')}")
 
-        # 1. Samla analyser från alla agents (core + plugins)
-        analyses = {}
+        current_round = 0
+        consensus_reached = False
+        final_consensus = None
 
-        # Core agents
-        for agent_name, agent in self.agents.items():
-            print(f"\n🔍 {agent.role} analyzing...")
-            try:
-                analysis = agent.analyze(prompt, context)
-                analyses[agent_name] = analysis
-                print(
-                    f"✅ {agent.name}: {analysis.get('recommendation', 'analysis complete')}"
-                )
-            except Exception as e:
-                print(f"❌ {agent.name} failed: {e}")
-                analyses[agent_name] = agent._fallback_analysis(prompt)
+        while current_round < max_rounds and not consensus_reached:
+            current_round += 1
+            logger.info(f"Discussion round {current_round}/{max_rounds}")
 
-        # Plugin agents
-        if self.enable_plugins and self.plugin_agents:
-            for plugin_name, plugin_agent in self.plugin_agents.items():
-                print(f"\n🔌 {plugin_name} analyzing...")
-                try:
-                    plugin_context = {
-                        "prompt": prompt,
-                        "code": context.get("code", ""),
-                        "discussion_history": context.get("discussion_history", []),
-                        "core_analyses": analyses,
-                    }
+            # Run analysis phase
+            analyses = self._run_analysis_phase(task_context, current_round)
 
-                    plugin_analysis = plugin_agent.analyze(plugin_context)
-                    analyses[f"plugin_{plugin_name}"] = plugin_analysis
-                    print(
-                        f"✅ {plugin_name}: {plugin_analysis.get('description', 'analysis complete')}"
-                    )
+            # Run proposal phase
+            proposals = self._run_proposal_phase(analyses, current_round, task_context)
 
-                except Exception as e:
-                    print(f"❌ Plugin {plugin_name} failed: {e}")
-                    analyses[f"plugin_{plugin_name}"] = {
-                        "error": str(e),
-                        "recommendation": "Plugin analysis failed",
-                    }
+            # Try to reach consensus
+            consensus = self._reach_consensus(proposals, current_round)
 
-        # 2. Syntetisera konsensus
-        consensus = self._synthesize_consensus(analyses, prompt)
-
-        # 3. Låt PromptOptimizer förfina
-        optimized = self._optimize_with_rl(consensus, prompt)
-
-        # 4. Skapa final proposal
-        final_proposal = self._create_final_proposal(analyses, consensus, optimized)
-
-        print("\n" + "=" * 60)
-        print("🎯 MULTI-AGENT CONSENSUS REACHED")
-        print("=" * 60)
-
-        return final_proposal
-
-    def _synthesize_consensus(
-        self, analyses: Dict[str, Any], prompt: str
-    ) -> Dict[str, Any]:
-        """Syntetiserar konsensus från alla agent-analyser."""
-
-        # Extrahera viktiga komponenter
-        approaches = []
-        patterns = []
-        risks = []
-        recommendations = []
-
-        for agent_name, analysis in analyses.items():
-            if "approach" in analysis:
-                approaches.append(analysis["approach"])
-            if "patterns" in analysis:
-                patterns.extend(analysis["patterns"])
-            if "risks" in analysis:
-                risks.extend(analysis["risks"])
-            if "recommendation" in analysis:
-                recommendations.append(analysis["recommendation"])
-
-        # Skapa konsensus
-        consensus = {
-            "synthesized_approach": self._combine_approaches(approaches),
-            "recommended_patterns": list(set(patterns))[:3],  # Top 3 unika patterns
-            "identified_risks": list(set(risks))[:5],  # Top 5 unika risks
-            "consensus_recommendation": self._select_best_recommendation(
-                recommendations
-            ),
-            "confidence": self._calculate_consensus_confidence(analyses),
-        }
-
-        return consensus
-
-    def _combine_approaches(self, approaches: List[str]) -> str:
-        """Kombinerar olika approaches till en syntetiserad approach."""
-        if not approaches:
-            return "Standard implementation with error handling"
-
-        # Enkel kombination - ta första som inte är fallback
-        for approach in approaches:
-            if approach and "Standard" not in approach:
-                return approach
-
-        return approaches[0] if approaches else "Standard implementation"
-
-    def _select_best_recommendation(self, recommendations: List[str]) -> str:
-        """Väljer bästa rekommendationen baserat på frekvens."""
-        if not recommendations:
-            return "defensive_programming"
-
-        # Räkna frekvens
-        from collections import Counter
-
-        counter = Counter(recommendations)
-        return counter.most_common(1)[0][0]
-
-    def _calculate_consensus_confidence(self, analyses: Dict[str, Any]) -> float:
-        """Beräknar konsensus-konfidens baserat på agent-konfidens."""
-        confidences = []
-        for analysis in analyses.values():
-            if "confidence" in analysis:
-                confidences.append(analysis["confidence"])
-
-        if not confidences:
-            return 0.7  # Default confidence
-
-        return sum(confidences) / len(confidences)
-
-    def _optimize_with_rl(
-        self, consensus: Dict[str, Any], prompt: str
-    ) -> Dict[str, Any]:
-        """Använder PromptOptimizer för att förfina konsensus."""
-
-        # Skapa en optimerad prompt baserat på konsensus
-        optimized_prompt = f"""
-Based on multi-agent consensus:
-
-{prompt}
-
-Consensus Approach: {consensus["synthesized_approach"]}
-Recommended Patterns: {", ".join(consensus["recommended_patterns"])}
-Identified Risks: {", ".join(consensus["identified_risks"])}
-
-Generate optimized implementation following the consensus.
-"""
-
-        # Skapa temporär prompt-fil
-        temp_prompt_path = Path("data/temp_consensus.md")
-        temp_prompt_path.parent.mkdir(parents=True, exist_ok=True)
-        temp_prompt_path.write_text(optimized_prompt)
-
-        try:
-            # Använd PromptOptimizer för att förfina
-            optimized_code = prompt_optimizer.mutate_prompt(
-                optimized_prompt, "add_examples"
+            # Create discussion round record
+            discussion_round = DiscussionRound(
+                round_id=current_round,
+                task_context=task_context,
+                analyses=analyses,
+                proposals=proposals,
+                consensus=consensus,
+                metadata={
+                    "consensus_reached": consensus is not None,
+                    "agent_count": len(self.agents),
+                    "timestamp": self._get_timestamp(),
+                },
             )
 
-            return {
-                "optimized_prompt": optimized_code,
-                "optimization_applied": "add_examples",
-                "rl_score": consensus["confidence"],
-            }
-        except Exception as e:
-            print(f"❌ RL optimization failed: {e}")
-            return {
-                "optimized_prompt": optimized_prompt,
-                "optimization_applied": "none",
-                "rl_score": consensus["confidence"],
-            }
-        finally:
-            # Cleanup
-            if temp_prompt_path.exists():
-                temp_prompt_path.unlink()
+            self.discussion_history.append(discussion_round)
 
-    def _create_final_proposal(
+            # Check if consensus was reached
+            if consensus is not None:
+                consensus_reached = True
+                final_consensus = consensus
+                logger.info(f"Consensus reached in round {current_round}")
+            else:
+                logger.info(f"No consensus in round {current_round}, continuing...")
+
+                # Update task context with feedback for next round
+                task_context = self._update_context_with_feedback(
+                    task_context, proposals
+                )
+
+        # Return final result
+        result = {
+            "consensus": final_consensus,
+            "discussion_rounds": len(self.discussion_history),
+            "consensus_reached": consensus_reached,
+            "final_proposals": proposals if not consensus_reached else None,
+            "discussion_summary": self._generate_discussion_summary(),
+            "metadata": {
+                "total_agents": len(self.agents),
+                "agent_names": [agent.name for agent in self.agents],
+                "config": self.config,
+            },
+        }
+
+        logger.info(f"Discussion completed. Consensus reached: {consensus_reached}")
+        return result
+
+    def _run_analysis_phase(
+        self, task_context: Dict[str, Any], round_id: int
+    ) -> List[Dict[str, Any]]:
+        """
+        Run the analysis phase where all agents analyze the task context.
+
+        Args:
+            task_context: Current task context
+            round_id: Current discussion round
+
+        Returns:
+            List of analysis results from all agents
+        """
+        analyses = []
+
+        for agent in self.agents:
+            try:
+                logger.debug(f"Agent {agent.name} analyzing task...")
+                analysis = agent.analyze(task_context)
+                analysis["agent_name"] = agent.name
+                analysis["round_id"] = round_id
+                analyses.append(analysis)
+                logger.debug(f"Agent {agent.name} analysis completed")
+            except Exception as e:
+                logger.error(f"Agent {agent.name} failed to analyze: {e}")
+                # Add error analysis
+                analyses.append(
+                    {
+                        "agent_name": agent.name,
+                        "round_id": round_id,
+                        "error": str(e),
+                        "status": "failed",
+                    }
+                )
+
+        return analyses
+
+    def _run_proposal_phase(
         self,
-        analyses: Dict[str, Any],
-        consensus: Dict[str, Any],
-        optimized: Dict[str, Any],
+        analyses: List[Dict[str, Any]],
+        round_id: int,
+        task_context: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        """
+        Run the proposal phase where all agents propose solutions.
+
+        Args:
+            analyses: Analysis results from all agents
+            round_id: Current discussion round
+
+        Returns:
+            List of proposal results from all agents
+        """
+        proposals = []
+
+        for agent, analysis in zip(self.agents, analyses):
+            try:
+                if analysis.get("status") == "failed":
+                    # Skip failed agents
+                    proposals.append(
+                        {
+                            "agent_name": agent.name,
+                            "round_id": round_id,
+                            "error": analysis.get("error", "Unknown error"),
+                            "status": "failed",
+                        }
+                    )
+                    continue
+
+                logger.debug(f"Agent {agent.name} proposing solution...")
+                proposal = agent.propose(analysis, task_context)
+                proposal["agent_name"] = agent.name
+                proposal["round_id"] = round_id
+                proposal["analysis_id"] = analysis.get("analysis_id", round_id)
+                proposals.append(proposal)
+                logger.debug(f"Agent {agent.name} proposal completed")
+            except Exception as e:
+                logger.error(f"Agent {agent.name} failed to propose: {e}")
+                proposals.append(
+                    {
+                        "agent_name": agent.name,
+                        "round_id": round_id,
+                        "error": str(e),
+                        "status": "failed",
+                    }
+                )
+
+        return proposals
+
+    def _reach_consensus(
+        self, proposals: List[Dict[str, Any]], round_id: int
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Attempt to reach consensus among agent proposals.
+
+        Args:
+            proposals: List of proposals from all agents
+            round_id: Current discussion round
+
+        Returns:
+            Consensus result if reached, None otherwise
+        """
+        # Filter out failed proposals
+        valid_proposals = [p for p in proposals if p.get("status") != "failed"]
+
+        if not valid_proposals:
+            logger.warning("No valid proposals to reach consensus on")
+            return None
+
+        if len(valid_proposals) == 1:
+            # Only one valid proposal, use it as consensus
+            logger.info("Single valid proposal, using as consensus")
+            return valid_proposals[0]
+
+        # Apply consensus strategy
+        strategy = self.config["consensus_strategy"]
+
+        if strategy == "majority":
+            consensus = self._majority_consensus(valid_proposals)
+        elif strategy == "weighted_majority":
+            consensus = self._weighted_majority_consensus(valid_proposals)
+        elif strategy == "unanimous":
+            consensus = self._unanimous_consensus(valid_proposals)
+        else:
+            logger.warning(f"Unknown consensus strategy: {strategy}, using majority")
+            consensus = self._majority_consensus(valid_proposals)
+
+        # Check if consensus meets threshold
+        if consensus and self._check_consensus_threshold(consensus, valid_proposals):
+            return consensus
+
+        return None
+
+    def _majority_consensus(
+        self, proposals: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        """Reach consensus using simple majority voting."""
+        # For now, use the first proposal as consensus
+        # TODO: Implement more sophisticated majority logic
+        return proposals[0] if proposals else None
+
+    def _weighted_majority_consensus(
+        self, proposals: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        """Reach consensus using weighted majority voting."""
+        # Calculate weighted scores for each proposal
+        proposal_scores = {}
+
+        for proposal in proposals:
+            agent_name = proposal["agent_name"]
+            weight = self.config["agent_weights"].get(agent_name, 1.0)
+            confidence = proposal.get("confidence", 0.5)
+
+            score = weight * confidence
+            proposal_scores[agent_name] = score
+
+        # Find the proposal with highest weighted score
+        if proposal_scores:
+            best_agent = max(proposal_scores.items(), key=lambda x: x[1])[0]
+            best_proposal = next(p for p in proposals if p["agent_name"] == best_agent)
+
+            # Add consensus metadata
+            best_proposal["consensus_metadata"] = {
+                "strategy": "weighted_majority",
+                "scores": proposal_scores,
+                "winning_agent": best_agent,
+                "winning_score": proposal_scores[best_agent],
+            }
+
+            return best_proposal
+
+        return None
+
+    def _unanimous_consensus(
+        self, proposals: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        """Reach consensus only if all agents agree."""
+        # For now, return None (no unanimous consensus)
+        # TODO: Implement unanimous consensus logic
+        return None
+
+    def _check_consensus_threshold(
+        self, consensus: Dict[str, Any], proposals: List[Dict[str, Any]]
+    ) -> bool:
+        """Check if consensus meets the required threshold."""
+        threshold = self.config["consensus_threshold"]
+
+        # Calculate agreement level
+        agreement_count = 0
+        total_weight = 0
+
+        for proposal in proposals:
+            agent_name = proposal["agent_name"]
+            weight = self.config["agent_weights"].get(agent_name, 1.0)
+            total_weight += weight
+
+            # Simple agreement check (can be enhanced)
+            if self._proposals_agree(consensus, proposal):
+                agreement_count += weight
+
+        agreement_level = agreement_count / total_weight if total_weight > 0 else 0
+        return agreement_level >= threshold
+
+    def _proposals_agree(
+        self, proposal1: Dict[str, Any], proposal2: Dict[str, Any]
+    ) -> bool:
+        """Check if two proposals agree on key aspects."""
+        # Check approval status first
+        approval1 = proposal1.get("approval", "")
+        approval2 = proposal2.get("approval", "")
+
+        # If approvals don't match, they don't agree
+        if approval1 != approval2:
+            return False
+
+        # Check confidence levels if approvals match
+        conf1 = proposal1.get("confidence", 0.5)
+        conf2 = proposal2.get("confidence", 0.5)
+
+        return abs(conf1 - conf2) < 0.2  # Within 20% confidence difference
+
+    def _update_context_with_feedback(
+        self, task_context: Dict[str, Any], proposals: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Skapar final proposal för human approval."""
+        """Update task context with feedback from proposals for next round."""
+        # Extract feedback from proposals
+        feedback = []
+        for proposal in proposals:
+            if proposal.get("status") != "failed":
+                feedback.append(
+                    {
+                        "agent": proposal["agent_name"],
+                        "reasoning": proposal.get("reasoning", ""),
+                        "confidence": proposal.get("confidence", 0.5),
+                        "suggestions": proposal.get("suggestions", []),
+                    }
+                )
+
+        # Update context with feedback
+        updated_context = task_context.copy()
+        updated_context["previous_feedback"] = feedback
+        updated_context["discussion_round"] = len(self.discussion_history) + 1
+
+        return updated_context
+
+    def _generate_discussion_summary(self) -> Dict[str, Any]:
+        """Generate a summary of the discussion."""
+        if not self.discussion_history:
+            return {"summary": "No discussion rounds completed"}
+
+        total_rounds = len(self.discussion_history)
+        consensus_rounds = sum(
+            1 for round_data in self.discussion_history if round_data.consensus
+        )
+
+        agent_participation = {}
+        for agent in self.agents:
+            agent_name = agent.name
+            participation = sum(
+                1
+                for round_data in self.discussion_history
+                for analysis in round_data.analyses
+                if analysis.get("agent_name") == agent_name
+                and analysis.get("status") != "failed"
+            )
+            agent_participation[agent_name] = participation
 
         return {
-            "proposal_id": f"proposal_{len(analyses)}_{int(consensus['confidence'] * 100)}_{int(datetime.now().timestamp())}",
-            "prompt": analyses.get("codegen", {}).get("approach", "Unknown"),
-            "approach": consensus["synthesized_approach"],
-            "confidence": consensus["confidence"],
-            "patterns": consensus["recommended_patterns"],
-            "risks": consensus["identified_risks"],
-            "rl_score": optimized["rl_score"],
-            "optimization": optimized["optimization_applied"],
-            "agent_analyses": analyses,
-            "consensus": consensus,
-            "optimized": optimized,
-            "timestamp": "2025-07-19T18:00:00Z",
+            "total_rounds": total_rounds,
+            "consensus_rounds": consensus_rounds,
+            "success_rate": consensus_rounds / total_rounds if total_rounds > 0 else 0,
+            "agent_participation": agent_participation,
+            "final_consensus_reached": bool(self.discussion_history[-1].consensus),
         }
 
-    def get_agent_summary(self) -> Dict[str, Any]:
-        """Returnerar sammanfattning av alla agents (core + plugins)."""
-        summary = {
-            "total_agents": len(self.agents) + len(self.plugin_agents),
-            "core_agents": len(self.agents),
-            "plugin_agents": len(self.plugin_agents),
-            "agents": {},
+    def get_discussion_history(self) -> List[DiscussionRound]:
+        """Get the complete discussion history."""
+        return self.discussion_history.copy()
+
+    def get_agent_statistics(self) -> Dict[str, Any]:
+        """Get statistics about agent performance."""
+        stats = {
+            "total_agents": len(self.agents),
+            "agent_names": [agent.name for agent in self.agents],
+            "total_discussions": len(self.discussion_history),
+            "agent_weights": self.config["agent_weights"].copy(),
         }
 
-        # Core agents
-        for name, agent in self.agents.items():
-            summary["agents"][name] = {
-                "name": agent.name,
-                "role": agent.role,
-                "type": "core",
+        # Calculate agent-specific statistics
+        agent_stats = {}
+        for agent in self.agents:
+            agent_name = agent.name
+            successful_analyses = 0
+            successful_proposals = 0
+
+            for round_data in self.discussion_history:
+                # Count successful analyses
+                for analysis in round_data.analyses:
+                    if (
+                        analysis.get("agent_name") == agent_name
+                        and analysis.get("status") != "failed"
+                    ):
+                        successful_analyses += 1
+
+                # Count successful proposals
+                for proposal in round_data.proposals:
+                    if (
+                        proposal.get("agent_name") == agent_name
+                        and proposal.get("status") != "failed"
+                    ):
+                        successful_proposals += 1
+
+            agent_stats[agent_name] = {
+                "successful_analyses": successful_analyses,
+                "successful_proposals": successful_proposals,
+                "success_rate": successful_proposals / len(self.discussion_history)
+                if self.discussion_history
+                else 0,
             }
 
-        # Plugin agents
-        for name, plugin_agent in self.plugin_agents.items():
-            summary["agents"][name] = {
-                "name": plugin_agent.metadata.name,
-                "role": plugin_agent.metadata.description,
-                "type": "plugin",
-                "version": plugin_agent.metadata.version,
-                "author": plugin_agent.metadata.author,
-            }
+        stats["agent_performance"] = agent_stats
+        return stats
 
-        return summary
+    def reset_discussion(self):
+        """Reset the discussion history."""
+        self.discussion_history.clear()
+        logger.info("Discussion history reset")
 
-    def get_plugin_info(self) -> Dict[str, Any]:
-        """Get detailed plugin information."""
-        if not self.plugin_manager:
-            return {"plugins_enabled": False}
+    def _get_timestamp(self) -> str:
+        """Get current timestamp for logging."""
+        from datetime import datetime
 
-        plugin_info = {
-            "plugins_enabled": True,
-            "total_plugins": len(self.plugin_manager.list_plugins()),
-            "active_plugins": len(self.plugin_agents),
-            "plugin_details": {},
-        }
-
-        for plugin_name, plugin_agent in self.plugin_agents.items():
-            plugin_info["plugin_details"][plugin_name] = {
-                "name": plugin_agent.metadata.name,
-                "version": plugin_agent.metadata.version,
-                "description": plugin_agent.metadata.description,
-                "author": plugin_agent.metadata.author,
-                "type": plugin_agent.metadata.plugin_type.value,
-                "tags": plugin_agent.metadata.tags,
-                "homepage": plugin_agent.metadata.homepage,
-                "license": plugin_agent.metadata.license,
-            }
-
-        return plugin_info
+        return datetime.now().isoformat()
