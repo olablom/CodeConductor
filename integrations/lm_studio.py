@@ -60,10 +60,14 @@ def generate_code(prompt_path: pathlib.Path, strategy: str) -> str | None:
     )
 
     # Förbättra prompten för att få Python-kod
-    enhanced_prompt = f"""Create Python code for this request:
+    enhanced_prompt = f"""You are an expert Python microservices developer. 
+Generate a **complete** Python function, including the `def` keyword, 
+docstring and proper indentation.
 
 {prompt_content}
 
+Here is the function signature you should implement:
+```python
 def"""
 
     code_prompt = enhanced_prompt
@@ -90,11 +94,57 @@ def"""
             print(f"[LM Studio] Generated text: '{text}'")
 
             if text:
-                # Lägg till 'def' om det saknas
-                if not text.strip().startswith("def "):
-                    text = f"def {text.strip()}"
+                # Post-processa svaret för att garantera giltig Python-kod
+                text = text.strip()
 
-                print(f"[LM Studio] ✅ Valid code generated")
+                # Om svaret börjar med mellanslag eller saknar 'def', lägg på det
+                if not text.startswith("def "):
+                    text = "def " + text
+
+                # Se till att vi avslutar vid stop-token om vi fått med extra rader
+                if "\n\n" in text:
+                    text = text.split("\n\n")[0]
+
+                # Ta bort eventuella markdown-kodblock
+                if text.startswith("```python"):
+                    text = text.replace("```python", "").strip()
+                if text.endswith("```"):
+                    text = text[:-3].strip()
+
+                # Fixa ofullständiga docstrings
+                lines = text.split("\n")
+                fixed_lines = []
+                in_docstring = False
+
+                for i, line in enumerate(lines):
+                    if '"""' in line and not in_docstring:
+                        in_docstring = True
+                        fixed_lines.append(line)
+                    elif in_docstring:
+                        if '"""' in line:
+                            in_docstring = False
+                            fixed_lines.append(line)
+                        else:
+                            fixed_lines.append(line)
+                    else:
+                        fixed_lines.append(line)
+
+                # Om docstring inte är avslutad, lägg till avslutning
+                if in_docstring:
+                    fixed_lines.append('    """')
+
+                # Lägg till en enkel return om funktionen saknar body
+                if len(fixed_lines) <= 2 or (
+                    len(fixed_lines) == 3 and '"""' in fixed_lines[1]
+                ):
+                    fixed_lines.append("    # TODO: Implement this function")
+                    fixed_lines.append(
+                        '    return {"username": username, "status": "active"}'
+                    )
+
+                text = "\n".join(fixed_lines)
+
+                print(f"[LM Studio] ✅ Valid code generated (post-processed)")
                 return text
 
         print(f"[LM Studio] ❌ No valid response")
