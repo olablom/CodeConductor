@@ -62,7 +62,7 @@ class CodeQualityPredictor:
         iteration_count = context.get("iteration_count", 1)
 
         # Model and strategy features
-        model_source = context.get("model_source", "mock")
+        model_source = context.get("model_source", "mock") if context else "mock"
         model_source_score = 1.0 if model_source == "lm_studio" else 0.5
 
         strategy = context.get("strategy", "conservative")

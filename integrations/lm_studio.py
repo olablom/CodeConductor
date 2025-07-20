@@ -55,14 +55,20 @@ def generate_code(prompt_path: pathlib.Path, strategy: str) -> str | None:
     prompt_content = prompt_path.read_text()
 
     # Bättre prompt-format för LM Studio
-    system_prompt = "You are a Python coding assistant. Write ONLY Python code. No explanations, no thinking, no markdown, no <think> tags, just pure Python code starting with 'def'."
-    user_prompt = f"def hello_world():\n    return "
+    system_prompt = "You are a Python coding assistant. Generate ONLY Python code. No markdown, no explanations, no comments. Just pure Python code."
+
+    # Använd prompt_content istället för hårdkodad prompt
+    user_prompt = (
+        prompt_content
+        if prompt_content.strip()
+        else "def hello_world():\n    return 'Hello, World!'"
+    )
 
     payload = {
         "prompt": f"{system_prompt}\n\n{user_prompt}",
-        "max_tokens": 500,
+        "max_tokens": 1000,
         "temperature": _TEMP[strategy],
-        "stop": ["```", "\n\n"],
+        "stop": ["```", "\n\n", "def ", "class ", "#", "##", "###"],
     }
     try:
         # Använd completions endpoint istället
