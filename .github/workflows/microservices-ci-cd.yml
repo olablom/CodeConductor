@@ -3,10 +3,10 @@ name: Microservices CI/CD Pipeline
 on:
   push:
     branches: [main]
-    paths: ["services/**"]
+    paths: ["services/**", ".github/workflows/microservices-ci-cd.yml"]
   pull_request:
     branches: [main]
-    paths: ["services/**"]
+    paths: ["services/**", ".github/workflows/microservices-ci-cd.yml"]
 
 permissions:
   security-events: write
