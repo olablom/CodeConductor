@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-07-20T19:08:14.212134",
+  "database": {
+    "qtable_read_avg": 0.20957999950041994,
+    "metrics_read_avg": 0.21898999839322641
+  },
+  "imports": {
+    "agents.base_agent": 7.836199991288595,
+    "agents.codegen_agent": 0.4273999948054552,
+    "agents.architect_agent": 0.33850000181701034,
+    "agents.review_agent": 5.4509000037796795,
+    "agents.policy_agent": 0.3063000040128827,
+    "agents.prompt_optimizer": 43.73669999768026,
+    "agents.orchestrator": 0.6603999936487526
+  },
+  "memory": {},
+  "file_ops": {
+    "json_io_avg_ms": 0.5631699983496219
+  },
+  "overall_score": 96.944492858477
+}

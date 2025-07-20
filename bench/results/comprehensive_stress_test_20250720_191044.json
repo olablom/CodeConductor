@@ -1,0 +1,263 @@
+{
+  "timestamp": "2025-07-20T19:10:44.237989",
+  "concurrent_test": {
+    "total_tasks": 50,
+    "successful_tasks": 46,
+    "failed_tasks": 4,
+    "success_rate": 0.92,
+    "failure_rate": 0.08,
+    "total_time_ms": 6072.291200005566,
+    "throughput_tasks_per_sec": 8.234124213271288,
+    "avg_latency_ms": 993.6051934779717,
+    "min_latency_ms": 101.48500000650529,
+    "max_latency_ms": 1982.8538999863667,
+    "median_latency_ms": 987.2475999945891,
+    "latency_std_dev": 528.8017967266577,
+    "errors": [
+      "Simulated failure for task 10",
+      "Simulated failure for task 18",
+      "Simulated failure for task 20",
+      "Simulated failure for task 28"
+    ],
+    "agent_distribution": {
+      "policy": 21,
+      "codegen": 12,
+      "reviewer": 11,
+      "architect": 6
+    }
+  },
+  "gradual_load_test": {
+    "test_type": "gradual_load",
+    "load_results": [
+      {
+        "total_tasks": 20,
+        "successful_tasks": 19,
+        "failed_tasks": 1,
+        "success_rate": 0.95,
+        "failure_rate": 0.05,
+        "total_time_ms": 3142.893099997309,
+        "throughput_tasks_per_sec": 6.363563558689643,
+        "avg_latency_ms": 1154.5193947347702,
+        "min_latency_ms": 157.41519999573939,
+        "max_latency_ms": 1957.2343000036199,
+        "median_latency_ms": 1292.3336999956518,
+        "latency_std_dev": 526.343534075664,
+        "errors": [
+          "Simulated failure for task 7"
+        ],
+        "agent_distribution": {
+          "reviewer": 5,
+          "architect": 4,
+          "policy": 7,
+          "codegen": 4
+        },
+        "load_level": 20
+      },
+      {
+        "total_tasks": 40,
+        "successful_tasks": 38,
+        "failed_tasks": 2,
+        "success_rate": 0.95,
+        "failure_rate": 0.05,
+        "total_time_ms": 5140.312899995479,
+        "throughput_tasks_per_sec": 7.781627456965738,
+        "avg_latency_ms": 1056.121410527818,
+        "min_latency_ms": 113.76570000720676,
+        "max_latency_ms": 1994.0874000021722,
+        "median_latency_ms": 1066.0205499953008,
+        "latency_std_dev": 573.4157460726275,
+        "errors": [
+          "Simulated failure for task 3",
+          "Simulated failure for task 33"
+        ],
+        "agent_distribution": {
+          "policy": 6,
+          "reviewer": 14,
+          "architect": 13,
+          "codegen": 7
+        },
+        "load_level": 40
+      },
+      {
+        "total_tasks": 60,
+        "successful_tasks": 56,
+        "failed_tasks": 4,
+        "success_rate": 0.9333333333333333,
+        "failure_rate": 0.06666666666666667,
+        "total_time_ms": 7582.151700000395,
+        "throughput_tasks_per_sec": 7.913320964020922,
+        "avg_latency_ms": 1087.7291357140036,
+        "min_latency_ms": 137.0619999943301,
+        "max_latency_ms": 1994.3078000069363,
+        "median_latency_ms": 1056.657549997908,
+        "latency_std_dev": 557.6180177898528,
+        "errors": [
+          "Simulated failure for task 15",
+          "Simulated failure for task 16",
+          "Simulated failure for task 17",
+          "Simulated failure for task 28"
+        ],
+        "agent_distribution": {
+          "codegen": 17,
+          "reviewer": 13,
+          "policy": 17,
+          "architect": 13
+        },
+        "load_level": 60
+      },
+      {
+        "total_tasks": 80,
+        "successful_tasks": 74,
+        "failed_tasks": 6,
+        "success_rate": 0.925,
+        "failure_rate": 0.075,
+        "total_time_ms": 8776.956900008372,
+        "throughput_tasks_per_sec": 9.114776443749392,
+        "avg_latency_ms": 966.0139729727431,
+        "min_latency_ms": 103.30699999758508,
+        "max_latency_ms": 1976.8807000073139,
+        "median_latency_ms": 898.6785000015516,
+        "latency_std_dev": 566.6168686348296,
+        "errors": [
+          "Simulated failure for task 10",
+          "Simulated failure for task 28",
+          "Simulated failure for task 40",
+          "Simulated failure for task 55",
+          "Simulated failure for task 53",
+          "Simulated failure for task 68"
+        ],
+        "agent_distribution": {
+          "codegen": 13,
+          "architect": 15,
+          "policy": 28,
+          "reviewer": 24
+        },
+        "load_level": 80
+      },
+      {
+        "total_tasks": 100,
+        "successful_tasks": 98,
+        "failed_tasks": 2,
+        "success_rate": 0.98,
+        "failure_rate": 0.02,
+        "total_time_ms": 11275.498000002699,
+        "throughput_tasks_per_sec": 8.868787879699509,
+        "avg_latency_ms": 1064.2732295919832,
+        "min_latency_ms": 112.13719999068417,
+        "max_latency_ms": 1981.9134999997914,
+        "median_latency_ms": 1023.8366500052507,
+        "latency_std_dev": 589.1993738396095,
+        "errors": [
+          "Simulated failure for task 42",
+          "Simulated failure for task 67"
+        ],
+        "agent_distribution": {
+          "reviewer": 19,
+          "policy": 26,
+          "architect": 30,
+          "codegen": 25
+        },
+        "load_level": 100
+      }
+    ],
+    "breaking_point": null
+  },
+  "burst_test": {
+    "test_type": "burst_load",
+    "burst_results": [
+      {
+        "total_tasks": 30,
+        "successful_tasks": 29,
+        "failed_tasks": 1,
+        "success_rate": 0.9666666666666667,
+        "failure_rate": 0.03333333333333333,
+        "total_time_ms": 4551.819900007104,
+        "throughput_tasks_per_sec": 6.590770430076371,
+        "avg_latency_ms": 1096.191396551901,
+        "min_latency_ms": 225.3311000094982,
+        "max_latency_ms": 1919.4622999930289,
+        "median_latency_ms": 1075.1898999878904,
+        "latency_std_dev": 527.2668874749797,
+        "errors": [
+          "Simulated failure for task 11"
+        ],
+        "agent_distribution": {
+          "reviewer": 9,
+          "codegen": 6,
+          "architect": 6,
+          "policy": 9
+        },
+        "burst_number": 1
+      },
+      {
+        "total_tasks": 30,
+        "successful_tasks": 30,
+        "failed_tasks": 0,
+        "success_rate": 1.0,
+        "failure_rate": 0.0,
+        "total_time_ms": 3634.637900002417,
+        "throughput_tasks_per_sec": 8.253917123348119,
+        "avg_latency_ms": 1016.7406733351527,
+        "min_latency_ms": 233.2279000111157,
+        "max_latency_ms": 1901.5885000117123,
+        "median_latency_ms": 987.3265499991248,
+        "latency_std_dev": 468.165529940418,
+        "errors": [],
+        "agent_distribution": {
+          "architect": 8,
+          "codegen": 11,
+          "policy": 7,
+          "reviewer": 4
+        },
+        "burst_number": 2
+      },
+      {
+        "total_tasks": 30,
+        "successful_tasks": 29,
+        "failed_tasks": 1,
+        "success_rate": 0.9666666666666667,
+        "failure_rate": 0.03333333333333333,
+        "total_time_ms": 3594.806499997503,
+        "throughput_tasks_per_sec": 8.345372692527633,
+        "avg_latency_ms": 1094.81347931282,
+        "min_latency_ms": 106.34959999879356,
+        "max_latency_ms": 1992.0456999971066,
+        "median_latency_ms": 1100.7895000075223,
+        "latency_std_dev": 502.13862115705024,
+        "errors": [
+          "Simulated failure for task 12"
+        ],
+        "agent_distribution": {
+          "architect": 12,
+          "reviewer": 6,
+          "codegen": 9,
+          "policy": 3
+        },
+        "burst_number": 3
+      }
+    ],
+    "recovery_analysis": {
+      "recovery_metrics": [
+        {
+          "burst_pair": "1-2",
+          "latency_recovery_ms": 79.45072321674843,
+          "failure_rate_recovery": 0.03333333333333333,
+          "recovered": true
+        },
+        {
+          "burst_pair": "2-3",
+          "latency_recovery_ms": -78.07280597766726,
+          "failure_rate_recovery": -0.03333333333333333,
+          "recovered": false
+        }
+      ],
+      "avg_latency_recovery_ms": 0.6889586195405855,
+      "recovery_success_rate": 0.5
+    }
+  },
+  "summary": {
+    "max_throughput": 8.234124213271288,
+    "breaking_point": null,
+    "recovery_rate": 0.5
+  }
+}
