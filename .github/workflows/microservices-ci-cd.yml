@@ -89,7 +89,19 @@ jobs:
       - name: Start services with Docker Compose
         run: |
           docker compose -f docker-compose.ci.yml up -d
-          sleep 30  # Wait for services to start
+          echo "=== DOCKER COMPOSE STATUS ==="
+          docker compose -f docker-compose.ci.yml ps
+          echo "=== DOCKER LOGS ==="
+          docker compose -f docker-compose.ci.yml logs --tail=20
+          sleep 60  # Wait longer for services to start
+
+      - name: Check service health
+        run: |
+          echo "=== CHECKING SERVICE HEALTH ==="
+          for port in 9000 9001 9002 9005 9006; do
+            echo "Checking port $port..."
+            curl -f http://localhost:$port/health || echo "Port $port not responding"
+          done
 
       - name: Debug environment
         run: |
