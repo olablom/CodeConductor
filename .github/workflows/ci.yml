@@ -63,12 +63,12 @@ jobs:
 
       - name: Run tests with pytest
         run: |
-          pytest tests/ -v --cov=agents --cov-report=xml --cov-report=html --tb=short --maxfail=1
+          pytest tests/ -v --cov=agents --cov-report=xml --cov-report=html --tb=short
 
       - name: Show test summary
         run: |
           echo "=== TEST SUMMARY ==="
-          echo "Total tests: $(pytest tests/ --collect-only -q | grep 'collected' | cut -d' ' -f2)"
+          echo "Total tests: $(pytest tests/ --collect-only -q | grep 'collected' | cut -d' ' -f2 || echo '0')"
           echo "Passed: $(pytest tests/ -q | grep 'passed' | cut -d' ' -f1 || echo '0')"
           echo "Failed: $(pytest tests/ -q | grep 'failed' | cut -d' ' -f1 || echo '0')"
           echo "XFailed: $(pytest tests/ -q | grep 'xfailed' | cut -d' ' -f1 || echo '0')"
