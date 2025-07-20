@@ -1,0 +1,213 @@
+{
+  "milestones": {
+    "Week 1": {
+      "title": "Infrastructure & RL Foundation",
+      "description": "Agent-bas, LLM-integration, Q-learning foundation",
+      "due_on": "2025-07-27T16:04:33.437207",
+      "state": "open"
+    },
+    "Week 2-3": {
+      "title": "Multi-Agent Discussion",
+      "description": "AgentOrchestrator, 3 agenter, diskussion",
+      "due_on": "2025-08-10T16:04:33.437207",
+      "state": "open"
+    },
+    "Week 3-4": {
+      "title": "Human-in-the-Loop",
+      "description": "CLI/Streamlit UI, godkännande-flöde",
+      "due_on": "2025-08-17T16:04:33.437207",
+      "state": "open"
+    },
+    "Week 4-6": {
+      "title": "Implementation & Integration",
+      "description": "Cursor/LM Studio, FastAPI fallback, testing",
+      "due_on": "2025-08-31T16:04:33.437207",
+      "state": "open"
+    },
+    "Week 6-9": {
+      "title": "RL Feedback Loop",
+      "description": "RewardAgent, PromptOptimizerAgent, metrics",
+      "due_on": "2025-09-21T16:04:33.437207",
+      "state": "open"
+    },
+    "Week 9-10": {
+      "title": "Demo & Documentation",
+      "description": "Live demo, dokumentation, workshop material",
+      "due_on": "2025-09-28T16:04:33.437207",
+      "state": "open"
+    }
+  },
+  "labels": {
+    "backend": "Backend-komponenter",
+    "agent": "Agent-relaterade features",
+    "rl": "Reinforcement learning",
+    "ui": "Användargränssnitt",
+    "docs": "Dokumentation",
+    "demo": "Demo och presentation",
+    "testing": "Tester och QA",
+    "infrastructure": "Infrastruktur och setup",
+    "task": "Development task",
+    "enhancement": "Feature enhancement"
+  },
+  "issues": [
+    {
+      "title": "[TASK] Definiera BaseAgent abstract class",
+      "body": "## 📋 Task: Definiera BaseAgent abstract class\n\n### **Beskrivning**\nSkapa en abstract base class för alla agenter med standardiserade metoder.\n\n### **Fas**\n- [x] Fas 1: Infrastruktur & Grundarkitektur\n\n### **Prioritet**\n- [x] Hög\n\n### **Tidsuppskattning**\n- [x] 1 dag\n\n### **Definition of Done**\n- [ ] Abstract class med `analyze()`, `propose()`, `review()` metoder\n- [ ] Type hints och docstrings\n- [ ] Unit tester för base class\n- [ ] Integration med befintlig agent-struktur\n\n### **Teknisk detaljer**\n- Skapa `agents/base_agent.py`\n- Definiera abstract methods\n- Implementera common functionality\n- Uppdatera befintliga agenter att ärva från BaseAgent\n\n### **Beroenden**\nInga\n\n### **Tester**\n- [x] Unit tester\n- [ ] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "agent",
+        "infrastructure"
+      ],
+      "milestone": "Week 1"
+    },
+    {
+      "title": "[TASK] Implementera kommunikationskanal (message bus)",
+      "body": "## 📋 Task: Implementera kommunikationskanal\n\n### **Beskrivning**\nSkapa en message bus för agent-kommunikation.\n\n### **Fas**\n- [x] Fas 1: Infrastruktur & Grundarkitektur\n\n### **Prioritet**\n- [x] Hög\n\n### **Tidsuppskattning**\n- [x] 1 dag\n\n### **Definition of Done**\n- [ ] Message bus implementation\n- [ ] Agent message routing\n- [ ] Error handling\n- [ ] Performance monitoring\n\n### **Teknisk detaljer**\n- Implementera in-memory message bus\n- Stöd för async kommunikation\n- Message validation och routing\n- Integration med agent-system\n\n### **Beroenden**\n- BaseAgent implementation\n\n### **Tester**\n- [x] Unit tester\n- [x] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "agent",
+        "infrastructure"
+      ],
+      "milestone": "Week 1"
+    },
+    {
+      "title": "[TASK] Skapa LLMClient wrapper för Ollama/CodeLlama",
+      "body": "## 📋 Task: LLMClient wrapper\n\n### **Beskrivning**\nSkapa en wrapper för LLM-integration med caching och retry-logic.\n\n### **Fas**\n- [x] Fas 1: Infrastruktur & Grundarkitektur\n\n### **Prioritet**\n- [x] Hög\n\n### **Tidsuppskattning**\n- [x] 2 dagar\n\n### **Definition of Done**\n- [ ] LLMClient class implementation\n- [ ] Ollama/CodeLlama integration\n- [ ] Caching mechanism\n- [ ] Retry logic och error handling\n- [ ] Configuration management\n\n### **Teknisk detaljer**\n- Skapa `integrations/llm_client.py`\n- Stöd för lokala modeller\n- Response caching\n- Exponential backoff för retries\n- Config-driven model selection\n\n### **Beroenden**\n- BaseAgent implementation\n\n### **Tester**\n- [x] Unit tester\n- [x] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "infrastructure",
+        "backend"
+      ],
+      "milestone": "Week 1"
+    },
+    {
+      "title": "[TASK] Skapa config.yaml för agent-profiler och RL-hyperparametrar",
+      "body": "## 📋 Task: YAML-konfiguration\n\n### **Beskrivning**\nSkapa konfigurationssystem för agent-profiler och RL-parametrar.\n\n### **Fas**\n- [x] Fas 1: Infrastruktur & Grundarkitektur\n\n### **Prioritet**\n- [x] Medium\n\n### **Tidsuppskattning**\n- [x] 1 dag\n\n### **Definition of Done**\n- [ ] config.yaml struktur\n- [ ] Config loader och validator\n- [ ] Agent profile definitions\n- [ ] RL hyperparameter configuration\n- [ ] Environment-specific configs\n\n### **Teknisk detaljer**\n- Skapa `config/` directory\n- Implementera config loader med validation\n- Stöd för development/production configs\n- Integration med agent-system\n\n### **Beroenden**\n- LLMClient implementation\n\n### **Tester**\n- [x] Unit tester\n- [ ] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "infrastructure"
+      ],
+      "milestone": "Week 1"
+    },
+    {
+      "title": "[TASK] Implementera calculate_reward() funktion",
+      "body": "## 📋 Task: Reward-funktion implementation\n\n### **Beskrivning**\nImplementera reward-funktion för RL-system enligt design.\n\n### **Fas**\n- [x] Fas 2: RL-Infrastruktur\n\n### **Prioritet**\n- [x] Hög\n\n### **Tidsuppskattning**\n- [x] 2 dagar\n\n### **Definition of Done**\n- [ ] Test-pass rate reward\n- [ ] Komplexitet bedömning\n- [ ] Policy-block detection\n- [ ] Reward normalisering\n- [ ] Unit tester för reward-logic\n\n### **Teknisk detaljer**\n- Skapa `bandits/reward_calculator.py`\n- Implementera olika reward-komponenter\n- Weighted reward combination\n- Normalisering och skalning\n- Integration med Q-learning\n\n### **Beroenden**\n- BaseAgent implementation\n- Config system\n\n### **Tester**\n- [x] Unit tester\n- [x] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "rl",
+        "backend"
+      ],
+      "milestone": "Week 2-3"
+    },
+    {
+      "title": "[TASK] Implementera tabular Q-agent",
+      "body": "## 📋 Task: Q-learning implementation\n\n### **Beskrivning**\nSkapa tabular Q-agent för prompt-optimering.\n\n### **Fas**\n- [x] Fas 2: RL-Infrastruktur\n\n### **Prioritet**\n- [x] Hög\n\n### **Tidsuppskattning**\n- [x] 3 dagar\n\n### **Definition of Done**\n- [ ] Tabular Q-agent implementation\n- [ ] State-action space definition\n- [ ] Epsilon-greedy exploration\n- [ ] Q-table persistence\n- [ ] Learning rate och discount factor\n\n### **Teknisk detaljer**\n- Skapa `bandits/q_agent.py`\n- Implementera Q-learning algorithm\n- State representation för prompts\n- Action space för prompt-modifieringar\n- Q-table serialization\n\n### **Beroenden**\n- Reward function implementation\n\n### **Tester**\n- [x] Unit tester\n- [x] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "rl",
+        "backend"
+      ],
+      "milestone": "Week 2-3"
+    },
+    {
+      "title": "[TASK] Implementera AgentOrchestrator",
+      "body": "## 📋 Task: AgentOrchestrator implementation\n\n### **Beskrivning**\nSkapa orchestrator för multi-agent diskussion och konsensus.\n\n### **Fas**\n- [x] Fas 3: Multi-Agent Diskussion\n\n### **Prioritet**\n- [x] Hög\n\n### **Tidsuppskattning**\n- [x] 3 dagar\n\n### **Definition of Done**\n- [ ] Diskussionsturnering koordination\n- [ ] Agent scheduling och timing\n- [ ] Consensus building logic\n- [ ] Conflict resolution\n- [ ] Performance monitoring\n\n### **Teknisk detaljer**\n- Skapa `orchestrator/agent_orchestrator.py`\n- Implementera discussion rounds\n- Agent voting och consensus\n- Timeout handling\n- Integration med message bus\n\n### **Beroenden**\n- BaseAgent implementation\n- Message bus\n- Config system\n\n### **Tester**\n- [x] Unit tester\n- [x] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "agent",
+        "backend"
+      ],
+      "milestone": "Week 2-3"
+    },
+    {
+      "title": "[TASK] Implementera CodeGenAgent, ArchitectAgent, ReviewAgent",
+      "body": "## 📋 Task: Specialiserade agenter\n\n### **Beskrivning**\nImplementera de tre huvudagenterna med specifika ansvarsområden.\n\n### **Fas**\n- [x] Fas 3: Multi-Agent Diskussion\n\n### **Prioritet**\n- [x] Hög\n\n### **Tidsuppskattning**\n- [x] 4 dagar\n\n### **Definition of Done**\n- [ ] CodeGenAgent - Kodgenerering fokus\n- [ ] ArchitectAgent - Arkitektur och design\n- [ ] ReviewAgent - Kodgranskning och kvalitet\n- [ ] Agent-specifika prompts och logik\n- [ ] Integration med orchestrator\n\n### **Teknisk detaljer**\n- Skapa `agents/codegen_agent.py`\n- Skapa `agents/architect_agent.py`\n- Skapa `agents/review_agent.py`\n- Implementera agent-specifika prompts\n- Integration med LLMClient\n\n### **Beroenden**\n- BaseAgent implementation\n- AgentOrchestrator\n- LLMClient\n\n### **Tester**\n- [x] Unit tester\n- [x] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "agent",
+        "backend"
+      ],
+      "milestone": "Week 2-3"
+    },
+    {
+      "title": "[TASK] Skapa CLI interface för agent-förslag",
+      "body": "## 📋 Task: CLI interface\n\n### **Beskrivning**\nSkapa command-line interface för agent-förslag och godkännande.\n\n### **Fas**\n- [x] Fas 4: Human-in-the-Loop\n\n### **Prioritet**\n- [x] Medium\n\n### **Tidsuppskattning**\n- [x] 2 dagar\n\n### **Definition of Done**\n- [ ] Enkel meny för agent-förslag\n- [ ] Approve/Reject funktionalitet\n- [ ] Förhandsvisning av kod\n- [ ] Keyboard shortcuts\n- [ ] Error handling\n\n### **Teknisk detaljer**\n- Skapa `ui/cli_interface.py`\n- Implementera interactive menu\n- Kod preview med syntax highlighting\n- Keyboard navigation\n- Integration med agent-system\n\n### **Beroenden**\n- AgentOrchestrator\n- Multi-agent system\n\n### **Tester**\n- [x] Unit tester\n- [x] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "ui",
+        "backend"
+      ],
+      "milestone": "Week 3-4"
+    },
+    {
+      "title": "[TASK] Skapa Streamlit UI med dark mode",
+      "body": "## 📋 Task: Streamlit UI\n\n### **Beskrivning**\nSkapa modern Streamlit interface med dark mode och live editing.\n\n### **Fas**\n- [x] Fas 4: Human-in-the-Loop\n\n### **Prioritet**\n- [x] Hög\n\n### **Tidsuppskattning**\n- [x] 3 dagar\n\n### **Definition of Done**\n- [ ] Modern dark mode interface\n- [ ] Live agent-diskussion visning\n- [ ] Kod preview med syntax highlighting\n- [ ] Feedback collection\n- [ ] Real-time updates\n\n### **Teknisk detaljer**\n- Skapa `ui/streamlit_app.py`\n- Implementera dark mode theme\n- Live discussion visualization\n- Code editor integration\n- Real-time agent communication\n\n### **Beroenden**\n- AgentOrchestrator\n- Multi-agent system\n\n### **Tester**\n- [x] Unit tester\n- [x] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "ui",
+        "frontend"
+      ],
+      "milestone": "Week 3-4"
+    },
+    {
+      "title": "[TASK] Integrera Cursor/LM Studio för kodgenerering",
+      "body": "## 📋 Task: Cursor/LM Studio integration\n\n### **Beskrivning**\nIntegrera Cursor och LM Studio för kodgenerering med fallback.\n\n### **Fas**\n- [x] Fas 5: Implementation\n\n### **Prioritet**\n- [x] Hög\n\n### **Tidsuppskattning**\n- [x] 3 dagar\n\n### **Definition of Done**\n- [ ] API integration för kodgenerering\n- [ ] Prompt engineering och optimization\n- [ ] Response parsing och validation\n- [ ] Error handling och fallback\n- [ ] Performance monitoring\n\n### **Teknisk detaljer**\n- Skapa `integrations/cursor_client.py`\n- Skapa `integrations/lm_studio_client.py`\n- Implementera prompt templates\n- Response validation och parsing\n- Fallback mechanism\n\n### **Beroenden**\n- LLMClient base\n- Agent system\n\n### **Tester**\n- [x] Unit tester\n- [x] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "backend",
+        "integration"
+      ],
+      "milestone": "Week 4-6"
+    },
+    {
+      "title": "[TASK] Implementera FastAPI fallback generator",
+      "body": "## 📋 Task: FastAPI fallback\n\n### **Beskrivning**\nSkapa fallback-generator för komplexa prompts när LLM misslyckas.\n\n### **Fas**\n- [x] Fas 5: Implementation\n\n### **Prioritet**\n- [x] Medium\n\n### **Tidsuppskattning**\n- [x] 2 dagar\n\n### **Definition of Done**\n- [ ] Integrera befintlig fallback-generator\n- [ ] Komplexa prompt-hantering\n- [ ] Code quality validation\n- [ ] Performance optimization\n- [ ] Integration med main pipeline\n\n### **Teknisk detaljer**\n- Skapa `generators/fastapi_fallback.py`\n- Template-based code generation\n- Code quality checks\n- Integration med agent-system\n- Performance monitoring\n\n### **Beroenden**\n- Cursor/LM Studio integration\n\n### **Tester**\n- [x] Unit tester\n- [x] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "backend",
+        "generation"
+      ],
+      "milestone": "Week 4-6"
+    },
+    {
+      "title": "[TASK] Implementera RewardAgent",
+      "body": "## 📋 Task: RewardAgent implementation\n\n### **Beskrivning**\nSkapa RewardAgent för att analysera resultat och beräkna belöningar.\n\n### **Fas**\n- [x] Fas 6: RL-Feedback Loop\n\n### **Prioritet**\n- [x] Hög\n\n### **Tidsuppskattning**\n- [x] 3 dagar\n\n### **Definition of Done**\n- [ ] Brainstorm belöningar baserat på resultat\n- [ ] Test-resultat analys\n- [ ] Komplexitet bedömning\n- [ ] Policy-block detection\n- [ ] Integration med Q-learning\n\n### **Teknisk detaljer**\n- Skapa `agents/reward_agent.py`\n- Implementera result analysis\n- Complexity assessment\n- Policy violation detection\n- Reward calculation logic\n\n### **Beroenden**\n- Q-learning implementation\n- Test system\n\n### **Tester**\n- [x] Unit tester\n- [x] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "agent",
+        "rl"
+      ],
+      "milestone": "Week 6-9"
+    },
+    {
+      "title": "[TASK] Implementera PromptOptimizerAgent",
+      "body": "## 📋 Task: PromptOptimizerAgent\n\n### **Beskrivning**\nSkapa PromptOptimizerAgent som använder Q-learning för prompt-optimering.\n\n### **Fas**\n- [x] Fas 6: RL-Feedback Loop\n\n### **Prioritet**\n- [x] Hög\n\n### **Tidsuppskattning**\n- [x] 4 dagar\n\n### **Definition of Done**\n- [ ] Q-agent integration\n- [ ] Q-table uppdatering\n- [ ] Prompt evolution\n- [ ] Performance tracking\n- [ ] Learning curve visualization\n\n### **Teknisk detaljer**\n- Skapa `agents/prompt_optimizer_agent.py`\n- Q-learning integration\n- Prompt modification strategies\n- Performance tracking\n- Learning visualization\n\n### **Beroenden**\n- RewardAgent\n- Q-learning system\n\n### **Tester**\n- [x] Unit tester\n- [x] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "agent",
+        "rl"
+      ],
+      "milestone": "Week 6-9"
+    },
+    {
+      "title": "[TASK] Skapa live demo script",
+      "body": "## 📋 Task: Live demo script\n\n### **Beskrivning**\nSkapa komplett demo script för att visa systemets funktionalitet.\n\n### **Fas**\n- [x] Fas 7: Live Demo & Dokumentation\n\n### **Prioritet**\n- [x] Hög\n\n### **Tidsuppskattning**\n- [x] 2 dagar\n\n### **Definition of Done**\n- [ ] Finslipa demo-script\n- [ ] Microservices demonstration\n- [ ] Live kodgenerering\n- [ ] Performance showcase\n- [ ] Error handling\n\n### **Teknisk detaljer**\n- Skapa `demo/live_demo.py`\n- Interactive demonstration\n- Real-time code generation\n- Performance metrics\n- Error recovery\n\n### **Beroenden**\n- Alla faser implementerade\n\n### **Tester**\n- [x] Unit tester\n- [x] Integration tester\n- [x] End-to-end tester",
+      "labels": [
+        "task",
+        "demo",
+        "documentation"
+      ],
+      "milestone": "Week 9-10"
+    },
+    {
+      "title": "[TASK] Skapa workshop material",
+      "body": "## 📋 Task: Workshop material\n\n### **Beskrivning**\nSkapa komplett workshop material för kursdeltagare.\n\n### **Fas**\n- [x] Fas 7: Live Demo & Dokumentation\n\n### **Prioritet**\n- [x] Medium\n\n### **Tidsuppskattning**\n- [x] 2 dagar\n\n### **Definition of Done**\n- [ ] Övningsuppgifter\n- [ ] Quiz för deltagare\n- [ ] Presentation slides\n- [ ] Hands-on tutorials\n- [ ] Evaluation forms\n\n### **Teknisk detaljer**\n- Skapa `workshop/` directory\n- Interactive exercises\n- Assessment materials\n- Presentation templates\n- Tutorial guides\n\n### **Beroenden**\n- Live demo script\n- Dokumentation\n\n### **Tester**\n- [x] Unit tester\n- [ ] Integration tester\n- [ ] End-to-end tester",
+      "labels": [
+        "task",
+        "docs",
+        "workshop"
+      ],
+      "milestone": "Week 9-10"
+    }
+  ]
+}
