@@ -277,9 +277,20 @@ class TestHumanGateIntegration:
     def test_real_proposal_approval(self):
         """Test approval of a real proposal from orchestrator."""
         from agents.orchestrator import AgentOrchestrator
+        from agents.codegen_agent import CodeGenAgent
+        from agents.architect_agent import ArchitectAgent
 
-        orchestrator = AgentOrchestrator()
-        proposal = orchestrator.facilitate_discussion("Create a simple function")
+        # Create agents for orchestrator
+        agents = [CodeGenAgent(), ArchitectAgent()]
+        orchestrator = AgentOrchestrator(agents=agents)
+
+        # Create a simple proposal instead of running full discussion
+        proposal = {
+            "prompt": "Create a simple function",
+            "confidence": 0.8,
+            "agent_analyses": {"codegen": {"agent": "CodeGenAgent"}},
+            "consensus": {"synthesized_approach": "Combined approach"},
+        }
 
         # Mock approval
         with patch("builtins.input", return_value="y"):

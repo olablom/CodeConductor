@@ -285,7 +285,14 @@ class TestQLearningFunctionality:
 
     def test_get_q_values(self):
         """Test getting all Q-values for a state."""
-        agent = QLearningAgent("test_agent", {"db_path": ":memory:"})
+        agent = QLearningAgent(
+            "test_agent",
+            {
+                "db_path": ":memory:",
+                "learning_rate": 1.0,  # Use full learning rate for exact values
+                "discount_factor": 0.0,  # No future discount for exact values
+            },
+        )
 
         state = State(
             prompt_type="code_generation",
