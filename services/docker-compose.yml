@@ -80,7 +80,7 @@ services:
     image: rabbitmq:3-management
     ports:
       - "8004:5672"
-      - "15672:15672"  # Management UI
+      - "15673:15672"  # Management UI (changed port to avoid conflict)
     environment:
       - RABBITMQ_DEFAULT_USER=codeconductor
       - RABBITMQ_DEFAULT_PASS=password
