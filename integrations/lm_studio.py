@@ -52,32 +52,50 @@ def generate_code(prompt_path: pathlib.Path, strategy: str) -> str | None:
     if not ensure_models_ready():
         logger.warning("Models not ready, but continuing...")
 
-    # Enkelt format som fungerar med codellama
-    code_prompt = '# Simple Python function\ndef hello_world():\n    return "'
+    # Läs prompt-filen och använd den
+    prompt_content = prompt_path.read_text()
+    print(f"[LM Studio DEBUG] Using prompt from file: {prompt_path}")
+    print(
+        f"[LM Studio DEBUG] Prompt content (first 100 chars): {prompt_content[:100]}..."
+    )
+
+    # Förbättra prompten för att få Python-kod
+    enhanced_prompt = f"""Create Python code for this request:
+
+{prompt_content}
+
+def"""
+
+    code_prompt = enhanced_prompt
 
     payload = {
         "prompt": code_prompt,
-        "max_tokens": 30,
+        "max_tokens": 500,  # Öka för längre svar
         "temperature": _TEMP[strategy],
-        "stop": ['"', "\n\n"],
+        "stop": ["\n\n", "```"],  # Enklare stop-tokens
         "stream": False,
     }
     try:
+        print(f"[LM Studio DEBUG] Sending request to {_BASE}/v1/completions")
+        print(f"[LM Studio DEBUG] Payload: {payload}")
+
         # Använd completions endpoint istället
         r = requests.post(f"{_BASE}/v1/completions", json=payload, timeout=60)
+        print(f"[LM Studio DEBUG] Response status: {r.status_code}")
         r.raise_for_status()
         response_data = r.json()
+        print(f"[LM Studio DEBUG] Response data: {response_data}")
         if response_data.get("choices"):
             text = response_data["choices"][0]["text"].strip()
             print(f"[LM Studio] Generated text: '{text}'")
 
             if text:
-                # Bygg komplett funktion
-                complete_code = (
-                    f'# Simple Python function\ndef hello_world():\n    return "{text}"'
-                )
+                # Lägg till 'def' om det saknas
+                if not text.strip().startswith("def "):
+                    text = f"def {text.strip()}"
+
                 print(f"[LM Studio] ✅ Valid code generated")
-                return complete_code
+                return text
 
         print(f"[LM Studio] ❌ No valid response")
         return None

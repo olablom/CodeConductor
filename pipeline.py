@@ -592,6 +592,17 @@ def main(prompt, iters, mock, online, multi_file, distributed):
     optimizer_action_prev = None
     task_id = Path(prompt).stem
 
+    # DEBUG: Verifiera prompt-inläsning
+    print("DEBUG: Loading prompt from", prompt)
+    try:
+        with open(prompt, "r", encoding="utf-8") as f:
+            prompt_text = f.read()
+        print("DEBUG: Prompt text (first 200 chars):")
+        print(prompt_text[:200] + "..." if len(prompt_text) > 200 else prompt_text)
+        print("DEBUG: Prompt length:", len(prompt_text), "characters")
+    except Exception as e:
+        print(f"DEBUG ERROR: Failed to read prompt file: {e}")
+
     click.echo(f"🚀 Starting CodeConductor pipeline with {iters} iterations...")
 
     for i in range(iters):
