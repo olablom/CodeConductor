@@ -8,6 +8,11 @@ on:
     branches: [main]
     paths: ["services/**"]
 
+permissions:
+  security-events: write
+  actions: read
+  contents: read
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -141,12 +146,12 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Run security scan
-        uses: github/codeql-action/init@v2
+        uses: github/codeql-action/init@v3
         with:
           languages: python
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+        uses: github/codeql-action/analyze@v3
 
   notify:
     needs: [build-and-test, integration-test, deploy]
