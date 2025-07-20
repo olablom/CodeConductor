@@ -230,6 +230,73 @@ class ReviewAgent(BaseAgent):
                 "final_score": 0.0,
             }
 
+    def review_generated_code(
+        self, code: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Review generated code for quality, security, and compliance issues.
+
+        Args:
+            code: The generated code to review
+            context: Context information about the generation
+
+        Returns:
+            Comprehensive review results with issues, security risks, and recommendations
+        """
+        self.logger.info(f"Reviewing generated code for {self.name}")
+
+        try:
+            # Perform comprehensive code review
+            review_result = {
+                "issues": self._identify_code_issues(code),
+                "security_risks": self._identify_security_risks(code),
+                "quality_score": self._calculate_quality_score(code),
+                "recommendations": self._generate_code_recommendations(code),
+                "complexity_metrics": self._calculate_complexity_metrics(code),
+                "compliance_status": self._check_code_compliance(code),
+                "safety_assessment": self._assess_code_safety(code),
+                "overall_assessment": "pass",  # Will be updated based on findings
+                "critical_issues": [],
+                "warnings": [],
+                "suggestions": [],
+            }
+
+            # Categorize issues by severity
+            for issue in review_result["issues"]:
+                if issue.severity == "critical":
+                    review_result["critical_issues"].append(issue)
+                elif issue.severity in ["high", "medium"]:
+                    review_result["warnings"].append(issue)
+                else:
+                    review_result["suggestions"].append(issue)
+
+            # Determine overall assessment
+            if review_result["critical_issues"]:
+                review_result["overall_assessment"] = "block"
+            elif review_result["warnings"]:
+                review_result["overall_assessment"] = "warn"
+            else:
+                review_result["overall_assessment"] = "pass"
+
+            # Calculate quality score
+            review_result["quality_score"] = self._calculate_quality_score(code)
+
+            self.logger.info(
+                f"Code review completed. Assessment: {review_result['overall_assessment']}"
+            )
+            return review_result
+
+        except Exception as e:
+            self.logger.error(f"Error during code review: {e}")
+            return {
+                "error": str(e),
+                "overall_assessment": "error",
+                "issues": [],
+                "security_risks": [],
+                "quality_score": 0.0,
+                "recommendations": [],
+            }
+
     def _assess_code_quality(self, code: str) -> float:
         """Assess overall code quality score."""
         try:
@@ -1123,3 +1190,253 @@ class ReviewAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error analyzing code structure: {e}")
             return 0.0
+
+    def _identify_code_issues(self, code: str) -> List[CodeIssue]:
+        """Identify code quality issues in the generated code."""
+        issues = []
+
+        lines = code.split("\n")
+
+        for i, line in enumerate(lines, 1):
+            line = line.strip()
+
+            # Check for common issues
+            if "print(" in line and "logging" not in code:
+                issues.append(
+                    CodeIssue(
+                        severity="medium",
+                        category="style",
+                        line_number=i,
+                        description="Use logging instead of print statements",
+                        suggestion="Replace print() with proper logging",
+                        confidence=0.8,
+                    )
+                )
+
+            if "TODO" in line or "FIXME" in line:
+                issues.append(
+                    CodeIssue(
+                        severity="low",
+                        category="maintainability",
+                        line_number=i,
+                        description="TODO/FIXME comment found",
+                        suggestion="Address the TODO/FIXME before production",
+                        confidence=0.9,
+                    )
+                )
+
+            if len(line) > 120:
+                issues.append(
+                    CodeIssue(
+                        severity="low",
+                        category="style",
+                        line_number=i,
+                        description="Line too long (>120 characters)",
+                        suggestion="Break long lines for better readability",
+                        confidence=0.7,
+                    )
+                )
+
+            if "except:" in line:
+                issues.append(
+                    CodeIssue(
+                        severity="high",
+                        category="bug",
+                        line_number=i,
+                        description="Bare except clause",
+                        suggestion="Specify exception types to catch",
+                        confidence=0.9,
+                    )
+                )
+
+        return issues
+
+    def _identify_security_risks(self, code: str) -> List[Dict[str, Any]]:
+        """Identify security risks in the generated code."""
+        risks = []
+
+        # Check for dangerous patterns
+        dangerous_patterns = [
+            ("eval(", "Use of eval() function", "critical"),
+            ("exec(", "Use of exec() function", "critical"),
+            ("os.system(", "System command execution", "critical"),
+            ("subprocess.call(", "Subprocess execution", "high"),
+            ("__import__(", "Dynamic imports", "high"),
+            ("open(", "File operations", "medium"),
+            ("input(", "User input without validation", "medium"),
+            ("pickle.loads(", "Unsafe deserialization", "critical"),
+            ("yaml.load(", "Unsafe YAML loading", "high"),
+            ("json.loads(", "JSON deserialization", "medium"),
+        ]
+
+        for pattern, description, severity in dangerous_patterns:
+            if pattern in code:
+                risks.append(
+                    {
+                        "pattern": pattern,
+                        "description": description,
+                        "severity": severity,
+                        "recommendation": f"Review and secure usage of {pattern}",
+                        "confidence": 0.9,
+                    }
+                )
+
+        # Check for hardcoded secrets
+        secret_patterns = [
+            r'password\s*=\s*["\'][^"\']+["\']',
+            r'secret\s*=\s*["\'][^"\']+["\']',
+            r'api_key\s*=\s*["\'][^"\']+["\']',
+            r'token\s*=\s*["\'][^"\']+["\']',
+        ]
+
+        import re
+
+        for pattern in secret_patterns:
+            if re.search(pattern, code, re.IGNORECASE):
+                risks.append(
+                    {
+                        "pattern": "hardcoded_secret",
+                        "description": "Hardcoded secret found",
+                        "severity": "critical",
+                        "recommendation": "Use environment variables for secrets",
+                        "confidence": 0.8,
+                    }
+                )
+                break
+
+        return risks
+
+    def _calculate_quality_score(self, code: str) -> float:
+        """Calculate overall code quality score."""
+        if not code.strip():
+            return 0.0
+
+        score = 1.0
+
+        # Deduct points for issues
+        issues = self._identify_code_issues(code)
+        for issue in issues:
+            if issue.severity == "critical":
+                score -= 0.2
+            elif issue.severity == "high":
+                score -= 0.1
+            elif issue.severity == "medium":
+                score -= 0.05
+            elif issue.severity == "low":
+                score -= 0.02
+
+        # Deduct points for security risks
+        risks = self._identify_security_risks(code)
+        for risk in risks:
+            if risk["severity"] == "critical":
+                score -= 0.3
+            elif risk["severity"] == "high":
+                score -= 0.15
+            elif risk["severity"] == "medium":
+                score -= 0.08
+
+        # Bonus for good practices
+        if "def " in code and "class " in code:
+            score += 0.1  # Good structure
+        if '"""' in code or "'''" in code:
+            score += 0.05  # Documentation
+        if "import " in code and "from " in code:
+            score += 0.05  # Proper imports
+
+        return max(0.0, min(1.0, score))
+
+    def _generate_code_recommendations(self, code: str) -> List[str]:
+        """Generate recommendations for code improvement."""
+        recommendations = []
+
+        # Basic recommendations
+        if "print(" in code and "logging" not in code:
+            recommendations.append(
+                "Consider using logging instead of print statements for better debugging"
+            )
+
+        if "except:" in code:
+            recommendations.append(
+                "Specify exception types in except clauses for better error handling"
+            )
+
+        if len(code.split("\n")) > 100:
+            recommendations.append("Consider breaking large files into smaller modules")
+
+        if not any(keyword in code for keyword in ["def ", "class "]):
+            recommendations.append(
+                "Consider adding functions or classes for better code organization"
+            )
+
+        # Security recommendations
+        risks = self._identify_security_risks(code)
+        for risk in risks:
+            recommendations.append(risk["recommendation"])
+
+        return recommendations
+
+    def _check_code_compliance(self, code: str) -> Dict[str, Any]:
+        """Check code compliance with standards."""
+        compliance = {
+            "pep8": True,
+            "security": True,
+            "documentation": False,
+            "testing": False,
+            "violations": [],
+        }
+
+        # Check for basic PEP8 violations
+        lines = code.split("\n")
+        for i, line in enumerate(lines, 1):
+            if len(line) > 120:
+                compliance["pep8"] = False
+                compliance["violations"].append(f"Line {i}: Line too long")
+
+        # Check for documentation
+        if '"""' in code or "'''" in code:
+            compliance["documentation"] = True
+
+        # Check for testing
+        if "test" in code.lower() or "assert" in code:
+            compliance["testing"] = True
+
+        # Check security compliance
+        risks = self._identify_security_risks(code)
+        if any(risk["severity"] in ["critical", "high"] for risk in risks):
+            compliance["security"] = False
+            compliance["violations"].append("Critical security risks detected")
+
+        return compliance
+
+    def _assess_code_safety(self, code: str) -> Dict[str, Any]:
+        """Assess overall code safety."""
+        risks = self._identify_security_risks(code)
+        critical_risks = [r for r in risks if r["severity"] == "critical"]
+        high_risks = [r for r in risks if r["severity"] == "high"]
+
+        safety_assessment = {
+            "safe": len(critical_risks) == 0 and len(high_risks) == 0,
+            "risk_level": "low",
+            "critical_risks": len(critical_risks),
+            "high_risks": len(high_risks),
+            "total_risks": len(risks),
+            "recommendations": [],
+        }
+
+        if critical_risks:
+            safety_assessment["risk_level"] = "critical"
+            safety_assessment["recommendations"].append(
+                "Code contains critical security risks and should not be deployed"
+            )
+        elif high_risks:
+            safety_assessment["risk_level"] = "high"
+            safety_assessment["recommendations"].append(
+                "Code contains high security risks and should be reviewed before deployment"
+            )
+        elif risks:
+            safety_assessment["risk_level"] = "medium"
+            safety_assessment["recommendations"].append(
+                "Code contains some security risks that should be addressed"
+            )
+
+        return safety_assessment

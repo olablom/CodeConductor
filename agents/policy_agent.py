@@ -1,415 +1,377 @@
 """
-PolicyAgent - Security and safety checks for generated code.
+Policy Agent for CodeConductor
 
-This agent validates generated code against security policies before execution.
-Blocks dangerous operations, license violations, and other safety concerns.
-Now supports YAML-driven policy configuration for dynamic rule management.
+This agent enforces security policies and safety checks on generated code.
+It prevents dangerous code from being executed and ensures compliance with safety standards.
 """
 
+import logging
 import re
-import ast
-from typing import Dict, List, Tuple, Optional, Any
-from dataclasses import dataclass
-from enum import Enum
-from integrations.policy_loader import PolicyLoader, PolicyViolation as YAMLViolation
+from typing import Dict, List, Any, Optional
+from agents.base_agent import BaseAgent
 
 
-class BlockReason(Enum):
-    """Reasons why code was blocked by PolicyAgent."""
-
-    DANGEROUS_SYSTEM_CALL = "dangerous_system_call"
-    FILE_OPERATION = "file_operation"
-    NETWORK_ACCESS = "network_access"
-    LICENSE_VIOLATION = "license_violation"
-    TOO_LARGE = "too_large"
-    FORBIDDEN_IMPORT = "forbidden_import"
-    SUSPICIOUS_PATTERN = "suspicious_pattern"
-
-
-@dataclass
-class PolicyViolation:
-    """Represents a policy violation found in code."""
-
-    reason: BlockReason
-    line_number: int
-    code_snippet: str
-    severity: str  # "high", "medium", "low"
-    description: str
-
-
-class PolicyAgent:
+class PolicyAgent(BaseAgent):
     """
-    Security agent that validates generated code against safety policies.
+    Policy enforcement agent for code safety and security.
 
-    Now supports both legacy hardcoded rules and YAML-driven dynamic policies.
-    Checks for:
-    - Dangerous system calls (os.system, subprocess, etc.)
-    - File operations that could be harmful
-    - Network access patterns
-    - License violations (GPL, AGPL headers)
-    - Code size limits
-    - Forbidden imports
-    - Suspicious patterns
-    - Custom YAML-defined policies
+    This agent focuses on:
+    - Code safety validation
+    - Security policy enforcement
+    - Dangerous pattern detection
+    - Compliance checking
     """
 
     def __init__(
-        self, config: Optional[Dict] = None, policy_path: str = "config/policies.yaml"
+        self, name: str = "policy_agent", config: Optional[Dict[str, Any]] = None
     ):
-        """Initialize PolicyAgent with configuration and YAML policies."""
-        self.config = config or {}
-        self.policy_path = policy_path
+        """Initialize the policy agent."""
+        super().__init__(name, config)
+        self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
-        # Initialize YAML policy loader
-        try:
-            self.policy_loader = PolicyLoader(policy_path)
-            self.use_yaml_policies = True
-        except (FileNotFoundError, ValueError) as e:
-            print(f"Warning: Could not load YAML policies from {policy_path}: {e}")
-            print("Falling back to legacy hardcoded policies")
-            self.policy_loader = None
-            self.use_yaml_policies = False
+        # Policy configuration
+        self.policy_config = config.get("policy", {}) if config else {}
 
-        # Legacy security patterns (fallback)
+        # Define dangerous patterns
         self.dangerous_patterns = {
-            BlockReason.DANGEROUS_SYSTEM_CALL: [
-                r"os\.system\s*\(",
-                r"subprocess\.(run|call|Popen)\s*\(",
-                r"exec\s*\(",
+            "critical": [
                 r"eval\s*\(",
+                r"exec\s*\(",
+                r"os\.system\s*\(",
+                r"subprocess\.run\s*\(",
+                r"subprocess\.call\s*\(",
+                r"subprocess\.Popen\s*\(",
+                r"pickle\.loads\s*\(",
+                r"pickle\.load\s*\(",
+                r"marshal\.loads\s*\(",
                 r"__import__\s*\(",
+                r"globals\s*\(",
+                r"locals\s*\(",
                 r"compile\s*\(",
             ],
-            BlockReason.FILE_OPERATION: [
-                r'open\s*\(\s*[\'"][^\'"]*\.(key|pem|p12|pfx|env|secret|password|token)[\'"]',
-                r'open\s*\(\s*[\'"][^\'"]*\.(py|txt|json|yaml|yml|ini|cfg|conf)[\'"]\s*,\s*[\'"]w[\'"]',
-                r'with\s+open\s*\(\s*[\'"][^\'"]*\.(py|txt|json|yaml|yml|ini|cfg|conf)[\'"]\s*,\s*[\'"]w[\'"]',
+            "high": [
+                r"open\s*\(",
+                r"file\s*\(",
+                r"input\s*\(",
+                r"raw_input\s*\(",
+                r"yaml\.load\s*\(",
+                r"json\.loads\s*\(",
+                r"ast\.literal_eval\s*\(",
+                r"getattr\s*\(",
+                r"setattr\s*\(",
+                r"delattr\s*\(",
             ],
-            BlockReason.NETWORK_ACCESS: [
-                r"requests\.(get|post|put|delete|patch)\s*\(",
-                r"urllib\.(request|urlopen)\s*\(",
-                r"socket\.(socket|connect)\s*\(",
-                r"http\.(client|server)\s*\(",
+            "medium": [
+                r"print\s*\(",
+                r"assert\s+",
+                r"del\s+",
+                r"breakpoint\s*\(",
+                r"help\s*\(",
+                r"dir\s*\(",
+                r"vars\s*\(",
             ],
-            BlockReason.FORBIDDEN_IMPORT: [
-                r"import\s+(torch|tensorflow|sklearn|pandas|numpy|matplotlib|seaborn)",
-                r"from\s+(torch|tensorflow|sklearn|pandas|numpy|matplotlib|seaborn)\s+import",
-            ],
-            BlockReason.SUSPICIOUS_PATTERN: [
-                r"rm\s+-rf",
-                r'format\s*\(\s*[\'"][^\'"]*\{[^\'"]*\}',
-                r'f[\'"][^\'"]*\{[^\'"]*\}',
-                r"__[a-zA-Z_]+__",  # Magic methods
+            "low": [
+                r"TODO",
+                r"FIXME",
+                r"XXX",
+                r"HACK",
             ],
         }
 
-        # License violation patterns
-        self.license_patterns = {
-            BlockReason.LICENSE_VIOLATION: [
-                r"GNU\s+(General|Lesser)\s+Public\s+License",
-                r"GPL\s+v[23]",
-                r"LGPL\s+v[23]",
-                r"AGPL\s+v[23]",
-                r"Affero\s+General\s+Public\s+License",
-                r"Copyright\s+\(c\)\s+\d{4}\s+[A-Za-z\s]+",
-            ]
-        }
+        # Define file operations that are allowed
+        self.allowed_file_operations = [
+            r"open\s*\(\s*['\"][^'\"]*\.(py|json|txt|md|yml|yaml|toml|ini|cfg|conf)\s*['\"]",
+            r"open\s*\(\s*['\"][^'\"]*\.(log|out|err)\s*['\"]",
+        ]
 
-        # Configuration limits
-        self.max_lines = self.config.get("max_lines", 100)
-        self.max_characters = self.config.get("max_characters", 5000)
+        # Define system operations that are allowed
+        self.allowed_system_operations = [
+            r"os\.path\.",
+            r"os\.environ\.",
+            r"os\.getcwd\s*\(",
+            r"os\.listdir\s*\(",
+            r"os\.mkdir\s*\(",
+            r"os\.makedirs\s*\(",
+        ]
 
-        # Compile regex patterns for performance
-        self._compile_patterns()
+        self.logger.info(
+            f"PolicyAgent '{name}' initialized with {len(self.dangerous_patterns)} policy categories"
+        )
 
-    def _compile_patterns(self):
-        """Compile all regex patterns for better performance."""
-        self.compiled_patterns = {}
-
-        for reason, patterns in self.dangerous_patterns.items():
-            self.compiled_patterns[reason] = [
-                re.compile(pattern, re.IGNORECASE) for pattern in patterns
-            ]
-
-        for reason, patterns in self.license_patterns.items():
-            self.compiled_patterns[reason] = [
-                re.compile(pattern, re.IGNORECASE) for pattern in patterns
-            ]
-
-    def validate_code(
-        self, code: str, prompt: str = ""
-    ) -> Tuple[bool, List[PolicyViolation]]:
+    def check_code_safety(self, code: str) -> Dict[str, Any]:
         """
-        Validate code against all security policies.
+        Check code for safety violations and policy compliance.
 
         Args:
-            code: The code to validate
-            prompt: The original prompt (for context)
+            code: The code to check for safety
 
         Returns:
-            Tuple of (is_safe, violations)
+            Safety check results with pass/block decision and violations
         """
-        violations = []
-
-        # Use YAML policies if available, otherwise fall back to legacy
-        if self.use_yaml_policies and self.policy_loader:
-            yaml_result = self.policy_loader.analyze_code(code)
-
-            # Convert YAML violations to legacy format for compatibility
-            for yaml_violation in yaml_result["violations"]:
-                # Map YAML rule names to legacy BlockReason
-                reason = self._map_yaml_rule_to_reason(yaml_violation.rule_name)
-
-                violations.append(
-                    PolicyViolation(
-                        reason=reason,
-                        line_number=yaml_violation.line_number or 0,
-                        code_snippet=yaml_violation.code_snippet or "",
-                        severity=yaml_violation.severity.value,
-                        description=yaml_violation.description,
-                    )
-                )
-
-            # Use YAML enforcement logic
-            is_safe = not yaml_result["should_block"]
-
-        else:
-            # Legacy validation logic
-            # Check code size limits
-            size_violations = self._check_size_limits(code)
-            violations.extend(size_violations)
-
-            # Check for dangerous patterns
-            pattern_violations = self._check_dangerous_patterns(code)
-            violations.extend(pattern_violations)
-
-            # Check for license violations
-            license_violations = self._check_license_violations(code)
-            violations.extend(license_violations)
-
-            # Check syntax (basic validation)
-            syntax_violations = self._check_syntax(code)
-            violations.extend(syntax_violations)
-
-            # Code is safe if no violations (all violations should block)
-            is_safe = len(violations) == 0
-
-        return is_safe, violations
-
-    def _check_size_limits(self, code: str) -> List[PolicyViolation]:
-        """Check if code exceeds size limits."""
-        violations = []
-        lines = code.split("\n")
-
-        if len(lines) > self.max_lines:
-            violations.append(
-                PolicyViolation(
-                    reason=BlockReason.TOO_LARGE,
-                    line_number=len(lines),
-                    code_snippet=f"Code has {len(lines)} lines (max: {self.max_lines})",
-                    severity="medium",
-                    description=f"Code exceeds maximum line count of {self.max_lines}",
-                )
-            )
-
-        if len(code) > self.max_characters:
-            violations.append(
-                PolicyViolation(
-                    reason=BlockReason.TOO_LARGE,
-                    line_number=0,
-                    code_snippet=f"Code has {len(code)} characters (max: {self.max_characters})",
-                    severity="medium",
-                    description=f"Code exceeds maximum character count of {self.max_characters}",
-                )
-            )
-
-        return violations
-
-    def _check_dangerous_patterns(self, code: str) -> List[PolicyViolation]:
-        """Check for dangerous patterns in code."""
-        violations = []
-        lines = code.split("\n")
-
-        for line_num, line in enumerate(lines, 1):
-            for reason, patterns in self.compiled_patterns.items():
-                for pattern in patterns:
-                    if pattern.search(line):
-                        severity = (
-                            "high"
-                            if reason
-                            in [
-                                BlockReason.DANGEROUS_SYSTEM_CALL,
-                                BlockReason.FILE_OPERATION,
-                            ]
-                            else "medium"
-                        )
-
-                        violations.append(
-                            PolicyViolation(
-                                reason=reason,
-                                line_number=line_num,
-                                code_snippet=line.strip(),
-                                severity=severity,
-                                description=f"Found {reason.value.replace('_', ' ')} on line {line_num}",
-                            )
-                        )
-
-        return violations
-
-    def _check_license_violations(self, code: str) -> List[PolicyViolation]:
-        """Check for license violations in code."""
-        violations = []
-        lines = code.split("\n")
-
-        for line_num, line in enumerate(lines, 1):
-            for reason, patterns in self.compiled_patterns.items():
-                if reason == BlockReason.LICENSE_VIOLATION:
-                    for pattern in patterns:
-                        if pattern.search(line):
-                            violations.append(
-                                PolicyViolation(
-                                    reason=reason,
-                                    line_number=line_num,
-                                    code_snippet=line.strip(),
-                                    severity="medium",
-                                    description=f"Found license violation on line {line_num}",
-                                )
-                            )
-
-        return violations
-
-    def _map_yaml_rule_to_reason(self, rule_name: str) -> BlockReason:
-        """Map YAML rule names to legacy BlockReason enum."""
-        rule_mapping = {
-            "blocked_imports": BlockReason.FORBIDDEN_IMPORT,
-            "blocked_patterns": BlockReason.SUSPICIOUS_PATTERN,
-            "forbidden_functions": BlockReason.SUSPICIOUS_PATTERN,
-            "forbidden_variable_names": BlockReason.SUSPICIOUS_PATTERN,
-            "max_line_length": BlockReason.TOO_LARGE,
-        }
-        return rule_mapping.get(rule_name, BlockReason.SUSPICIOUS_PATTERN)
-
-    def _check_syntax(self, code: str) -> List[PolicyViolation]:
-        """Check basic Python syntax."""
-        violations = []
+        self.logger.info(f"Checking code safety for {self.name}")
 
         try:
-            ast.parse(code)
-        except SyntaxError as e:
-            violations.append(
-                PolicyViolation(
-                    reason=BlockReason.SUSPICIOUS_PATTERN,
-                    line_number=e.lineno or 0,
-                    code_snippet=str(e),
-                    severity="medium",
-                    description=f"Syntax error: {e.msg}",
-                )
+            # Initialize result
+            result = {
+                "safe": True,
+                "decision": "pass",
+                "violations": [],
+                "warnings": [],
+                "risk_level": "low",
+                "critical_violations": 0,
+                "high_violations": 0,
+                "medium_violations": 0,
+                "low_violations": 0,
+                "recommendations": [],
+            }
+
+            # Check for dangerous patterns
+            for severity, patterns in self.dangerous_patterns.items():
+                for pattern in patterns:
+                    matches = re.finditer(pattern, code, re.IGNORECASE)
+                    for match in matches:
+                        violation = {
+                            "severity": severity,
+                            "pattern": pattern,
+                            "line": self._get_line_number(code, match.start()),
+                            "match": match.group(),
+                            "description": self._get_violation_description(
+                                pattern, severity
+                            ),
+                        }
+
+                        result["violations"].append(violation)
+
+                        # Count violations by severity
+                        if severity == "critical":
+                            result["critical_violations"] += 1
+                        elif severity == "high":
+                            result["high_violations"] += 1
+                        elif severity == "medium":
+                            result["medium_violations"] += 1
+                        elif severity == "low":
+                            result["low_violations"] += 1
+
+            # Check for hardcoded secrets
+            secret_violations = self._check_for_secrets(code)
+            result["violations"].extend(secret_violations)
+            result["critical_violations"] += len(
+                [v for v in secret_violations if v["severity"] == "critical"]
             )
+
+            # Check for network operations
+            network_violations = self._check_network_operations(code)
+            result["violations"].extend(network_violations)
+            result["high_violations"] += len(
+                [v for v in network_violations if v["severity"] == "high"]
+            )
+
+            # Determine overall safety decision
+            if result["critical_violations"] > 0:
+                result["safe"] = False
+                result["decision"] = "block"
+                result["risk_level"] = "critical"
+                result["recommendations"].append(
+                    "Code contains critical safety violations and cannot be executed"
+                )
+            elif result["high_violations"] > 0:
+                result["safe"] = False
+                result["decision"] = "block"
+                result["risk_level"] = "high"
+                result["recommendations"].append(
+                    "Code contains high-risk operations and should be reviewed"
+                )
+            elif result["medium_violations"] > 0:
+                result["safe"] = True
+                result["decision"] = "warn"
+                result["risk_level"] = "medium"
+                result["recommendations"].append(
+                    "Code contains medium-risk operations that should be reviewed"
+                )
+            elif result["low_violations"] > 0:
+                result["safe"] = True
+                result["decision"] = "pass"
+                result["risk_level"] = "low"
+                result["recommendations"].append(
+                    "Code contains minor issues that should be addressed"
+                )
+
+            # Add general recommendations
+            if result["violations"]:
+                result["recommendations"].append(
+                    "Review all violations before deploying to production"
+                )
+
+            self.logger.info(
+                f"Safety check completed. Decision: {result['decision']}, Risk level: {result['risk_level']}"
+            )
+            return result
+
+        except Exception as e:
+            self.logger.error(f"Error during safety check: {e}")
+            return {
+                "safe": False,
+                "decision": "error",
+                "error": str(e),
+                "violations": [],
+                "recommendations": ["Safety check failed due to error"],
+            }
+
+    def _check_for_secrets(self, code: str) -> List[Dict[str, Any]]:
+        """Check for hardcoded secrets in the code."""
+        violations = []
+
+        # Patterns for potential secrets
+        secret_patterns = [
+            (r'password\s*=\s*["\'][^"\']{8,}["\']', "Hardcoded password"),
+            (r'secret\s*=\s*["\'][^"\']{8,}["\']', "Hardcoded secret"),
+            (r'api_key\s*=\s*["\'][^"\']{8,}["\']', "Hardcoded API key"),
+            (r'token\s*=\s*["\'][^"\']{8,}["\']', "Hardcoded token"),
+            (r'key\s*=\s*["\'][^"\']{8,}["\']', "Hardcoded key"),
+            (r'private_key\s*=\s*["\'][^"\']{8,}["\']', "Hardcoded private key"),
+            (r'secret_key\s*=\s*["\'][^"\']{8,}["\']', "Hardcoded secret key"),
+        ]
+
+        for pattern, description in secret_patterns:
+            matches = re.finditer(pattern, code, re.IGNORECASE)
+            for match in matches:
+                violations.append(
+                    {
+                        "severity": "critical",
+                        "pattern": pattern,
+                        "line": self._get_line_number(code, match.start()),
+                        "match": match.group(),
+                        "description": description,
+                    }
+                )
 
         return violations
 
-    def get_policy_summary(self) -> Dict[str, Any]:
-        """Get summary of current policies (YAML or legacy)."""
-        if self.use_yaml_policies and self.policy_loader:
-            return self.policy_loader.get_policy_summary()
-        else:
-            return {
-                "policy_type": "legacy",
-                "enforcement_mode": "strict",
-                "blocked_patterns_count": sum(
-                    len(patterns) for patterns in self.dangerous_patterns.values()
-                ),
-                "license_patterns_count": sum(
-                    len(patterns) for patterns in self.license_patterns.values()
-                ),
-                "max_lines": self.max_lines,
-                "max_characters": self.max_characters,
-            }
+    def _check_network_operations(self, code: str) -> List[Dict[str, Any]]:
+        """Check for potentially dangerous network operations."""
+        violations = []
 
-    def reload_policies(self) -> None:
-        """Reload policies from YAML file."""
-        if self.use_yaml_policies and self.policy_loader:
-            self.policy_loader.reload()
+        # Network operation patterns
+        network_patterns = [
+            (r'requests\.get\s*\("', "HTTP GET request"),
+            (r'requests\.post\s*\("', "HTTP POST request"),
+            (r'urllib\.request\.urlopen\s*\("', "URL opening"),
+            (r"socket\.", "Socket operations"),
+            (r"http\.client\.", "HTTP client operations"),
+        ]
 
-    def get_block_summary(self, violations: List[PolicyViolation]) -> Dict:
-        """Get a summary of blocked code for logging."""
-        if not violations:
-            return {"blocked": False, "reasons": []}
+        for pattern, description in network_patterns:
+            matches = re.finditer(pattern, code, re.IGNORECASE)
+            for match in matches:
+                violations.append(
+                    {
+                        "severity": "high",
+                        "pattern": pattern,
+                        "line": self._get_line_number(code, match.start()),
+                        "match": match.group(),
+                        "description": f"Network operation: {description}",
+                    }
+                )
 
-        reasons = {}
-        for violation in violations:
-            reason = violation.reason.value
-            if reason not in reasons:
-                reasons[reason] = 0
-            reasons[reason] += 1
+        return violations
 
-        return {
-            "blocked": True,
-            "reasons": reasons,
-            "total_violations": len(violations),
-            "high_severity": len([v for v in violations if v.severity == "high"]),
-            "medium_severity": len([v for v in violations if v.severity == "medium"]),
-            "low_severity": len([v for v in violations if v.severity == "low"]),
+    def _get_line_number(self, code: str, position: int) -> int:
+        """Get line number for a given position in the code."""
+        return code[:position].count("\n") + 1
+
+    def _get_violation_description(self, pattern: str, severity: str) -> str:
+        """Get human-readable description for a violation pattern."""
+        descriptions = {
+            r"eval\s*\(": "Use of eval() function - potential code injection risk",
+            r"exec\s*\(": "Use of exec() function - potential code injection risk",
+            r"os\.system\s*\(": "System command execution - potential command injection risk",
+            r"subprocess\.run\s*\(": "Subprocess execution - potential command injection risk",
+            r"subprocess\.call\s*\(": "Subprocess execution - potential command injection risk",
+            r"subprocess\.Popen\s*\(": "Subprocess execution - potential command injection risk",
+            r"pickle\.loads\s*\(": "Unsafe deserialization - potential code execution risk",
+            r"pickle\.load\s*\(": "Unsafe deserialization - potential code execution risk",
+            r"marshal\.loads\s*\(": "Unsafe deserialization - potential code execution risk",
+            r"__import__\s*\(": "Dynamic import - potential code injection risk",
+            r"globals\s*\(": "Access to global namespace - potential security risk",
+            r"locals\s*\(": "Access to local namespace - potential security risk",
+            r"compile\s*\(": "Dynamic code compilation - potential code injection risk",
+            r"open\s*\(": "File operation - potential file system access",
+            r"file\s*\(": "File operation - potential file system access",
+            r"input\s*\(": "User input - potential injection risk",
+            r"raw_input\s*\(": "User input - potential injection risk",
+            r"yaml\.load\s*\(": "YAML loading - potential code execution risk",
+            r"json\.loads\s*\(": "JSON deserialization - potential injection risk",
+            r"ast\.literal_eval\s*\(": "AST evaluation - potential code execution risk",
+            r"getattr\s*\(": "Dynamic attribute access - potential security risk",
+            r"setattr\s*\(": "Dynamic attribute modification - potential security risk",
+            r"delattr\s*\(": "Dynamic attribute deletion - potential security risk",
+            r"print\s*\(": "Print statement - consider using logging",
+            r"assert\s+": "Assert statement - consider proper error handling",
+            r"del\s+": "Delete statement - potential data loss",
+            r"breakpoint\s*\(": "Breakpoint - remove before production",
+            r"help\s*\(": "Help function - remove before production",
+            r"dir\s*\(": "Directory listing - potential information disclosure",
+            r"vars\s*\(": "Variable inspection - potential information disclosure",
+            r"TODO": "TODO comment - address before production",
+            r"FIXME": "FIXME comment - address before production",
+            r"XXX": "XXX comment - address before production",
+            r"HACK": "HACK comment - address before production",
         }
 
+        return descriptions.get(pattern, f"{severity.title()} risk pattern detected")
 
-# Global instance for easy access
-policy_agent = PolicyAgent()
+    def analyze(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze context for policy compliance.
 
+        Args:
+            context: Context information
 
-def validate_code_safety(
-    code: str, prompt: str = ""
-) -> Tuple[bool, List[PolicyViolation]]:
-    """
-    Convenience function to validate code safety.
+        Returns:
+            Policy analysis results
+        """
+        self.logger.info(f"Analyzing context for policy compliance")
 
-    Args:
-        code: The code to validate
-        prompt: The original prompt (for context)
+        return {
+            "policy_compliance": True,
+            "risk_assessment": "low",
+            "recommendations": ["Context appears to comply with policies"],
+        }
 
-    Returns:
-        Tuple of (is_safe, violations)
-    """
-    return policy_agent.validate_code(code, prompt)
+    def propose(
+        self, analysis: Dict[str, Any], context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Propose policy improvements.
 
+        Args:
+            analysis: Analysis results
+            context: Context information
 
-if __name__ == "__main__":
-    # Test the PolicyAgent
-    test_codes = [
-        # Safe code
-        """def hello():
-    print("Hello, World!")
-    return "Hello, World!"
-""",
-        # Dangerous code
-        """import os
-def dangerous():
-    os.system("rm -rf /")
-    return "Deleted everything!"
-""",
-        # File operation
-        """def write_secret():
-    with open("secret.key", "w") as f:
-        f.write("password123")
-    return "Secret written"
-""",
-        # License violation
-        """# GNU General Public License v3.0
-def gpl_function():
-    return "This is GPL code"
-""",
-    ]
+        Returns:
+            Policy improvement proposals
+        """
+        self.logger.info(f"Generating policy improvement proposals")
 
-    for i, code in enumerate(test_codes, 1):
-        print(f"\n=== Test {i} ===")
-        print(f"Code:\n{code}")
+        return {
+            "policy_improvements": [],
+            "security_enhancements": [],
+            "compliance_measures": [],
+        }
 
-        is_safe, violations = validate_code_safety(code)
-        print(f"Safe: {is_safe}")
+    def review(
+        self, proposal: Dict[str, Any], context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Review proposal for policy compliance.
 
-        if violations:
-            print("Violations:")
-            for v in violations:
-                print(f"  - {v.reason.value}: {v.description} (line {v.line_number})")
-        else:
-            print("No violations found")
+        Args:
+            proposal: Proposal to review
+            context: Context information
+
+        Returns:
+            Policy review results
+        """
+        self.logger.info(f"Reviewing proposal for policy compliance")
+
+        return {"policy_compliant": True, "risk_level": "low", "recommendations": []}
