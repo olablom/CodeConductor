@@ -1,0 +1,232 @@
+openapi: 3.0.3
+info:
+  title: CodeConductor Agent Service API
+  description: Service för hantering av AI-agenter (CodeGen, Architect, Review, Policy, Q-Learning)
+  version: 1.0.0
+  contact:
+    name: CodeConductor Team
+    email: team@codeconductor.ai
+
+servers:
+  - url: http://localhost:8001
+    description: Development server
+  - url: https://api.codeconductor.ai/agent
+    description: Production server
+
+paths:
+  /:
+    get:
+      summary: Health check
+      description: Basic health check endpoint
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  service:
+                    type: string
+                    example: "Agent Service"
+                  status:
+                    type: string
+                    example: "healthy"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /health:
+    get:
+      summary: Detailed health check
+      description: Detailed health check with service dependencies
+      responses:
+        "200":
+          description: Detailed health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  agents_available:
+                    type: array
+                    items:
+                      type: string
+                    example: ["codegen", "architect", "review"]
+                  queue_size:
+                    type: integer
+                    example: 0
+                  uptime:
+                    type: string
+                    example: "2h 15m 30s"
+
+  /agents/analyze:
+    post:
+      summary: Analyze task with agent
+      description: Analysera en uppgift med specifik agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentRequest"
+      responses:
+        "200":
+          description: Analysis completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentResponse"
+        "400":
+          description: Invalid request
+        "500":
+          description: Internal server error
+
+  /agents/propose:
+    post:
+      summary: Propose solution with agent
+      description: Föreslå en lösning med specifik agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentRequest"
+      responses:
+        "200":
+          description: Proposal generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentResponse"
+        "400":
+          description: Invalid request
+        "500":
+          description: Internal server error
+
+  /agents/status:
+    get:
+      summary: Get agent status
+      description: Hämta status för alla agenter
+      responses:
+        "200":
+          description: Agent status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AgentStatus"
+
+  /agents/{agent_type}/reset:
+    post:
+      summary: Reset agent
+      description: Återställ en specifik agent
+      parameters:
+        - name: agent_type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Type of agent to reset
+      responses:
+        "200":
+          description: Agent reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Agent codegen reset successfully"
+        "404":
+          description: Agent not found
+
+components:
+  schemas:
+    AgentRequest:
+      type: object
+      required:
+        - agent_type
+        - task_context
+      properties:
+        agent_type:
+          type: string
+          enum: [codegen, architect, review, policy, qlearning]
+          description: Type of agent to use
+        task_context:
+          type: object
+          description: Context and requirements for the task
+        config:
+          type: object
+          description: Optional configuration for the agent
+
+    AgentResponse:
+      type: object
+      required:
+        - agent_name
+        - result
+        - confidence
+        - execution_time
+        - timestamp
+      properties:
+        agent_name:
+          type: string
+          description: Name of the agent that processed the request
+        result:
+          type: object
+          description: Result from the agent
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Confidence score of the result
+        execution_time:
+          type: number
+          format: float
+          description: Time taken to process the request
+        timestamp:
+          type: string
+          format: date-time
+          description: When the request was processed
+
+    AgentStatus:
+      type: object
+      required:
+        - agent_name
+        - status
+        - last_activity
+        - queue_size
+      properties:
+        agent_name:
+          type: string
+          description: Name of the agent
+        status:
+          type: string
+          enum: [idle, busy, error]
+          description: Current status of the agent
+        last_activity:
+          type: string
+          format: date-time
+          description: When the agent was last active
+        queue_size:
+          type: integer
+          minimum: 0
+          description: Number of pending requests for this agent
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []

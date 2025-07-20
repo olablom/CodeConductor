@@ -1,0 +1,169 @@
+version: '3.8'
+
+services:
+  # Gateway/API Service
+  gateway-service:
+    build:
+      context: ../..
+      dockerfile: services/gateway_service/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - AGENT_SERVICE_URL=http://agent-service:8001
+      - ORCHESTRATOR_SERVICE_URL=http://orchestrator-service:8002
+      - DATA_SERVICE_URL=http://data-service:8003
+      - AUTH_SERVICE_URL=http://auth-service:8005
+    depends_on:
+      - agent-service
+      - orchestrator-service
+      - data-service
+      - auth-service
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+  # Agent Service
+  agent-service:
+    build:
+      context: ../..
+      dockerfile: services/agent_service/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=postgresql://codeconductor:password@postgres:5432/codeconductor
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+  # Orchestrator Service
+  orchestrator-service:
+    build:
+      context: ../..
+      dockerfile: services/orchestrator_service/Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - AGENT_SERVICE_URL=http://agent-service:8001
+      - DATA_SERVICE_URL=http://data-service:8003
+      - QUEUE_SERVICE_URL=http://queue-service:8004
+      - DATABASE_URL=postgresql://codeconductor:password@postgres:5432/codeconductor
+    depends_on:
+      - agent-service
+      - data-service
+      - queue-service
+      - postgres
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+  # Data Service
+  data-service:
+    build:
+      context: ../..
+      dockerfile: services/data_service/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - DATABASE_URL=postgresql://codeconductor:password@postgres:5432/codeconductor
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+  # Queue Service (RabbitMQ)
+  queue-service:
+    image: rabbitmq:3-management
+    ports:
+      - "8004:5672"
+      - "15672:15672"  # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=codeconductor
+      - RABBITMQ_DEFAULT_PASS=password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+  # Auth/Approval Service
+  auth-service:
+    build:
+      context: ../..
+      dockerfile: services/auth_service/Dockerfile
+    ports:
+      - "8005:8005"
+    environment:
+      - DATABASE_URL=postgresql://codeconductor:password@postgres:5432/codeconductor
+      - JWT_SECRET=your-secret-key-here
+    depends_on:
+      - postgres
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=codeconductor
+      - POSTGRES_USER=codeconductor
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+  # Monitoring (Optional)
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+  grafana_data:
+
+networks:
+  codeconductor-network:
+    driver: bridge 
