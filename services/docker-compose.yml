@@ -64,10 +64,11 @@ services:
       context: .
       dockerfile: data_service/Dockerfile
     ports:
-      - "9003:8003"
+      - "9006:8003"
     environment:
       - DATABASE_URL=postgresql://codeconductor:password@postgres:5432/codeconductor
       - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=INFO
     depends_on:
       - postgres
       - redis

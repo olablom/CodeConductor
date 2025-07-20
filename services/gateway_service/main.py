@@ -35,10 +35,10 @@ app.add_middleware(
 
 # Service routing configuration
 SERVICES = {
-    "agent": "http://localhost:8001",
-    "orchestrator": "http://localhost:8002",
-    "data": "http://localhost:8003",
-    "auth": "http://localhost:8005",
+    "agent": "http://agent-service:8001",
+    "orchestrator": "http://orchestrator-service:8002",
+    "data": "http://data-service:8003",
+    "auth": "http://auth-service:8005",
 }
 
 

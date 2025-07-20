@@ -1,0 +1,235 @@
+{
+  "health_gateway": {
+    "status": "\u2705 PASS",
+    "service": "gateway",
+    "response": {
+      "status": "healthy",
+      "gateway": "healthy",
+      "services": {
+        "agent": "healthy",
+        "orchestrator": "healthy",
+        "data": "healthy",
+        "auth": "healthy"
+      },
+      "timestamp": "2025-07-20T21:45:07.426965"
+    },
+    "error": null
+  },
+  "health_agent": {
+    "status": "\u2705 PASS",
+    "service": "agent",
+    "response": {
+      "status": "healthy",
+      "service": "Agent Service",
+      "version": "2.0.0",
+      "agents_available": [
+        "codegen"
+      ]
+    },
+    "error": null
+  },
+  "health_orchestrator": {
+    "status": "\u2705 PASS",
+    "service": "orchestrator",
+    "response": {
+      "status": "healthy",
+      "service": "Orchestrator Service",
+      "version": "2.0.0",
+      "available_agents": [
+        "codegen",
+        "review",
+        "architect"
+      ],
+      "consensus_strategies": [
+        "majority",
+        "weighted_majority",
+        "unanimous"
+      ]
+    },
+    "error": null
+  },
+  "health_auth": {
+    "status": "\u2705 PASS",
+    "service": "auth",
+    "response": {
+      "status": "healthy",
+      "service": "Auth Service",
+      "version": "2.0.0",
+      "policy_agent_ready": true,
+      "human_gate_ready": true,
+      "approval_stats": {
+        "total_approvals": 0,
+        "approved_count": 0,
+        "rejected_count": 0,
+        "approval_rate": 0.0,
+        "recent_decisions": []
+      }
+    },
+    "error": null
+  },
+  "health_data": {
+    "status": "\u2705 PASS",
+    "service": "data",
+    "response": {
+      "status": "healthy",
+      "service": "Data Service",
+      "version": "2.0.0",
+      "bandits_ready": true,
+      "qlearning_ready": true,
+      "prompt_optimizer_ready": true,
+      "active_bandits": [
+        "default",
+        "test_bandit",
+        "gateway_test"
+      ],
+      "active_agents": [
+        "qlearning_agent",
+        "test_qlearning",
+        "gateway_qlearning",
+        "prompt_optimizer",
+        "test_optimizer",
+        "gateway_optimizer"
+      ]
+    },
+    "error": null
+  },
+  "routing_agent": {
+    "status": "\u2705 PASS",
+    "route": "/api/v1/agents/health",
+    "response": {
+      "status": "healthy",
+      "service": "Agent Service",
+      "version": "2.0.0",
+      "agents_available": [
+        "codegen"
+      ]
+    }
+  },
+  "routing_orchestrator": {
+    "status": "\u2705 PASS",
+    "route": "/api/v1/orchestrator/health",
+    "response": {
+      "status": "healthy",
+      "service": "Orchestrator Service",
+      "version": "2.0.0",
+      "available_agents": [
+        "codegen",
+        "review",
+        "architect"
+      ],
+      "consensus_strategies": [
+        "majority",
+        "weighted_majority",
+        "unanimous"
+      ]
+    }
+  },
+  "routing_data": {
+    "status": "\u2705 PASS",
+    "route": "/api/v1/data/health",
+    "response": {
+      "status": "healthy",
+      "service": "Data Service",
+      "version": "2.0.0",
+      "bandits_ready": true,
+      "qlearning_ready": true,
+      "prompt_optimizer_ready": true,
+      "active_bandits": [
+        "default",
+        "test_bandit",
+        "gateway_test"
+      ],
+      "active_agents": [
+        "qlearning_agent",
+        "test_qlearning",
+        "gateway_qlearning",
+        "prompt_optimizer",
+        "test_optimizer",
+        "gateway_optimizer"
+      ]
+    }
+  },
+  "routing_auth": {
+    "status": "\u2705 PASS",
+    "route": "/api/v1/auth/health",
+    "response": {
+      "status": "healthy",
+      "service": "Auth Service",
+      "version": "2.0.0",
+      "policy_agent_ready": true,
+      "human_gate_ready": true,
+      "approval_stats": {
+        "total_approvals": 0,
+        "approved_count": 0,
+        "rejected_count": 0,
+        "approval_rate": 0.0,
+        "recent_decisions": []
+      }
+    }
+  },
+  "data_bandit_choose": {
+    "status": "\u2705 PASS",
+    "response": {
+      "selected_arm": "arm2",
+      "ucb_values": {
+        "arm1": 0.0,
+        "arm2": 0.0,
+        "arm3": 0.0
+      },
+      "confidence_intervals": {
+        "arm1": 0.0,
+        "arm2": 0.0,
+        "arm3": 0.0
+      },
+      "bandit_name": "test_bandit",
+      "exploration": false,
+      "timestamp": "2025-07-20T21:45:07.574006"
+    }
+  },
+  "data_qlearning_run": {
+    "status": "\u2705 PASS",
+    "response": {
+      "agent_name": "test_qlearning",
+      "selected_action": {
+        "agent_combination": "codegen_only",
+        "prompt_strategy": "standard",
+        "iteration_count": 1,
+        "confidence_threshold": 0.5
+      },
+      "q_value": 0.0,
+      "epsilon": 0.1,
+      "exploration": false,
+      "confidence": 0.9,
+      "reasoning": "Q-learning selection with epsilon=0.1000",
+      "timestamp": "2025-07-20T21:45:07.586292"
+    }
+  },
+  "auth_approval": {
+    "status": "\u2705 PASS",
+    "response": {
+      "approved": true,
+      "strategy": "auto_approve",
+      "risk_level": "medium",
+      "violations": [
+        {
+          "type": "dangerous_pattern",
+          "severity": "medium",
+          "pattern": "print\\s*\\(",
+          "line": 1,
+          "position": 0,
+          "description": "Pattern 'print\\s*\\(' detected (medium risk)"
+        }
+      ],
+      "recommendations": [
+        "Code appears relatively safe but review for best practices"
+      ],
+      "confidence": 0.9,
+      "reasoning": "Auto-approved by policy agent",
+      "timestamp": "2025-07-20T21:45:07.594719"
+    }
+  },
+  "orchestrator_discussion": {
+    "status": "\u274c FAIL",
+    "error": "HTTP 404"
+  }
+}
