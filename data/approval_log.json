@@ -184,5 +184,605 @@
       "timestamp": "2025-07-19T19:22:03.681900",
       "reason": "human_approved"
     }
+  },
+  {
+    "proposal": {
+      "proposal_id": "proposal_4_85_1753009970",
+      "prompt": "def hello_world():\n    return 42\n</think>",
+      "approach": "def hello_world():\n    return 42\n</think>",
+      "confidence": 0.85,
+      "patterns": [
+        "simple",
+        "modular"
+      ],
+      "risks": [
+        "complexity",
+        "maintenance",
+        "performance"
+      ],
+      "rl_score": 0.85,
+      "optimization": "add_examples",
+      "agent_analyses": {
+        "codegen": {
+          "agent": "CodeGenAgent",
+          "role": "Implementation Strategy Expert",
+          "approach": "def hello_world():\n    return 42\n</think>",
+          "confidence": 0.85,
+          "alternatives": [
+            "functional",
+            "oop",
+            "procedural"
+          ],
+          "risks": [
+            "complexity",
+            "performance"
+          ],
+          "recommendation": "structured_approach"
+        },
+        "architect": {
+          "agent": "ArchitectAgent",
+          "role": "Software Architecture Expert",
+          "patterns": [
+            "simple",
+            "modular"
+          ],
+          "structure": "def hello_world():\n    return 42\n</think>",
+          "risks": [
+            "complexity",
+            "maintenance"
+          ],
+          "scalability": "medium",
+          "recommendation": "modular_design"
+        },
+        "reviewer": {
+          "agent": "ReviewerAgent",
+          "role": "Code Quality & Security Expert",
+          "security_risks": [
+            "input_validation"
+          ],
+          "quality_issues": [
+            "readability"
+          ],
+          "testing_needs": [
+            "unit_test",
+            "edge_case"
+          ],
+          "maintainability": "medium",
+          "recommendation": "defensive_programming"
+        },
+        "plugin_security_agent": {
+          "security_score": 100,
+          "vulnerabilities": [],
+          "recommendations": [
+            "\u2705 No security vulnerabilities detected"
+          ],
+          "severity": "low"
+        }
+      },
+      "consensus": {
+        "synthesized_approach": "def hello_world():\n    return 42\n</think>",
+        "recommended_patterns": [
+          "simple",
+          "modular"
+        ],
+        "identified_risks": [
+          "complexity",
+          "maintenance",
+          "performance"
+        ],
+        "consensus_recommendation": "structured_approach",
+        "confidence": 0.85
+      },
+      "optimized": {
+        "optimized_prompt": "\nBased on multi-agent consensus:\n\nWrite a Python function that validates email addresses\n\nConsensus Approach: def hello_world():\n    return 42\n</think>\nRecommended Patterns: simple, modular\nIdentified Risks: complexity, maintenance, performance\n\nGenerate optimized implementation following the consensus.\n\n\n# Please include usage examples in the code.",
+        "optimization_applied": "add_examples",
+        "rl_score": 0.85
+      },
+      "timestamp": "2025-07-19T18:00:00Z"
+    },
+    "decision": {
+      "approved": true,
+      "timestamp": "2025-07-20T13:12:50.346694",
+      "reason": "human_approved",
+      "proposal_id": "proposal_4_85_1753009970"
+    }
+  },
+  {
+    "proposal": {
+      "proposal_id": "proposal_4_85_1753010335",
+      "prompt": "def hello_world():\n    return 42",
+      "approach": "def hello_world():\n    return 42",
+      "confidence": 0.85,
+      "patterns": [
+        "modular",
+        "simple"
+      ],
+      "risks": [
+        "performance",
+        "maintenance",
+        "complexity"
+      ],
+      "rl_score": 0.85,
+      "optimization": "add_examples",
+      "agent_analyses": {
+        "codegen": {
+          "agent": "CodeGenAgent",
+          "role": "Implementation Strategy Expert",
+          "approach": "def hello_world():\n    return 42",
+          "confidence": 0.85,
+          "alternatives": [
+            "functional",
+            "oop",
+            "procedural"
+          ],
+          "risks": [
+            "complexity",
+            "performance"
+          ],
+          "recommendation": "structured_approach"
+        },
+        "architect": {
+          "agent": "ArchitectAgent",
+          "role": "Software Architecture Expert",
+          "patterns": [
+            "simple",
+            "modular"
+          ],
+          "structure": "def hello_world():\n    return 42",
+          "risks": [
+            "complexity",
+            "maintenance"
+          ],
+          "scalability": "medium",
+          "recommendation": "modular_design"
+        },
+        "reviewer": {
+          "agent": "ReviewerAgent",
+          "role": "Code Quality & Security Expert",
+          "security_risks": [
+            "input_validation"
+          ],
+          "quality_issues": [
+            "readability"
+          ],
+          "testing_needs": [
+            "unit_test",
+            "edge_case"
+          ],
+          "maintainability": "medium",
+          "recommendation": "defensive_programming"
+        },
+        "plugin_security_agent": {
+          "security_score": 100,
+          "vulnerabilities": [],
+          "recommendations": [
+            "\u2705 No security vulnerabilities detected"
+          ],
+          "severity": "low"
+        }
+      },
+      "consensus": {
+        "synthesized_approach": "def hello_world():\n    return 42",
+        "recommended_patterns": [
+          "modular",
+          "simple"
+        ],
+        "identified_risks": [
+          "performance",
+          "maintenance",
+          "complexity"
+        ],
+        "consensus_recommendation": "structured_approach",
+        "confidence": 0.85
+      },
+      "optimized": {
+        "optimized_prompt": "\nBased on multi-agent consensus:\n\nWrite a Python function that validates email addresses\n\nConsensus Approach: def hello_world():\n    return 42\nRecommended Patterns: modular, simple\nIdentified Risks: performance, maintenance, complexity\n\nGenerate optimized implementation following the consensus.\n\n\n# Please include usage examples in the code.",
+        "optimization_applied": "add_examples",
+        "rl_score": 0.85
+      },
+      "timestamp": "2025-07-19T18:00:00Z"
+    },
+    "decision": {
+      "approved": true,
+      "timestamp": "2025-07-20T13:18:55.297270",
+      "reason": "human_approved",
+      "proposal_id": "proposal_4_85_1753010335"
+    }
+  },
+  {
+    "proposal": {
+      "proposal_id": "proposal_4_85_1753012707",
+      "prompt": "# Simple Python function\ndef hello_world():\n    return \"Hello, World\"",
+      "approach": "# Simple Python function\ndef hello_world():\n    return \"Hello, World\"",
+      "confidence": 0.85,
+      "patterns": [
+        "simple",
+        "modular"
+      ],
+      "risks": [
+        "performance",
+        "maintenance",
+        "complexity"
+      ],
+      "rl_score": 0.85,
+      "optimization": "add_examples",
+      "agent_analyses": {
+        "codegen": {
+          "agent": "CodeGenAgent",
+          "role": "Implementation Strategy Expert",
+          "approach": "# Simple Python function\ndef hello_world():\n    return \"Hello, World\"",
+          "confidence": 0.85,
+          "alternatives": [
+            "functional",
+            "oop",
+            "procedural"
+          ],
+          "risks": [
+            "complexity",
+            "performance"
+          ],
+          "recommendation": "structured_approach"
+        },
+        "architect": {
+          "agent": "ArchitectAgent",
+          "role": "Software Architecture Expert",
+          "patterns": [
+            "simple",
+            "modular"
+          ],
+          "structure": "# Simple Python function\ndef hello_world():\n    return \"Hello World\"",
+          "risks": [
+            "complexity",
+            "maintenance"
+          ],
+          "scalability": "medium",
+          "recommendation": "modular_design"
+        },
+        "reviewer": {
+          "agent": "ReviewerAgent",
+          "role": "Code Quality & Security Expert",
+          "security_risks": [
+            "input_validation"
+          ],
+          "quality_issues": [
+            "readability"
+          ],
+          "testing_needs": [
+            "unit_test",
+            "edge_case"
+          ],
+          "maintainability": "medium",
+          "recommendation": "defensive_programming"
+        },
+        "plugin_security_agent": {
+          "security_score": 100,
+          "vulnerabilities": [],
+          "recommendations": [
+            "\u2705 No security vulnerabilities detected"
+          ],
+          "severity": "low"
+        }
+      },
+      "consensus": {
+        "synthesized_approach": "# Simple Python function\ndef hello_world():\n    return \"Hello, World\"",
+        "recommended_patterns": [
+          "simple",
+          "modular"
+        ],
+        "identified_risks": [
+          "performance",
+          "maintenance",
+          "complexity"
+        ],
+        "consensus_recommendation": "structured_approach",
+        "confidence": 0.85
+      },
+      "optimized": {
+        "optimized_prompt": "\nBased on multi-agent consensus:\n\nCreate a FastAPI REST API with user authentication using JWT tokens\n\nConsensus Approach: # Simple Python function\ndef hello_world():\n    return \"Hello, World\"\nRecommended Patterns: simple, modular\nIdentified Risks: performance, maintenance, complexity\n\nGenerate optimized implementation following the consensus.\n\n\n# Please include usage examples in the code.",
+        "optimization_applied": "add_examples",
+        "rl_score": 0.85
+      },
+      "timestamp": "2025-07-19T18:00:00Z"
+    },
+    "decision": {
+      "approved": true,
+      "timestamp": "2025-07-20T13:59:54.427151",
+      "reason": "human_approved"
+    }
+  },
+  {
+    "proposal": {
+      "proposal_id": "proposal_4_85_1753013432",
+      "prompt": "# Simple Python function\ndef hello_world():\n    return \"Hello, World\"",
+      "approach": "# Simple Python function\ndef hello_world():\n    return \"Hello, World\"",
+      "confidence": 0.85,
+      "patterns": [
+        "simple",
+        "modular"
+      ],
+      "risks": [
+        "performance",
+        "maintenance",
+        "complexity"
+      ],
+      "rl_score": 0.85,
+      "optimization": "add_examples",
+      "agent_analyses": {
+        "codegen": {
+          "agent": "CodeGenAgent",
+          "role": "Implementation Strategy Expert",
+          "approach": "# Simple Python function\ndef hello_world():\n    return \"Hello, World\"",
+          "confidence": 0.85,
+          "alternatives": [
+            "functional",
+            "oop",
+            "procedural"
+          ],
+          "risks": [
+            "complexity",
+            "performance"
+          ],
+          "recommendation": "structured_approach"
+        },
+        "architect": {
+          "agent": "ArchitectAgent",
+          "role": "Software Architecture Expert",
+          "patterns": [
+            "simple",
+            "modular"
+          ],
+          "structure": "# Simple Python function\ndef hello_world():\n    return \"Hello World\"",
+          "risks": [
+            "complexity",
+            "maintenance"
+          ],
+          "scalability": "medium",
+          "recommendation": "modular_design"
+        },
+        "reviewer": {
+          "agent": "ReviewerAgent",
+          "role": "Code Quality & Security Expert",
+          "security_risks": [
+            "input_validation"
+          ],
+          "quality_issues": [
+            "readability"
+          ],
+          "testing_needs": [
+            "unit_test",
+            "edge_case"
+          ],
+          "maintainability": "medium",
+          "recommendation": "defensive_programming"
+        },
+        "plugin_security_agent": {
+          "security_score": 100,
+          "vulnerabilities": [],
+          "recommendations": [
+            "\u2705 No security vulnerabilities detected"
+          ],
+          "severity": "low"
+        }
+      },
+      "consensus": {
+        "synthesized_approach": "# Simple Python function\ndef hello_world():\n    return \"Hello, World\"",
+        "recommended_patterns": [
+          "simple",
+          "modular"
+        ],
+        "identified_risks": [
+          "performance",
+          "maintenance",
+          "complexity"
+        ],
+        "consensus_recommendation": "structured_approach",
+        "confidence": 0.85
+      },
+      "optimized": {
+        "optimized_prompt": "\nBased on multi-agent consensus:\n\nBuild a microservice architecture with:\n- User service (FastAPI) for user management\n- Order service (FastAPI) for order processing  \n- RabbitMQ for async communication between services\n- Docker compose setup for all services\n- JWT-based inter-service authentication\n- Shared authentication middleware\n- Health check endpoints for each service\n\nConsensus Approach: # Simple Python function\ndef hello_world():\n    return \"Hello, World\"\nRecommended Patterns: simple, modular\nIdentified Risks: performance, maintenance, complexity\n\nGenerate optimized implementation following the consensus.\n\n\n# Please include usage examples in the code.",
+        "optimization_applied": "add_examples",
+        "rl_score": 0.85
+      },
+      "timestamp": "2025-07-19T18:00:00Z"
+    },
+    "decision": {
+      "approved": true,
+      "timestamp": "2025-07-20T14:14:26.237809",
+      "reason": "human_approved"
+    }
+  },
+  {
+    "proposal": {
+      "proposal_id": "proposal_4_70_1753018241",
+      "prompt": "Standard implementation with error handling",
+      "approach": "Standard implementation with error handling",
+      "confidence": 0.7,
+      "patterns": [
+        "modular",
+        "simple"
+      ],
+      "risks": [
+        "edge_cases",
+        "tight_coupling"
+      ],
+      "rl_score": 0.7,
+      "optimization": "add_examples",
+      "agent_analyses": {
+        "codegen": {
+          "agent": "CodeGenAgent",
+          "role": "Implementation Strategy Expert",
+          "approach": "Standard implementation with error handling",
+          "confidence": 0.7,
+          "alternatives": [
+            "simple",
+            "robust"
+          ],
+          "risks": [
+            "edge_cases"
+          ],
+          "recommendation": "defensive_programming"
+        },
+        "architect": {
+          "agent": "ArchitectAgent",
+          "role": "Software Architecture Expert",
+          "patterns": [
+            "simple",
+            "modular"
+          ],
+          "structure": "Single responsibility with clear separation",
+          "risks": [
+            "tight_coupling"
+          ],
+          "scalability": "low",
+          "recommendation": "simple_structure"
+        },
+        "reviewer": {
+          "agent": "ReviewerAgent",
+          "role": "Code Quality & Security Expert",
+          "security_risks": [
+            "input_validation"
+          ],
+          "quality_issues": [
+            "readability"
+          ],
+          "testing_needs": [
+            "unit_test",
+            "edge_case"
+          ],
+          "maintainability": "low",
+          "recommendation": "add_validation"
+        },
+        "plugin_security_agent": {
+          "security_score": 100,
+          "vulnerabilities": [],
+          "recommendations": [
+            "\u2705 No security vulnerabilities detected"
+          ],
+          "severity": "low"
+        }
+      },
+      "consensus": {
+        "synthesized_approach": "Standard implementation with error handling",
+        "recommended_patterns": [
+          "modular",
+          "simple"
+        ],
+        "identified_risks": [
+          "edge_cases",
+          "tight_coupling"
+        ],
+        "consensus_recommendation": "defensive_programming",
+        "confidence": 0.7
+      },
+      "optimized": {
+        "optimized_prompt": "\nBased on multi-agent consensus:\n\nWrite a Python function that validates email addresses\n\nConsensus Approach: Standard implementation with error handling\nRecommended Patterns: modular, simple\nIdentified Risks: edge_cases, tight_coupling\n\nGenerate optimized implementation following the consensus.\n\n\n# Please include usage examples in the code.",
+        "optimization_applied": "add_examples",
+        "rl_score": 0.7
+      },
+      "timestamp": "2025-07-19T18:00:00Z"
+    },
+    "decision": {
+      "approved": true,
+      "timestamp": "2025-07-20T15:30:41.944506",
+      "reason": "human_approved",
+      "proposal_id": "proposal_4_70_1753018241"
+    }
+  },
+  {
+    "proposal": {
+      "proposal_id": "proposal_4_70_1753018315",
+      "prompt": "Standard implementation with error handling",
+      "approach": "Standard implementation with error handling",
+      "confidence": 0.7,
+      "patterns": [
+        "modular",
+        "simple"
+      ],
+      "risks": [
+        "edge_cases",
+        "tight_coupling"
+      ],
+      "rl_score": 0.7,
+      "optimization": "add_examples",
+      "agent_analyses": {
+        "codegen": {
+          "agent": "CodeGenAgent",
+          "role": "Implementation Strategy Expert",
+          "approach": "Standard implementation with error handling",
+          "confidence": 0.7,
+          "alternatives": [
+            "simple",
+            "robust"
+          ],
+          "risks": [
+            "edge_cases"
+          ],
+          "recommendation": "defensive_programming"
+        },
+        "architect": {
+          "agent": "ArchitectAgent",
+          "role": "Software Architecture Expert",
+          "patterns": [
+            "simple",
+            "modular"
+          ],
+          "structure": "Single responsibility with clear separation",
+          "risks": [
+            "tight_coupling"
+          ],
+          "scalability": "low",
+          "recommendation": "simple_structure"
+        },
+        "reviewer": {
+          "agent": "ReviewerAgent",
+          "role": "Code Quality & Security Expert",
+          "security_risks": [
+            "input_validation"
+          ],
+          "quality_issues": [
+            "readability"
+          ],
+          "testing_needs": [
+            "unit_test",
+            "edge_case"
+          ],
+          "maintainability": "low",
+          "recommendation": "add_validation"
+        },
+        "plugin_security_agent": {
+          "security_score": 100,
+          "vulnerabilities": [],
+          "recommendations": [
+            "\u2705 No security vulnerabilities detected"
+          ],
+          "severity": "low"
+        }
+      },
+      "consensus": {
+        "synthesized_approach": "Standard implementation with error handling",
+        "recommended_patterns": [
+          "modular",
+          "simple"
+        ],
+        "identified_risks": [
+          "edge_cases",
+          "tight_coupling"
+        ],
+        "consensus_recommendation": "defensive_programming",
+        "confidence": 0.7
+      },
+      "optimized": {
+        "optimized_prompt": "\nBased on multi-agent consensus:\n\nWrite a Python function that validates email addresses\n\nConsensus Approach: Standard implementation with error handling\nRecommended Patterns: modular, simple\nIdentified Risks: edge_cases, tight_coupling\n\nGenerate optimized implementation following the consensus.\n\n\n# Please include usage examples in the code.",
+        "optimization_applied": "add_examples",
+        "rl_score": 0.7
+      },
+      "timestamp": "2025-07-19T18:00:00Z"
+    },
+    "decision": {
+      "approved": true,
+      "timestamp": "2025-07-20T15:31:55.506229",
+      "reason": "human_approved",
+      "proposal_id": "proposal_4_70_1753018315"
+    }
   }
 ]

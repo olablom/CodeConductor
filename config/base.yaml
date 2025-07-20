@@ -16,36 +16,31 @@ llm:
   server_url: http://localhost:1234
   default_model: You
   available_models:
-    - You
-
-# Distributed execution configuration
+  - You
 distributed:
-  enabled: true # Set to true to enable distributed execution
+  enabled: true
   broker_url: redis://localhost:6379/0
   result_backend: redis://localhost:6379/0
   worker_concurrency: 4
-  task_timeout: 300 # 5 minutes
+  task_timeout: 300
   max_retries: 3
-  retry_delay: 60 # 1 minute
-
-# Celery configuration
+  retry_delay: 60
 celery:
   task_serializer: json
   result_serializer: json
-  accept_content: [json]
+  accept_content:
+  - json
   timezone: UTC
   enable_utc: true
   task_track_started: true
   task_time_limit: 300
   task_soft_time_limit: 240
-
-# GitHub integration configuration
 github_webhook:
-  enabled: false # Set to true to enable GitHub webhook
-  secret: "" # Webhook secret for signature verification
-  token: "" # GitHub personal access token
-  webhook_url: "http://localhost:5000/webhook"
+  enabled: false
+  secret: ''
+  token: ''
+  webhook_url: http://localhost:5000/webhook
   events:
-    - pull_request
-    - push
-    - issues
+  - pull_request
+  - push
+  - issues
