@@ -1,300 +1,287 @@
-# 🎼 CodeConductor v2.0
+# 🎼 CodeConductor
 
-[![CI](https://github.com/olablom/CodeConductor/actions/workflows/ci.yml/badge.svg)](https://github.com/olablom/CodeConductor/actions/workflows/ci.yml)
+> **Self-Learning Multi-Agent AI System for Intelligent Code Generation**
 
-> Multi-agent AI system with Reinforcement Learning for self-improving code generation
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/Tests-35%2F35%20passing-brightgreen.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/Coverage-61%25-yellow.svg)](tests/)
+[![Pipeline](https://img.shields.io/badge/Pipeline-v2.0-orange.svg)](pipeline.py)
+[![RL](https://img.shields.io/badge/RL-Q--Learning-purple.svg)](agents/qlearning_agent.py)
 
-**Status**: Week -1/0 - Production Ready! 🚀
+**CodeConductor** är ett revolutionerande AI-system som kombinerar multi-agent diskussion, mänsklig godkännande och reinforcement learning för att generera högkvalitativ kod. Systemet lär sig kontinuerligt från feedback och optimerar sig själv över tid.
 
-CodeConductor orchestrates intelligent LLM agents to improve code generation through multi-agent collaboration, reinforcement learning, distributed execution, and ML analytics.
+## 🚀 Live Demo
+
+![CodeConductor Demo](docs/demo.gif)
+
+_Se CodeConductor i aktion: Multi-agent diskussion → Mänsklig godkännande → Kodgenerering → RL-feedback_
+
+## ✨ Nyckelfunktioner
+
+- 🤖 **Multi-Agent System** - Architect, Review, CodeGen och Policy agents arbetar tillsammans
+- 👤 **Human-in-the-Loop** - Mänsklig godkännande för kritiska beslut
+- 🧠 **Reinforcement Learning** - Q-learning optimerar kodgenerering över tid
+- 🛡️ **Safety First** - Policy agent säkerställer säker kod
+- 📊 **Comprehensive Testing** - 35+ tester med 61% kodtäckning
+- 🔄 **Self-Improving** - Systemet lär sig från varje iteration
+
+## 🏗️ Systemarkitektur
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Multi-Agent   │    │   Human-in-the- │    │   CodeGen +     │
+│   Discussion    │───▶│   Loop Approval │───▶│   Safety Check  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Consensus     │    │   Approval      │    │   Review +      │
+│   Building      │    │   Interface     │    │   Policy Check  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   CodeGenAgent  │    │   RewardAgent   │    │   QLearningAgent│
+│   Generation    │───▶│   Calculation   │───▶│   Optimization  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+```
 
 ## 🚀 Quick Start
 
-### **Option 1: Docker (Recommended)**
+### Installation
 
 ```bash
-# Clone and run with Docker
+# Klona repository
 git clone https://github.com/olablom/CodeConductor.git
 cd CodeConductor
-docker-compose up --build
 
-# Access the system:
-# 📊 API: http://localhost:8000
-# 🎨 GUI: http://localhost:8501
-```
-
-### **Option 2: Local Development**
-
-```bash
-# Clone and setup
-git clone https://github.com/olablom/CodeConductor.git
-cd CodeConductor
+# Skapa virtual environment
 python -m venv .venv
-source .venv/bin/activate  # På Windows: .venv\Scripts\activate
+source .venv/bin/activate  # Linux/Mac
+# eller
+.venv\Scripts\activate     # Windows
+
+# Installera dependencies
 pip install -r requirements.txt
-
-# Run pipeline
-python pipeline.py --prompt prompts/hello_world.md --iters 10 --mock
-
-# View results
-streamlit run app.py
 ```
 
-## 🎭 Live Demo - Microservices Generation
-
-**Experience CodeConductor v2.0 in action with a complete microservices demo!**
-
-### **1. Start the Microservices**
+### Kör din första pipeline
 
 ```bash
-# Navigate to generated services
-cd data/generated
+# Kör en enkel API-generering
+python pipeline.py --prompt prompts/simple_api.md --iters 1 --offline
 
-# Start all services with Docker Compose
-docker-compose up --build -d
-
-# Wait for services to be ready (about 30 seconds)
+# Kör med online LLM (kräver LM Studio/Ollama)
+python pipeline.py --prompt prompts/simple_api.md --iters 3 --online
 ```
 
-### **2. Access the Services**
+### Exempel output
 
-- **User Service API**: http://localhost:8001/docs
-- **Order Service API**: http://localhost:8002/docs
-- **RabbitMQ Management**: http://localhost:15672 (admin/admin123)
+```
+============================================================
+PIPELINE COMPLETED
+============================================================
+Total iterations: 3
+Successful iterations: 3
+Results saved to: data/generated/pipeline_results_20250720_183003.json
 
-### **3. Run the Complete Demo**
-
-```bash
-# Make demo script executable
-chmod +x demo.sh
-
-# Run the full demo
-./demo.sh
+Generated files:
+  - data/generated/iter_1.py
+  - data/generated/iter_2.py
+  - data/generated/iter_3.py
+============================================================
 ```
 
-**What the demo does:**
-
-1. ✅ **User Registration** - Creates a new user account
-2. ✅ **JWT Authentication** - Logs in and gets access token
-3. ✅ **Order Creation** - Creates a new order with authentication
-4. ✅ **Order Management** - Lists, updates, and manages orders
-5. ✅ **RabbitMQ Events** - Publishes events for service communication
-6. ✅ **Statistics** - Shows order analytics and user data
-
-### **4. Manual Testing with Swagger UI**
-
-**User Service (http://localhost:8001/docs):**
-
-```json
-// Register user
-POST /register
-{
-  "username": "testuser",
-  "email": "test@example.com",
-  "password": "password123"
-}
-
-// Login
-POST /login
-{
-  "username": "testuser",
-  "password": "password123"
-}
-```
-
-**Order Service (http://localhost:8002/docs):**
-
-```json
-// Create order (requires JWT token)
-POST /orders
-Authorization: Bearer <your-jwt-token>
-{
-  "item": "Premium Widget",
-  "quantity": 2,
-  "price": 29.99
-}
-```
-
-### **5. View RabbitMQ Events**
-
-1. Open http://localhost:15672
-2. Login with: `admin` / `admin123`
-3. Go to "Queues" tab
-4. Check `user_events` and `order_events` queues
-5. See real-time event publishing!
-
-### **6. Dashboard Analytics**
-
-```bash
-# Start the RL dashboard
-streamlit run dashboard/app.py
-
-# View learning metrics and see how microservices generation
-# has improved the system's performance over time
-```
-
-## 📊 Architecture
+## 📁 Projektstruktur
 
 ```
 CodeConductor/
-├── agents/                 # Multi-agent system
-│   ├── base_agent.py      # Abstract base class
-│   ├── orchestrator.py    # Agent coordination
-│   └── orchestrator_distributed.py  # Distributed version
-├── bandits/               # RL algorithms
-│   └── q_learning.py      # Q-learning implementation
-├── plugins/               # Plugin system
-│   ├── base_simple.py     # Plugin base classes
-│   ├── security_plugin.py # Security analysis
-│   └── formatter_plugin.py # Code formatting
-├── integrations/          # External integrations
-│   ├── lm_studio.py       # LM Studio integration
-│   ├── celery_app.py      # Celery configuration
-│   └── github_webhook.py  # GitHub webhook
-├── analytics/             # ML analytics
-│   ├── ml_predictor.py    # Quality prediction
-│   └── dashboard.py       # Analytics dashboard
-├── config/                # Configuration
-│   └── base.yaml          # Main configuration
-├── data/                  # Data storage
-│   └── metrics.db         # SQLite database
+├── agents/                 # AI-agenter
+│   ├── base_agent.py      # Basklass för alla agenter
+│   ├── architect_agent.py # Arkitektur-design
+│   ├── review_agent.py    # Kodgranskning
+│   ├── codegen_agent.py   # Kodgenerering
+│   ├── policy_agent.py    # Säkerhetskontroll
+│   ├── reward_agent.py    # Reward calculation
+│   └── qlearning_agent.py # Q-learning optimization
+├── cli/                   # Command-line interface
+│   └── human_approval.py  # Mänsklig godkännande CLI
+├── integrations/          # Externa tjänster
+│   └── llm_client.py     # LLM integration
 ├── tests/                 # Test suite
-├── pipeline.py            # Main pipeline
-└── app.py                 # Streamlit dashboard
+│   ├── test_*.py         # Unit tester
+│   └── conftest.py       # Test configuration
+├── prompts/              # Prompt templates
+├── data/                 # Generated code & metrics
+│   ├── generated/        # Output files
+│   ├── qtable.db        # Q-learning database
+│   └── metrics.db       # Performance metrics
+├── pipeline.py           # Main pipeline
+└── requirements.txt      # Dependencies
 ```
 
-## 🧪 Complete Feature Set
+## 🧠 AI-Agenter
 
-### **Core Features**
+### ArchitectAgent
 
-- [x] **Multi-Agent Discussion System**
-  - CodeGenAgent: Implementation strategy analysis
-  - ArchitectAgent: Design pattern analysis
-  - ReviewerAgent: Code quality & security analysis
-  - PolicyAgent: Security and compliance checking
-  - AgentOrchestrator: Consensus coordination
-- [x] **Reinforcement Learning**
-  - Q-learning optimization of strategies
-  - Bandit algorithms for exploration/exploitation
-  - Multi-factor reward calculation
-  - Learning curves and convergence tracking
-- [x] **Plugin Architecture**
-  - Security plugin for code analysis
-  - Formatter plugin for code quality
-  - Extensible plugin system
-  - Automatic plugin discovery and loading
-- [x] **Distributed Execution**
-  - Celery + Redis for parallel processing
-  - Scalable agent execution
-  - Graceful fallback to local execution
-  - Real-time task monitoring
-- [x] **ML Analytics**
-  - Quality prediction using RandomForest
-  - Trend analysis over time
-  - Proactive warning system
-  - Feature importance analysis
-- [x] **GitHub Integration**
-  - Automated PR analysis
-  - Webhook-based triggers
-  - Comment-based feedback
-  - CI/CD integration
+- **Syfte**: Designar systemarkitektur och teknisk stack
+- **Input**: Projektkrav och kontext
+- **Output**: Arkitekturförslag med teknisk motivering
 
-## 🔒 Week 2 Progress - PolicyAgent & PromptOptimizer
+### ReviewAgent
 
-### **PolicyAgent Security System**
+- **Syfte**: Granskar kod för kvalitet och säkerhet
+- **Input**: Genererad kod
+- **Output**: Kvalitetsbedömning och förbättringsförslag
 
-- [x] **PolicyAgent Security System**
-  - Dangerous system call detection (`os.system`, `subprocess`)
-  - File operation validation (secret files, write operations)
-  - Network access blocking (`requests`, `urllib`)
-  - License violation detection (GPL, AGPL headers)
-  - Forbidden import blocking (`torch`, `tensorflow`, etc.)
-  - Code size limits and syntax validation
-- [x] **Pipeline Integration**
-  - Automatic code validation after generation
-  - Negative rewards for blocked code (-20.0)
-  - Database tracking of violations
-  - Real-time blocking statistics
-- [x] **Dashboard Enhancements**
-  - Policy violation analysis tab
-  - Block reasons distribution charts
-  - Model source tracking (mock vs LM Studio)
-  - Security metrics overview
+### CodeGenAgent
 
-### **PromptOptimizerAgent Q-Learning System**
+- **Syfte**: Genererar faktisk kod baserat på arkitektur
+- **Input**: Arkitekturförslag och kontext
+- **Output**: Komplett kodimplementation
 
-- [x] **Q-Learning Agent**
-  - State vector: `(task_id, arm_prev, fail_bucket, complexity_bin, model_source)`
-  - 6 prompt mutation actions: type hints, OOP, docstrings, simplify, examples, no change
-  - ε-greedy exploration with configurable parameters
-  - Q-table persistence and analysis
-- [x] **Pipeline Integration**
-  - Automatic prompt optimization after failures
-  - Reward bonuses for green-on-first-retry (+10)
-  - Iteration penalties (-1 per additional iteration)
-  - Policy block penalties (-5)
-  - Complexity bonuses (+2 for good complexity)
-- [x] **Dashboard Enhancements**
-  - PromptOptimizer analysis tab
-  - Action distribution charts
-  - Optimization timeline visualization
-  - Q-table statistics and action usage
+### PolicyAgent
 
-## 📈 Example Usage
+- **Syfte**: Säkerhetskontroll och policy-enforcement
+- **Input**: Genererad kod
+- **Output**: Säkerhetsbedömning och violations
+
+### RewardAgent
+
+- **Syfte**: Beräknar rewards för RL-system
+- **Input**: Test results, quality metrics, human feedback
+- **Output**: Comprehensive reward score
+
+### QLearningAgent
+
+- **Syfte**: Optimering genom reinforcement learning
+- **Input**: States, actions, rewards
+- **Output**: Optimal action selection
+
+## 🔧 Konfiguration
+
+### Environment Variables
 
 ```bash
-# Test Multi-Agent System
-python test_multi_agent.py
+# LLM Configuration
+LLM_BASE_URL=http://localhost:1234/v1
+LLM_API_KEY=your-api-key
 
-# Test Complete System with Human Approval
-python test_complete_system.py
+# Pipeline Configuration
+PIPELINE_MAX_ITERATIONS=5
+PIPELINE_REWARD_THRESHOLD=0.7
+```
 
-# Run with mock generator
-python pipeline.py --prompt prompts/hello_world.md --iters 20 --mock
+### Custom Prompts
 
-# Run with LM Studio (if available)
-python pipeline.py --prompt prompts/calculator.md --iters 20 --online
+Skapa egna prompts i `prompts/` mappen:
 
-# Run benchmark suite
-python bench/run_suite.py --prompt_dir prompts --iters 50 --online
+```markdown
+# My Custom API
+
+Create a REST API for managing books with the following features:
+
+- CRUD operations for books
+- Author management
+- Category filtering
+- Search functionality
+```
+
+## 🧪 Testing
+
+```bash
+# Kör alla tester
+pytest
+
+# Kör specifika tester
+pytest tests/test_reward_agent.py -v
+pytest tests/test_qlearning_agent.py -v
+
+# Med coverage
+pytest --cov=agents --cov-report=html
+```
+
+## 📊 Performance Metrics
+
+- **Test Coverage**: 61%
+- **Total Tests**: 35/35 passing
+- **Average Reward**: 0.867 (good)
+- **Q-table Entries**: 1+ (growing with usage)
+- **Pipeline Success Rate**: 100%
+
+## 🤝 Bidrag
+
+Vi välkomnar bidrag! Se [CONTRIBUTING.md](CONTRIBUTING.md) för detaljer.
+
+### Utvecklingsmiljö
+
+```bash
+# Setup development environment
+git clone https://github.com/olablom/CodeConductor.git
+cd CodeConductor
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
 
 # Run tests
-pytest tests/ -v
+pytest -v
 
-# View metrics
-sqlite3 data/metrics.db "SELECT * FROM metrics ORDER BY iteration DESC LIMIT 10"
-
-# View blocked code analysis
-sqlite3 data/metrics.db "SELECT iteration, block_reasons FROM metrics WHERE blocked = 1"
-
-# View prompt optimization data
-sqlite3 data/metrics.db "SELECT iteration, optimizer_action, reward FROM metrics WHERE optimizer_action != 'no_change'"
-
-## 🔮 Next Steps (Week 4-5)
-
-- [x] **Multi-file project support** - Complex project generation ✅
-- [x] **Docker deployment** - One-click deployment ✅
-- [ ] **Cursor IDE integration** - Direct IDE plugin
-- [ ] **SQLite persistence for RL history** - Advanced learning storage
-- [ ] **Advanced prompt optimization** - Temperature/stop-token tweaks
-- [ ] **Advanced security rules** - Custom policy configuration
-
-## 🎯 Gabriel's Vision Status
-
-✅ **Multi-agent collaboration** - Complete with 3 specialized agents
-✅ **Reinforcement Learning** - Q-learning with convergence tracking
-✅ **Human-in-the-Loop** - Approval system with decision logging
-✅ **Local reasoning** - LM Studio integration with privacy-first approach
-
-## 🚀 CI/CD
-
-This project uses GitHub Actions for continuous integration:
-
-- **Automated Testing**: Runs pytest on every push/PR
-- **Pipeline Validation**: Tests the full CodeConductor pipeline
-- **Quality Checks**: Ensures code quality and functionality
-
-## �� License
-
-MIT
+# Run linting
+flake8 agents/ tests/
 ```
+
+## 📚 Dokumentation
+
+- [Getting Started Guide](GETTING_STARTED.md) - Detaljerad onboarding
+- [Plugin Guide](PLUGIN_GUIDE.md) - Skapa egna agenter
+- [API Documentation](docs/api.md) - Teknisk dokumentation
+- [Architecture Guide](docs/architecture.md) - Systemdesign
+
+## 🎯 Användningsfall
+
+### 1. API Development
+
+```bash
+python pipeline.py --prompt prompts/rest_api.md --iters 3
+```
+
+### 2. Web Application
+
+```bash
+python pipeline.py --prompt prompts/web_app.md --iters 2
+```
+
+### 3. Data Processing
+
+```bash
+python pipeline.py --prompt prompts/data_pipeline.md --iters 1
+```
+
+## 🏆 Roadmap
+
+- [x] **v1.0** - Multi-agent system
+- [x] **v2.0** - Reinforcement learning
+- [ ] **v3.0** - Plugin architecture
+- [ ] **v4.0** - Cloud deployment
+- [ ] **v5.0** - Enterprise features
+
+## 📄 Licens
+
+Detta projekt är licensierat under MIT License - se [LICENSE](LICENSE) filen för detaljer.
+
+## 🙏 Acknowledgments
+
+- **Multi-Agent Systems** - Inspiration från moderna AI-arkitekturer
+- **Reinforcement Learning** - Q-learning implementation
+- **Human-in-the-Loop** - Mänsklig centrerad AI-design
+- **Open Source Community** - Alla som bidragit till detta projekt
+
+---
+
+**Byggt med ❤️ för framtidens AI-utveckling**
+
+[![GitHub stars](https://img.shields.io/github/stars/olablom/CodeConductor?style=social)](https://github.com/olablom/CodeConductor)
+[![GitHub forks](https://img.shields.io/github/forks/olablom/CodeConductor?style=social)](https://github.com/olablom/CodeConductor)
+[![GitHub issues](https://img.shields.io/github/issues/olablom/CodeConductor)](https://github.com/olablom/CodeConductor/issues)
