@@ -133,34 +133,34 @@ services:
       - codeconductor-network
     restart: unless-stopped
 
-  # Monitoring (Optional)
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-    networks:
-      - codeconductor-network
-    restart: unless-stopped
+  # Monitoring (Optional) - Commented out for now
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+  #   networks:
+  #     - codeconductor-network
+  #   restart: unless-stopped
 
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana_data:/var/lib/grafana
-    networks:
-      - codeconductor-network
-    restart: unless-stopped
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin
+  #   volumes:
+  #     - grafana_data:/var/lib/grafana
+  #   networks:
+  #     - codeconductor-network
+  #   restart: unless-stopped
 
 volumes:
   postgres_data:
   redis_data:
   rabbitmq_data:
-  grafana_data:
+  # grafana_data:
 
 networks:
   codeconductor-network:
