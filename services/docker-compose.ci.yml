@@ -1,0 +1,75 @@
+services:
+  # Gateway/API Service
+  gateway-service:
+    build:
+      context: .
+      dockerfile: gateway_service/Dockerfile
+    ports:
+      - "9000:8000"
+    environment:
+      - AGENT_SERVICE_URL=http://agent-service:8001
+      - ORCHESTRATOR_SERVICE_URL=http://orchestrator-service:8002
+      - DATA_SERVICE_URL=http://data-service:8003
+      - AUTH_SERVICE_URL=http://auth-service:8005
+    depends_on:
+      - agent-service
+      - orchestrator-service
+      - data-service
+      - auth-service
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+  # Agent Service
+  agent-service:
+    build:
+      context: .
+      dockerfile: agent_service/Dockerfile
+    ports:
+      - "9001:8001"
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+  # Orchestrator Service
+  orchestrator-service:
+    build:
+      context: .
+      dockerfile: orchestrator_service/Dockerfile
+    ports:
+      - "9002:8002"
+    environment:
+      - AGENT_SERVICE_URL=http://agent-service:8001
+      - DATA_SERVICE_URL=http://data-service:8003
+    depends_on:
+      - agent-service
+      - data-service
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+  # Data Service
+  data-service:
+    build:
+      context: .
+      dockerfile: data_service/Dockerfile
+    ports:
+      - "9006:8003"
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+  # Auth/Approval Service
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth_service/Dockerfile
+    ports:
+      - "9005:8005"
+    networks:
+      - codeconductor-network
+    restart: unless-stopped
+
+networks:
+  codeconductor-network:
+    driver: bridge 
