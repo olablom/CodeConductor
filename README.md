@@ -40,6 +40,99 @@ python pipeline.py --prompt prompts/hello_world.md --iters 10 --mock
 streamlit run app.py
 ```
 
+## 🎭 Live Demo - Microservices Generation
+
+**Experience CodeConductor v2.0 in action with a complete microservices demo!**
+
+### **1. Start the Microservices**
+
+```bash
+# Navigate to generated services
+cd data/generated
+
+# Start all services with Docker Compose
+docker-compose up --build -d
+
+# Wait for services to be ready (about 30 seconds)
+```
+
+### **2. Access the Services**
+
+- **User Service API**: http://localhost:8001/docs
+- **Order Service API**: http://localhost:8002/docs
+- **RabbitMQ Management**: http://localhost:15672 (admin/admin123)
+
+### **3. Run the Complete Demo**
+
+```bash
+# Make demo script executable
+chmod +x demo.sh
+
+# Run the full demo
+./demo.sh
+```
+
+**What the demo does:**
+
+1. ✅ **User Registration** - Creates a new user account
+2. ✅ **JWT Authentication** - Logs in and gets access token
+3. ✅ **Order Creation** - Creates a new order with authentication
+4. ✅ **Order Management** - Lists, updates, and manages orders
+5. ✅ **RabbitMQ Events** - Publishes events for service communication
+6. ✅ **Statistics** - Shows order analytics and user data
+
+### **4. Manual Testing with Swagger UI**
+
+**User Service (http://localhost:8001/docs):**
+
+```json
+// Register user
+POST /register
+{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+// Login
+POST /login
+{
+  "username": "testuser",
+  "password": "password123"
+}
+```
+
+**Order Service (http://localhost:8002/docs):**
+
+```json
+// Create order (requires JWT token)
+POST /orders
+Authorization: Bearer <your-jwt-token>
+{
+  "item": "Premium Widget",
+  "quantity": 2,
+  "price": 29.99
+}
+```
+
+### **5. View RabbitMQ Events**
+
+1. Open http://localhost:15672
+2. Login with: `admin` / `admin123`
+3. Go to "Queues" tab
+4. Check `user_events` and `order_events` queues
+5. See real-time event publishing!
+
+### **6. Dashboard Analytics**
+
+```bash
+# Start the RL dashboard
+streamlit run dashboard/app.py
+
+# View learning metrics and see how microservices generation
+# has improved the system's performance over time
+```
+
 ## 📊 Architecture
 
 ```
@@ -201,7 +294,7 @@ This project uses GitHub Actions for continuous integration:
 - **Pipeline Validation**: Tests the full CodeConductor pipeline
 - **Quality Checks**: Ensures code quality and functionality
 
-## 📝 License
+## �� License
 
 MIT
 ```
