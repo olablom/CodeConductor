@@ -3,7 +3,6 @@ click>=8.0.0
 numpy>=1.21.0
 omegaconf>=2.3.0
 pyyaml>=6.0
-sqlite3
 
 # ML and optimization
 scikit-learn>=1.0.0

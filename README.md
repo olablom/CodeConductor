@@ -2,11 +2,13 @@
 
 > **Self-Learning Multi-Agent AI System for Intelligent Code Generation**
 
+[![CI](https://github.com/olablom/CodeConductor/actions/workflows/ci.yml/badge.svg)](https://github.com/olablom/CodeConductor/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-35%2F35%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-277%2F336%20passing-brightgreen.svg)](tests/)
 [![Coverage](https://img.shields.io/badge/Coverage-61%25-yellow.svg)](tests/)
-[![Pipeline](https://img.shields.io/badge/Pipeline-v2.0-orange.svg)](pipeline.py)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://github.com/olablom/CodeConductor/pkgs/container/codeconductor)
+[![PyPI](https://img.shields.io/badge/PyPI-v2.0.0-orange.svg)](https://pypi.org/project/codeconductor/)
 [![RL](https://img.shields.io/badge/RL-Q--Learning-purple.svg)](agents/qlearning_agent.py)
 
 **CodeConductor** är ett revolutionerande AI-system som kombinerar multi-agent diskussion, mänsklig godkännande och reinforcement learning för att generera högkvalitativ kod. Systemet lär sig kontinuerligt från feedback och optimerar sig själv över tid.
@@ -50,6 +52,26 @@ _Se CodeConductor i aktion: Multi-agent diskussion → Mänsklig godkännande �
 ## 🚀 Quick Start
 
 ### Installation
+
+#### **Option 1: Docker (Rekommenderat)**
+
+```bash
+# Dra ner och kör med Docker
+docker pull ghcr.io/olablom/codeconductor:latest
+docker run -it --rm ghcr.io/olablom/codeconductor:latest python pipeline.py --help
+```
+
+#### **Option 2: Pip Package**
+
+```bash
+# Installera från PyPI
+pip install codeconductor
+
+# Kör pipeline
+codeconductor --prompt "Create a simple API" --iters 1 --offline
+```
+
+#### **Option 3: Local Development**
 
 ```bash
 # Klona repository

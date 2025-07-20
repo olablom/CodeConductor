@@ -1,61 +1,44 @@
-# ─────────────────────────────────────────────────────────────
-# CodeConductor v2.0 - Multi-Agent AI Code Generation System
-# ─────────────────────────────────────────────────────────────
+# Use Python 3.11 slim image as base
+FROM python:3.11-slim
 
-# Stage 1: Install dependencies
-FROM python:3.11-slim AS builder
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# Set work directory
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        git \
+        curl \
+        build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements for caching
+# Copy requirements first for better caching
 COPY requirements.txt .
+
+# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ─────────────────────────────────────────────────────────────
-# Stage 2: Production image
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy Python dependencies from builder
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-
-# Copy application code
+# Copy project files
 COPY . .
 
-# Create necessary directories
+# Create data directories
 RUN mkdir -p data/generated data/logs
 
-# Set environment variables
-ENV PYTHONPATH=/app
-ENV JWT_SECRET=supersecretkey
-ENV CONFIG_PATH=/app/config/base.yaml
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash codeconductor \
+    && chown -R codeconductor:codeconductor /app
 
-# Expose ports
-EXPOSE 8000   # FastAPI
-EXPOSE 8501   # Streamlit GUI
+# Switch to non-root user
+USER codeconductor
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+# Expose port (if needed for future web interface)
+EXPOSE 8000
 
-# Start both API and GUI
-CMD ["bash", "-c", "\
-    echo '🚀 Starting CodeConductor v2.0...' && \
-    echo '📊 API: http://localhost:8000' && \
-    echo '🎨 GUI: http://localhost:8501' && \
-    uvicorn generated_api:app --host 0.0.0.0 --port 8000 & \
-    streamlit run app.py --server.port 8501 --server.headless true --server.address 0.0.0.0"] 
+# Set default command
+CMD ["python", "pipeline.py", "--help"] 

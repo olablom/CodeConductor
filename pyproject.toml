@@ -1,0 +1,164 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codeconductor"
+version = "2.0.0"
+description = "Self-Learning Multi-Agent AI System for Intelligent Code Generation"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "olablom", email = "olablom@example.com"}
+]
+maintainers = [
+    {name = "olablom", email = "olablom@example.com"}
+]
+keywords = [
+    "ai",
+    "code-generation", 
+    "multi-agent",
+    "reinforcement-learning",
+    "machine-learning",
+    "software-development",
+    "automation",
+    "q-learning",
+    "human-in-the-loop"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Code Generators",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Testing",
+]
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.28.0",
+    "sqlite3",
+    "dataclasses",
+    "typing-extensions>=4.0.0",
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0",
+    "click>=8.0.0",
+    "rich>=13.0.0",
+    "tqdm>=4.64.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "flake8>=6.0.0",
+    "black>=23.0.0",
+    "bandit>=1.7.0",
+    "safety>=2.0.0",
+]
+docker = [
+    "docker>=6.0.0",
+]
+full = [
+    "streamlit>=1.28.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/olablom/CodeConductor"
+Documentation = "https://github.com/olablom/CodeConductor#readme"
+Repository = "https://github.com/olablom/CodeConductor"
+"Bug Tracker" = "https://github.com/olablom/CodeConductor/issues"
+
+[project.scripts]
+codeconductor = "pipeline:main"
+cc-pipeline = "pipeline:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agents*", "cli*", "integrations*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.md", "*.txt", "*.yaml", "*.yml"]
+
+[tool.black]
+line-length = 127
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "--cov=agents",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+[tool.coverage.run]
+source = ["agents"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.flake8]
+max-line-length = 127
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    ".eggs",
+    "*.egg",
+]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101", "B601"] 

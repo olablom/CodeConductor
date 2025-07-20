@@ -50,29 +50,35 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Docker
-Dockerfile
-docker-compose.yml
-.dockerignore
-
 # Documentation
-README.md
 docs/
 *.md
+!README.md
 
-# Test files
+# Tests
 tests/
-test_*.py
-*_test.py
+.pytest_cache/
 
-# Generated data
+# Data (will be created at runtime)
 data/generated/
 data/logs/
-*.db
-*.sqlite
+
+# CI/CD
+.github/
+.github/workflows/
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Development
+*.log
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Temporary files
 *.tmp
-*.temp
-temp/
-tmp/ 
+*.temp 

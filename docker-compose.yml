@@ -1,43 +1,73 @@
-version: "3.8"
+version: '3.8'
 
 services:
   codeconductor:
     build: .
-    container_name: codeconductor-v2
-    ports:
-      - "8000:8000"   # FastAPI
-      - "8501:8501"   # Streamlit GUI
+    image: codeconductor:latest
+    container_name: codeconductor
     volumes:
-      - ./data:/app/data        # Persist generated projects
-      - ./config:/app/config    # Mount config for easy updates
-      - ./prompts:/app/prompts  # Mount prompts for customization
+      # Mount current directory for development
+      - .:/app
+      # Mount data directory for persistence
+      - ./data:/app/data
     environment:
-      - JWT_SECRET=${JWT_SECRET:-supersecretkey}
-      - CONFIG_PATH=/app/config/base.yaml
       - PYTHONPATH=/app
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    command: >
-      bash -c "
-        echo '🎼 CodeConductor v2.0 Starting...' &&
-        echo '📊 API: http://localhost:8000' &&
-        echo '🎨 GUI: http://localhost:8501' &&
-        echo '📁 Data: /app/data' &&
-        uvicorn generated_api:app --host 0.0.0.0 --port 8000 &
-        streamlit run app.py --server.port 8501 --server.headless true --server.address 0.0.0.0
-      "
+      - LOG_LEVEL=INFO
+    working_dir: /app
+    command: python pipeline.py --help
+    profiles:
+      - dev
+      - test
 
-  # Optional: Add a simple nginx reverse proxy for production
-  # nginx:
-  #   image: nginx:alpine
+  codeconductor-pipeline:
+    build: .
+    image: codeconductor:latest
+    container_name: codeconductor-pipeline
+    volumes:
+      - ./data:/app/data
+      - ./prompts:/app/prompts
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+    working_dir: /app
+    command: python pipeline.py --prompt prompts/simple_api.md --iters 3 --offline
+    profiles:
+      - run
+
+  codeconductor-interactive:
+    build: .
+    image: codeconductor:latest
+    container_name: codeconductor-interactive
+    volumes:
+      - .:/app
+      - ./data:/app/data
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=DEBUG
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+    profiles:
+      - dev
+
+  # Future: Add web interface
+  # codeconductor-web:
+  #   build: .
+  #   image: codeconductor:latest
+  #   container_name: codeconductor-web
   #   ports:
-  #     - "80:80"
+  #     - "8000:8000"
   #   volumes:
-  #     - ./nginx.conf:/etc/nginx/nginx.conf
-  #   depends_on:
-  #     - codeconductor 
+  #     - ./data:/app/data
+  #   environment:
+  #     - PYTHONPATH=/app
+  #     - LOG_LEVEL=INFO
+  #   working_dir: /app
+  #   command: streamlit run app.py --server.port 8000 --server.address 0.0.0.0
+  #   profiles:
+  #     - web
+
+networks:
+  default:
+    name: codeconductor-network 
