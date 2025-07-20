@@ -1,7 +1,7 @@
 
 As a code quality and security expert, analyze this implementation request:
 
-Test prompt
+Create a simple hello world function in Python
 
 Consider:
 - What are the potential security risks?
