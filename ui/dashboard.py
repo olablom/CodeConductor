@@ -454,7 +454,7 @@ def main():
     # Auto-refresh
     if st.sidebar.checkbox("Auto-refresh (30s)", value=True):
         time.sleep(30)
-        st.experimental_rerun()
+        st.rerun()
 
     # Load data
     with st.spinner("Loading data..."):
