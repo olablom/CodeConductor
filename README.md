@@ -9,6 +9,7 @@
 [![Tests](https://img.shields.io/badge/Tests-275%2F336%20passing-brightgreen.svg)](tests/)
 [![Coverage](https://img.shields.io/badge/Coverage-61%25-yellow.svg)](tests/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://github.com/olablom/CodeConductor/pkgs/container/codeconductor)
+[![Docker Hub](https://img.shields.io/badge/Docker%20Hub-Deploy%20Ready-green.svg)](https://hub.docker.com/)
 [![PyPI](https://img.shields.io/badge/PyPI-v2.0.0-orange.svg)](https://pypi.org/project/codeconductor/)
 [![RL](https://img.shields.io/badge/RL-Q--Learning-purple.svg)](agents/qlearning_agent.py)
 [![Microservices](https://img.shields.io/badge/Microservices-5%20Services-blue.svg)](services/)
@@ -62,6 +63,21 @@ _Se CodeConductor i aktion: Multi-agent diskussion → Mänsklig godkännande �
 # Dra ner och kör med Docker
 docker pull ghcr.io/olablom/codeconductor:latest
 docker run -it --rm ghcr.io/olablom/codeconductor:latest python pipeline.py --help
+```
+
+#### **Option 1b: Microservices (Docker Hub)**
+
+```bash
+# Kör hela microservices stacken
+docker pull your-username/codeconductor-gateway:latest
+docker pull your-username/codeconductor-agent:latest
+docker pull your-username/codeconductor-orchestrator:latest
+docker pull your-username/codeconductor-auth:latest
+docker pull your-username/codeconductor-data:latest
+
+# Kör med Docker Compose
+cd services
+docker compose up -d
 ```
 
 #### **Option 2: Pip Package**
