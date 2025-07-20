@@ -7,6 +7,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
@@ -16,7 +17,7 @@ COPY services/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy service code
-COPY services/data_service/ .
+COPY data_service/ .
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app && \

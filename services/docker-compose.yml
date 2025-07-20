@@ -1,11 +1,9 @@
-version: '3.8'
-
 services:
   # Gateway/API Service
   gateway-service:
     build:
-      context: ../..
-      dockerfile: services/gateway_service/Dockerfile
+      context: .
+      dockerfile: gateway_service/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -25,8 +23,8 @@ services:
   # Agent Service
   agent-service:
     build:
-      context: ../..
-      dockerfile: services/agent_service/Dockerfile
+      context: .
+      dockerfile: agent_service/Dockerfile
     ports:
       - "8001:8001"
     environment:
@@ -42,8 +40,8 @@ services:
   # Orchestrator Service
   orchestrator-service:
     build:
-      context: ../..
-      dockerfile: services/orchestrator_service/Dockerfile
+      context: .
+      dockerfile: orchestrator_service/Dockerfile
     ports:
       - "8002:8002"
     environment:
@@ -63,8 +61,8 @@ services:
   # Data Service
   data-service:
     build:
-      context: ../..
-      dockerfile: services/data_service/Dockerfile
+      context: .
+      dockerfile: data_service/Dockerfile
     ports:
       - "8003:8003"
     environment:
@@ -95,8 +93,8 @@ services:
   # Auth/Approval Service
   auth-service:
     build:
-      context: ../..
-      dockerfile: services/auth_service/Dockerfile
+      context: .
+      dockerfile: auth_service/Dockerfile
     ports:
       - "8005:8005"
     environment:
