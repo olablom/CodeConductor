@@ -12,11 +12,11 @@ from typing import Dict, List
 
 # Service URLs
 SERVICES = {
-    "gateway": "http://localhost:8000",
-    "agent": "http://localhost:8001",
-    "orchestrator": "http://localhost:8002",
-    "data": "http://localhost:8003",
-    "auth": "http://localhost:8005",
+    "gateway": "http://localhost:9000",
+    "agent": "http://localhost:9001",
+    "orchestrator": "http://localhost:9002",
+    "data": "http://localhost:9003",
+    "auth": "http://localhost:9005",
 }
 
 

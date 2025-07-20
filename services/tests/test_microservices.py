@@ -17,11 +17,11 @@ logger = logging.getLogger(__name__)
 
 # Service URLs
 SERVICES = {
-    "gateway": "http://localhost:8000",
-    "agent": "http://localhost:8001",
-    "orchestrator": "http://localhost:8002",
-    "data": "http://localhost:8003",
-    "auth": "http://localhost:8005",
+    "gateway": "http://localhost:9000",
+    "agent": "http://localhost:9001",
+    "orchestrator": "http://localhost:9002",
+    "data": "http://localhost:9003",
+    "auth": "http://localhost:9005",
 }
 
 
@@ -282,7 +282,7 @@ class TestInfrastructure:
             connection = pika.BlockingConnection(
                 pika.ConnectionParameters(
                     host="localhost",
-                    port=8004,
+                    port=9004,
                     credentials=pika.PlainCredentials("codeconductor", "password"),
                 )
             )
