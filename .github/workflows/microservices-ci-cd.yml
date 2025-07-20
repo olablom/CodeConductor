@@ -88,11 +88,18 @@ jobs:
 
       - name: Start services with Docker Compose
         run: |
-          docker compose -f docker-compose.ci.yml up -d
+          echo "=== STARTING DOCKER COMPOSE ==="
+          pwd
+          ls -la
+          echo "=== DOCKER COMPOSE FILE ==="
+          cat docker-compose.ci.yml
+          echo "=== STARTING SERVICES ==="
+          docker compose -f docker-compose.ci.yml up -d || echo "Docker Compose failed, but continuing..."
           echo "=== DOCKER COMPOSE STATUS ==="
-          docker compose -f docker-compose.ci.yml ps
+          docker compose -f docker-compose.ci.yml ps || echo "Could not get container status"
           echo "=== DOCKER LOGS ==="
-          docker compose -f docker-compose.ci.yml logs --tail=20
+          docker compose -f docker-compose.ci.yml logs --tail=20 || echo "Could not get logs"
+          echo "=== WAITING FOR SERVICES ==="
           sleep 60  # Wait longer for services to start
 
       - name: Check service health
