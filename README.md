@@ -2,10 +2,10 @@
 
 > **Self-Learning Multi-Agent AI System for Intelligent Code Generation**
 
-[![CI](https://github.com/olablom/CodeConductor/actions/workflows/ci.yml/badge.svg)](https://github.com/olablom/CodeConductor/actions/workflows/ci.yml)
+[![CI](https://github.com/olablom/CodeConductor/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/olablom/CodeConductor/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-277%2F336%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/Tests-275%2F336%20passing-brightgreen.svg)](tests/)
 [![Coverage](https://img.shields.io/badge/Coverage-61%25-yellow.svg)](tests/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://github.com/olablom/CodeConductor/pkgs/container/codeconductor)
 [![PyPI](https://img.shields.io/badge/PyPI-v2.0.0-orange.svg)](https://pypi.org/project/codeconductor/)
