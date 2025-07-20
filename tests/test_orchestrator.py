@@ -143,9 +143,7 @@ class TestAgentOrchestrator(unittest.TestCase):
             ),
         ]
 
-        orchestrator = AgentOrchestrator(
-            agents=mixed_agents, consensus_strategy="unanimous"
-        )
+        orchestrator = AgentOrchestrator(agents=mixed_agents, consensus_strategy="unanimous")
         result = orchestrator.run_discussion(self.sample_context)
 
         self.assertFalse(result["consensus_reached"])
@@ -210,9 +208,7 @@ class TestAgentOrchestrator(unittest.TestCase):
             "Agent2": {"score": 0.7, "issues": ["issue2"]},
         }
 
-        results = self.orchestrator._run_proposal_phase(
-            analysis_results, self.sample_context
-        )
+        results = self.orchestrator._run_proposal_phase(analysis_results, self.sample_context)
 
         self.assertIsInstance(results, dict)
         self.assertEqual(len(results), 2)
@@ -229,9 +225,7 @@ class TestAgentOrchestrator(unittest.TestCase):
         orchestrator = AgentOrchestrator(agents=[error_agent])
         analysis_results = {"ErrorAgent": {"score": 0.8}}
 
-        results = orchestrator._run_proposal_phase(
-            analysis_results, self.sample_context
-        )
+        results = orchestrator._run_proposal_phase(analysis_results, self.sample_context)
 
         self.assertIn("ErrorAgent", results)
         self.assertIn("error", results["ErrorAgent"])
@@ -254,9 +248,7 @@ class TestAgentOrchestrator(unittest.TestCase):
     @pytest.mark.xfail(reason="Temporarily disabled for CI - will fix in Phase 12")
     def test_reach_consensus_unanimous(self):
         """Test unanimous consensus strategy"""
-        orchestrator = AgentOrchestrator(
-            agents=self.mock_agents, consensus_strategy="unanimous"
-        )
+        orchestrator = AgentOrchestrator(agents=self.mock_agents, consensus_strategy="unanimous")
 
         proposals = {
             "Agent1": {"approval": "approve", "score": 0.9},
@@ -272,9 +264,7 @@ class TestAgentOrchestrator(unittest.TestCase):
     @pytest.mark.xfail(reason="Temporarily disabled for CI - will fix in Phase 12")
     def test_reach_consensus_weighted_majority(self):
         """Test weighted majority consensus strategy"""
-        orchestrator = AgentOrchestrator(
-            agents=self.mock_agents, consensus_strategy="weighted_majority"
-        )
+        orchestrator = AgentOrchestrator(agents=self.mock_agents, consensus_strategy="weighted_majority")
 
         proposals = {
             "Agent1": {"approval": "approve", "score": 0.9, "confidence": 0.8},
@@ -367,9 +357,7 @@ class TestAgentOrchestrator(unittest.TestCase):
             "Agent3": {"approval": "reject", "confidence": 0.6},
         }
 
-        consensus, decision, score = self.orchestrator._weighted_majority_consensus(
-            proposals
-        )
+        consensus, decision, score = self.orchestrator._weighted_majority_consensus(proposals)
 
         self.assertTrue(consensus)
         self.assertEqual(decision, "approve")
@@ -384,9 +372,7 @@ class TestAgentOrchestrator(unittest.TestCase):
             "Agent3": {"approval": "reject"},
         }
 
-        consensus, decision, score = self.orchestrator._weighted_majority_consensus(
-            proposals
-        )
+        consensus, decision, score = self.orchestrator._weighted_majority_consensus(proposals)
 
         self.assertTrue(consensus)
         self.assertEqual(decision, "approve")
@@ -425,9 +411,7 @@ class TestAgentOrchestrator(unittest.TestCase):
         valid_strategies = ["majority", "unanimous", "weighted_majority"]
         for strategy in valid_strategies:
             # Test that we can set valid strategies in config
-            orchestrator = AgentOrchestrator(
-                agents=self.mock_agents, config={"consensus_strategy": strategy}
-            )
+            orchestrator = AgentOrchestrator(agents=self.mock_agents, config={"consensus_strategy": strategy})
             self.assertEqual(orchestrator.config["consensus_strategy"], strategy)
 
     def test_get_consensus_method(self):
@@ -436,9 +420,7 @@ class TestAgentOrchestrator(unittest.TestCase):
         strategies = ["majority", "unanimous", "weighted_majority"]
 
         for strategy in strategies:
-            orchestrator = AgentOrchestrator(
-                agents=self.mock_agents, config={"consensus_strategy": strategy}
-            )
+            orchestrator = AgentOrchestrator(agents=self.mock_agents, config={"consensus_strategy": strategy})
             # The actual implementation doesn't have _get_consensus_method, so we test the config
             self.assertEqual(orchestrator.config["consensus_strategy"], strategy)
 

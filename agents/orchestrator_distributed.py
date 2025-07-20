@@ -31,9 +31,7 @@ class DistributedAgentOrchestrator:
 
         # Check if Celery is available
         if self.distributed_enabled and not is_celery_available():
-            logger.warning(
-                "Distributed mode enabled but Celery broker not available. Falling back to local mode."
-            )
+            logger.warning("Distributed mode enabled but Celery broker not available. Falling back to local mode.")
             self.distributed_enabled = False
 
         # Initialize plugin system if enabled
@@ -54,9 +52,7 @@ class DistributedAgentOrchestrator:
             logger.error(f"Plugin initialization failed: {e}")
             self.enable_plugins = False
 
-    def facilitate_discussion(
-        self, prompt: str, context: Dict[str, Any] = None
-    ) -> Dict[str, Any]:
+    def facilitate_discussion(self, prompt: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Facilitate multi-agent discussion using distributed execution"""
         if context is None:
             context = {}
@@ -70,9 +66,7 @@ class DistributedAgentOrchestrator:
         else:
             return self._local_discussion(prompt, context)
 
-    def _distributed_discussion(
-        self, prompt: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _distributed_discussion(self, prompt: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Run discussion using distributed Celery tasks"""
         start_time = time.time()
 
@@ -115,9 +109,7 @@ class DistributedAgentOrchestrator:
         final_proposal = self._create_final_proposal(results, consensus, optimized)
 
         execution_time = time.time() - start_time
-        logger.info(
-            f"⏱️ Distributed discussion completed in {execution_time:.2f} seconds"
-        )
+        logger.info(f"⏱️ Distributed discussion completed in {execution_time:.2f} seconds")
 
         return final_proposal
 
@@ -129,9 +121,7 @@ class DistributedAgentOrchestrator:
         orchestrator = SimpleAgentOrchestrator(enable_plugins=self.enable_plugins)
         return orchestrator.facilitate_discussion(prompt, context)
 
-    def _run_plugin_analysis(
-        self, prompt: str, context: Dict[str, Any], core_results: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _run_plugin_analysis(self, prompt: str, context: Dict[str, Any], core_results: Dict[str, Any]) -> Dict[str, Any]:
         """Run plugin analysis in parallel"""
         if not self.plugin_manager:
             return {}
@@ -162,9 +152,7 @@ class DistributedAgentOrchestrator:
 
         return plugin_results
 
-    def _synthesize_consensus(
-        self, analyses: Dict[str, Any], prompt: str
-    ) -> Dict[str, Any]:
+    def _synthesize_consensus(self, analyses: Dict[str, Any], prompt: str) -> Dict[str, Any]:
         """Synthesize consensus from all agent analyses"""
         approaches = []
         patterns = []
@@ -185,15 +173,10 @@ class DistributedAgentOrchestrator:
                 # Handle plugin-specific analysis results
                 if agent_name.startswith("plugin_"):
                     if "security_score" in analysis:
-                        recommendations.append(
-                            f"Security score: {analysis['security_score']}"
-                        )
+                        recommendations.append(f"Security score: {analysis['security_score']}")
                     if "vulnerabilities" in analysis:
                         risks.extend(
-                            [
-                                f"Security: {v.get('description', 'vulnerability')}"
-                                for v in analysis.get("vulnerabilities", [])
-                            ]
+                            [f"Security: {v.get('description', 'vulnerability')}" for v in analysis.get("vulnerabilities", [])]
                         )
                     if "recommendations" in analysis:
                         recommendations.extend(analysis["recommendations"])
@@ -202,9 +185,7 @@ class DistributedAgentOrchestrator:
             "synthesized_approach": self._combine_approaches(approaches),
             "recommended_patterns": list(set(patterns))[:3],
             "identified_risks": list(set(risks))[:5],
-            "consensus_recommendation": self._select_best_recommendation(
-                recommendations
-            ),
+            "consensus_recommendation": self._select_best_recommendation(recommendations),
             "confidence": self._calculate_consensus_confidence(analyses),
         }
 
@@ -235,9 +216,7 @@ class DistributedAgentOrchestrator:
 
     def _calculate_consensus_confidence(self, analyses: Dict[str, Any]) -> float:
         """Calculate confidence score based on agreement"""
-        successful_analyses = sum(
-            1 for a in analyses.values() if isinstance(a, dict) and "error" not in a
-        )
+        successful_analyses = sum(1 for a in analyses.values() if isinstance(a, dict) and "error" not in a)
         total_analyses = len(analyses)
 
         if total_analyses == 0:
@@ -252,9 +231,7 @@ class DistributedAgentOrchestrator:
 
         return min(base_confidence, 1.0)
 
-    def _optimize_with_rl(
-        self, consensus: Dict[str, Any], prompt: str
-    ) -> Dict[str, Any]:
+    def _optimize_with_rl(self, consensus: Dict[str, Any], prompt: str) -> Dict[str, Any]:
         """Optimize consensus using reinforcement learning"""
         try:
             from agents.prompt_optimizer import prompt_optimizer
@@ -283,9 +260,7 @@ class DistributedAgentOrchestrator:
             "agent_analyses": analyses,
             "execution_mode": "distributed" if self.distributed_enabled else "local",
             "timestamp": time.time(),
-            "plugin_count": len(
-                [k for k in analyses.keys() if k.startswith("plugin_")]
-            ),
+            "plugin_count": len([k for k in analyses.keys() if k.startswith("plugin_")]),
         }
 
     def get_distributed_stats(self) -> Dict[str, Any]:

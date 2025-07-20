@@ -52,9 +52,7 @@ class TestAgent:
 
         return analysis
 
-    def run_tests(
-        self, code: str, test_type: str = "basic", project_path: Path = None
-    ) -> Dict[str, Any]:
+    def run_tests(self, code: str, test_type: str = "basic", project_path: Path = None) -> Dict[str, Any]:
         """
         Run automated tests on generated code
 
@@ -83,9 +81,7 @@ class TestAgent:
                 test_results.update(self._run_project_tests(project_path, test_type))
             else:
                 # Single file testing
-                with tempfile.NamedTemporaryFile(
-                    mode="w", suffix=".py", delete=False
-                ) as f:
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
                     f.write(code)
                     temp_file = f.name
 
@@ -119,18 +115,10 @@ class TestAgent:
             tree = ast.parse(code)
 
             # Count various complexity indicators
-            functions = len(
-                [node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
-            )
-            classes = len(
-                [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
-            )
-            imports = len(
-                [node for node in ast.walk(tree) if isinstance(node, ast.Import)]
-            )
-            imports_from = len(
-                [node for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)]
-            )
+            functions = len([node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)])
+            classes = len([node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)])
+            imports = len([node for node in ast.walk(tree) if isinstance(node, ast.Import)])
+            imports_from = len([node for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)])
 
             # Count nested structures
             nested_levels = 0
@@ -151,12 +139,8 @@ class TestAgent:
             tree = ast.parse(code)
 
             # Count testable elements
-            functions = len(
-                [node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
-            )
-            classes = len(
-                [node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)]
-            )
+            functions = len([node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)])
+            classes = len([node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)])
 
             # Simple heuristic: more functions/classes = lower coverage estimate
             total_elements = functions + classes
@@ -212,9 +196,7 @@ class TestAgent:
 
         # Check for proper string formatting
         if code.count("%") > code.count(".format(") + code.count('f"'):
-            issues.append(
-                "Consider using f-strings or .format() instead of % formatting"
-            )
+            issues.append("Consider using f-strings or .format() instead of % formatting")
 
         # Check for proper variable naming
         if re.search(r"\b[a-z]+\d*\s*=\s*", code):
@@ -432,16 +414,12 @@ class TestAgent:
             # Parse pytest output
             if result.returncode == 0:
                 # Count passed tests
-                passed_lines = [
-                    line for line in result.stdout.split("\n") if "PASSED" in line
-                ]
+                passed_lines = [line for line in result.stdout.split("\n") if "PASSED" in line]
                 results["tests_passed"] = len(passed_lines)
                 results["tests_run"] = len(passed_lines)
             else:
                 # Count failed tests
-                failed_lines = [
-                    line for line in result.stdout.split("\n") if "FAILED" in line
-                ]
+                failed_lines = [line for line in result.stdout.split("\n") if "FAILED" in line]
                 results["tests_failed"] = len(failed_lines)
                 results["tests_run"] = len(failed_lines)
                 results["errors"].append(f"Tests failed: {result.stdout}")
@@ -497,18 +475,11 @@ class TestAgent:
             return {"total_tests": 0, "success_rate": 0.0, "average_score": 0.0}
 
         total_tests = len(self.test_results)
-        successful_tests = sum(
-            1 for result in self.test_results if result.get("tests_passed", 0) > 0
-        )
-        average_score = (
-            sum(result.get("overall_score", 0) for result in self.test_results)
-            / total_tests
-        )
+        successful_tests = sum(1 for result in self.test_results if result.get("tests_passed", 0) > 0)
+        average_score = sum(result.get("overall_score", 0) for result in self.test_results) / total_tests
 
         return {
             "total_tests": total_tests,
-            "success_rate": (successful_tests / total_tests) * 100
-            if total_tests > 0
-            else 0.0,
+            "success_rate": (successful_tests / total_tests) * 100 if total_tests > 0 else 0.0,
             "average_score": average_score,
         }

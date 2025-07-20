@@ -78,9 +78,7 @@ class TestAction:
 
     def test_action_to_dict(self):
         """Test action to dictionary conversion."""
-        action = Action(
-            action_type="clarify_requirements", parameters={"detail_level": "high"}
-        )
+        action = Action(action_type="clarify_requirements", parameters={"detail_level": "high"})
 
         action_dict = action.to_dict()
 
@@ -89,9 +87,7 @@ class TestAction:
 
     def test_action_to_string(self):
         """Test action to string conversion for hashing."""
-        action = Action(
-            action_type="add_context", parameters={"context_type": "technical"}
-        )
+        action = Action(action_type="add_context", parameters={"context_type": "technical"})
 
         action_string = action.to_string()
 

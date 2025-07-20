@@ -53,9 +53,7 @@ class BaseAgent(ABC):
         pass
 
     @abstractmethod
-    def propose(
-        self, analysis: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def propose(self, analysis: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate a proposal based on the analysis and context.
 
@@ -72,9 +70,7 @@ class BaseAgent(ABC):
         pass
 
     @abstractmethod
-    def review(
-        self, proposal: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def review(self, proposal: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Review a proposal and provide feedback on quality and safety.
 

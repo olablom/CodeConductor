@@ -57,9 +57,7 @@ class SimpleAgentOrchestrator:
             print(f"⚠️ Plugin system initialization failed: {e}")
             self.enable_plugins = False
 
-    def facilitate_discussion(
-        self, prompt: str, context: Dict[str, Any] = None
-    ) -> Dict[str, Any]:
+    def facilitate_discussion(self, prompt: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Facilitarar multi-agent diskussion och syntetiserar konsensus.
 
@@ -86,9 +84,7 @@ class SimpleAgentOrchestrator:
             try:
                 analysis = agent.analyze(prompt, context)
                 analyses[agent_name] = analysis
-                print(
-                    f"✅ {agent.name}: {analysis.get('recommendation', 'analysis complete')}"
-                )
+                print(f"✅ {agent.name}: {analysis.get('recommendation', 'analysis complete')}")
             except Exception as e:
                 print(f"❌ {agent.name} failed: {e}")
                 analyses[agent_name] = agent._fallback_analysis(prompt)
@@ -106,13 +102,9 @@ class SimpleAgentOrchestrator:
                         "core_analyses": analyses,
                     }
 
-                    plugin_analysis = plugin_agent.analyze(
-                        context.get("code", ""), plugin_context
-                    )
+                    plugin_analysis = plugin_agent.analyze(context.get("code", ""), plugin_context)
                     analyses[f"plugin_{plugin_name}"] = plugin_analysis
-                    print(
-                        f"✅ {plugin_name}: {plugin_analysis.get('description', 'analysis complete')}"
-                    )
+                    print(f"✅ {plugin_name}: {plugin_analysis.get('description', 'analysis complete')}")
 
                 except Exception as e:
                     print(f"❌ Plugin {plugin_name} failed: {e}")
@@ -136,9 +128,7 @@ class SimpleAgentOrchestrator:
 
         return final_proposal
 
-    def _synthesize_consensus(
-        self, analyses: Dict[str, Any], prompt: str
-    ) -> Dict[str, Any]:
+    def _synthesize_consensus(self, analyses: Dict[str, Any], prompt: str) -> Dict[str, Any]:
         """Syntetiserar konsensus från alla agent-analyser."""
 
         # Extrahera viktiga komponenter
@@ -160,15 +150,10 @@ class SimpleAgentOrchestrator:
             # Handle plugin-specific analysis results
             if agent_name.startswith("plugin_"):
                 if "security_score" in analysis:
-                    recommendations.append(
-                        f"Security score: {analysis['security_score']}"
-                    )
+                    recommendations.append(f"Security score: {analysis['security_score']}")
                 if "vulnerabilities" in analysis:
                     risks.extend(
-                        [
-                            f"Security: {v.get('description', 'vulnerability')}"
-                            for v in analysis.get("vulnerabilities", [])
-                        ]
+                        [f"Security: {v.get('description', 'vulnerability')}" for v in analysis.get("vulnerabilities", [])]
                     )
                 if "recommendations" in analysis:
                     recommendations.extend(analysis["recommendations"])
@@ -178,9 +163,7 @@ class SimpleAgentOrchestrator:
             "synthesized_approach": self._combine_approaches(approaches),
             "recommended_patterns": list(set(patterns))[:3],  # Top 3 unika patterns
             "identified_risks": list(set(risks))[:5],  # Top 5 unika risks
-            "consensus_recommendation": self._select_best_recommendation(
-                recommendations
-            ),
+            "consensus_recommendation": self._select_best_recommendation(recommendations),
             "confidence": self._calculate_consensus_confidence(analyses),
         }
 
@@ -221,9 +204,7 @@ class SimpleAgentOrchestrator:
 
         return sum(confidences) / len(confidences)
 
-    def _optimize_with_rl(
-        self, consensus: Dict[str, Any], prompt: str
-    ) -> Dict[str, Any]:
+    def _optimize_with_rl(self, consensus: Dict[str, Any], prompt: str) -> Dict[str, Any]:
         """Använder PromptOptimizer för att förfina konsensus."""
 
         # Skapa en optimerad prompt baserat på konsensus
@@ -246,9 +227,7 @@ Generate optimized implementation following the consensus.
 
         try:
             # Använd PromptOptimizer för att förfina
-            optimized_code = prompt_optimizer.mutate_prompt(
-                optimized_prompt, "add_examples"
-            )
+            optimized_code = prompt_optimizer.mutate_prompt(optimized_prompt, "add_examples")
 
             return {
                 "optimized_prompt": optimized_code,

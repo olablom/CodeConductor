@@ -186,8 +186,6 @@ Provide a quality and security analysis.
 
         return {
             "agent": self.name,
-            "suggestions": improvement_suggestions.get(
-                current_quality, ["Add validation"]
-            ),
+            "suggestions": improvement_suggestions.get(current_quality, ["Add validation"]),
             "priority": "medium",
         }

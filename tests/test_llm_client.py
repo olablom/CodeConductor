@@ -185,9 +185,7 @@ class TestCreateLLMClient:
 
     def test_create_ollama_client(self):
         """Test creating an Ollama client."""
-        client = create_llm_client(
-            "ollama", endpoint="http://localhost:11434", model="codellama:7b"
-        )
+        client = create_llm_client("ollama", endpoint="http://localhost:11434", model="codellama:7b")
 
         assert isinstance(client, LLMClient)
         assert client.endpoint == "http://localhost:11434"
@@ -195,9 +193,7 @@ class TestCreateLLMClient:
 
     def test_create_lm_studio_client(self):
         """Test creating an LM Studio client."""
-        client = create_llm_client(
-            "lm_studio", endpoint="http://localhost:1234", model="local-model"
-        )
+        client = create_llm_client("lm_studio", endpoint="http://localhost:1234", model="local-model")
 
         assert isinstance(client, LLMClient)
         assert client.endpoint == "http://localhost:1234"

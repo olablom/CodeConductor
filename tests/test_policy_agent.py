@@ -173,9 +173,7 @@ def function_with_network():
 
     def test_check_code_safety_with_error(self):
         """Test safety check when an error occurs"""
-        with patch.object(
-            self.agent, "_check_for_secrets", side_effect=Exception("Test error")
-        ):
+        with patch.object(self.agent, "_check_for_secrets", side_effect=Exception("Test error")):
             result = self.agent.check_code_safety("def test(): pass")
 
             self.assertFalse(result["safe"])
@@ -223,9 +221,7 @@ def function_with_network():
 
         for secret_code in test_cases:
             violations = self.agent._check_for_secrets(secret_code)
-            self.assertGreater(
-                len(violations), 0, f"Secret not detected: {secret_code}"
-            )
+            self.assertGreater(len(violations), 0, f"Secret not detected: {secret_code}")
             self.assertTrue(all(v["severity"] == "critical" for v in violations))
 
     def test_network_patterns_coverage(self):
@@ -240,9 +236,7 @@ def function_with_network():
 
         for network_code in test_cases:
             violations = self.agent._check_network_operations(network_code)
-            self.assertGreater(
-                len(violations), 0, f"Network operation not detected: {network_code}"
-            )
+            self.assertGreater(len(violations), 0, f"Network operation not detected: {network_code}")
             self.assertTrue(all(v["severity"] == "high" for v in violations))
 
     def test_analyze_method(self):

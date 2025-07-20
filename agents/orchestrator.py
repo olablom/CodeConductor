@@ -35,9 +35,7 @@ class AgentOrchestrator:
     on the best approach for a given task.
     """
 
-    def __init__(
-        self, agents: List[BaseAgent], config: Optional[Dict[str, Any]] = None
-    ):
+    def __init__(self, agents: List[BaseAgent], config: Optional[Dict[str, Any]] = None):
         """
         Initialize the agent orchestrator.
 
@@ -74,9 +72,7 @@ class AgentOrchestrator:
         logger.info(f"Initialized AgentOrchestrator with {len(self.agents)} agents")
         logger.info(f"Agents: {[agent.name for agent in self.agents]}")
 
-    def run_discussion(
-        self, task_context: Dict[str, Any], max_rounds: Optional[int] = None
-    ) -> Dict[str, Any]:
+    def run_discussion(self, task_context: Dict[str, Any], max_rounds: Optional[int] = None) -> Dict[str, Any]:
         """
         Run a multi-agent discussion for the given task.
 
@@ -135,9 +131,7 @@ class AgentOrchestrator:
                 logger.info(f"No consensus in round {current_round}, continuing...")
 
                 # Update task context with feedback for next round
-                task_context = self._update_context_with_feedback(
-                    task_context, proposals
-                )
+                task_context = self._update_context_with_feedback(task_context, proposals)
 
         # Return final result
         result = {
@@ -156,9 +150,7 @@ class AgentOrchestrator:
         logger.info(f"Discussion completed. Consensus reached: {consensus_reached}")
         return result
 
-    def _run_analysis_phase(
-        self, task_context: Dict[str, Any], round_id: int
-    ) -> List[Dict[str, Any]]:
+    def _run_analysis_phase(self, task_context: Dict[str, Any], round_id: int) -> List[Dict[str, Any]]:
         """
         Run the analysis phase where all agents analyze the task context.
 
@@ -245,9 +237,7 @@ class AgentOrchestrator:
 
         return proposals
 
-    def _reach_consensus(
-        self, proposals: List[Dict[str, Any]], round_id: int
-    ) -> Optional[Dict[str, Any]]:
+    def _reach_consensus(self, proposals: List[Dict[str, Any]], round_id: int) -> Optional[Dict[str, Any]]:
         """
         Attempt to reach consensus among agent proposals.
 
@@ -289,17 +279,13 @@ class AgentOrchestrator:
 
         return None
 
-    def _majority_consensus(
-        self, proposals: List[Dict[str, Any]]
-    ) -> Optional[Dict[str, Any]]:
+    def _majority_consensus(self, proposals: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """Reach consensus using simple majority voting."""
         # For now, use the first proposal as consensus
         # TODO: Implement more sophisticated majority logic
         return proposals[0] if proposals else None
 
-    def _weighted_majority_consensus(
-        self, proposals: List[Dict[str, Any]]
-    ) -> Optional[Dict[str, Any]]:
+    def _weighted_majority_consensus(self, proposals: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """Reach consensus using weighted majority voting."""
         # Calculate weighted scores for each proposal
         proposal_scores = {}
@@ -329,17 +315,13 @@ class AgentOrchestrator:
 
         return None
 
-    def _unanimous_consensus(
-        self, proposals: List[Dict[str, Any]]
-    ) -> Optional[Dict[str, Any]]:
+    def _unanimous_consensus(self, proposals: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """Reach consensus only if all agents agree."""
         # For now, return None (no unanimous consensus)
         # TODO: Implement unanimous consensus logic
         return None
 
-    def _check_consensus_threshold(
-        self, consensus: Dict[str, Any], proposals: List[Dict[str, Any]]
-    ) -> bool:
+    def _check_consensus_threshold(self, consensus: Dict[str, Any], proposals: List[Dict[str, Any]]) -> bool:
         """Check if consensus meets the required threshold."""
         threshold = self.config["consensus_threshold"]
 
@@ -359,9 +341,7 @@ class AgentOrchestrator:
         agreement_level = agreement_count / total_weight if total_weight > 0 else 0
         return agreement_level >= threshold
 
-    def _proposals_agree(
-        self, proposal1: Dict[str, Any], proposal2: Dict[str, Any]
-    ) -> bool:
+    def _proposals_agree(self, proposal1: Dict[str, Any], proposal2: Dict[str, Any]) -> bool:
         """Check if two proposals agree on key aspects."""
         # Check approval status first
         approval1 = proposal1.get("approval", "")
@@ -377,9 +357,7 @@ class AgentOrchestrator:
 
         return abs(conf1 - conf2) < 0.2  # Within 20% confidence difference
 
-    def _update_context_with_feedback(
-        self, task_context: Dict[str, Any], proposals: List[Dict[str, Any]]
-    ) -> Dict[str, Any]:
+    def _update_context_with_feedback(self, task_context: Dict[str, Any], proposals: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Update task context with feedback from proposals for next round."""
         # Extract feedback from proposals
         feedback = []
@@ -407,9 +385,7 @@ class AgentOrchestrator:
             return {"summary": "No discussion rounds completed"}
 
         total_rounds = len(self.discussion_history)
-        consensus_rounds = sum(
-            1 for round_data in self.discussion_history if round_data.consensus
-        )
+        consensus_rounds = sum(1 for round_data in self.discussion_history if round_data.consensus)
 
         agent_participation = {}
         for agent in self.agents:
@@ -418,8 +394,7 @@ class AgentOrchestrator:
                 1
                 for round_data in self.discussion_history
                 for analysis in round_data.analyses
-                if analysis.get("agent_name") == agent_name
-                and analysis.get("status") != "failed"
+                if analysis.get("agent_name") == agent_name and analysis.get("status") != "failed"
             )
             agent_participation[agent_name] = participation
 
@@ -454,26 +429,18 @@ class AgentOrchestrator:
             for round_data in self.discussion_history:
                 # Count successful analyses
                 for analysis in round_data.analyses:
-                    if (
-                        analysis.get("agent_name") == agent_name
-                        and analysis.get("status") != "failed"
-                    ):
+                    if analysis.get("agent_name") == agent_name and analysis.get("status") != "failed":
                         successful_analyses += 1
 
                 # Count successful proposals
                 for proposal in round_data.proposals:
-                    if (
-                        proposal.get("agent_name") == agent_name
-                        and proposal.get("status") != "failed"
-                    ):
+                    if proposal.get("agent_name") == agent_name and proposal.get("status") != "failed":
                         successful_proposals += 1
 
             agent_stats[agent_name] = {
                 "successful_analyses": successful_analyses,
                 "successful_proposals": successful_proposals,
-                "success_rate": successful_proposals / len(self.discussion_history)
-                if self.discussion_history
-                else 0,
+                "success_rate": successful_proposals / len(self.discussion_history) if self.discussion_history else 0,
             }
 
         stats["agent_performance"] = agent_stats
@@ -510,15 +477,11 @@ class AgentOrchestrator:
         """Run analysis phase for backward compatibility."""
         return self._run_analysis_phase(task_context, 1)
 
-    def _run_proposal_phase(
-        self, analyses: List[Dict[str, Any]], task_context: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    def _run_proposal_phase(self, analyses: List[Dict[str, Any]], task_context: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Run proposal phase for backward compatibility."""
         return self._run_proposal_phase(analyses, 1, task_context)
 
-    def _reach_consensus(
-        self, proposals: List[Dict[str, Any]]
-    ) -> Optional[Dict[str, Any]]:
+    def _reach_consensus(self, proposals: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """Reach consensus for backward compatibility."""
         return self._reach_consensus(proposals, 1)
 
@@ -528,9 +491,7 @@ class AgentOrchestrator:
             return None, None, 0.0
 
         # Filter out failed proposals
-        valid_proposals = [
-            p for p in proposals if isinstance(p, dict) and "error" not in p
-        ]
+        valid_proposals = [p for p in proposals if isinstance(p, dict) and "error" not in p]
 
         if not valid_proposals:
             return None, None, 0.0
@@ -548,9 +509,7 @@ class AgentOrchestrator:
             return None, None, 0.0
 
         # Filter out failed proposals
-        valid_proposals = [
-            p for p in proposals if isinstance(p, dict) and "error" not in p
-        ]
+        valid_proposals = [p for p in proposals if isinstance(p, dict) and "error" not in p]
 
         if not valid_proposals:
             return None, None, 0.0
@@ -570,9 +529,7 @@ class AgentOrchestrator:
             return None, None, 0.0
 
         # Filter out failed proposals
-        valid_proposals = [
-            p for p in proposals if isinstance(p, dict) and "error" not in p
-        ]
+        valid_proposals = [p for p in proposals if isinstance(p, dict) and "error" not in p]
 
         if not valid_proposals:
             return None, None, 0.0

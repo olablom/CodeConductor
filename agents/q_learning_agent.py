@@ -64,9 +64,7 @@ class QLearningAgent(BaseAgent):
     a Q-table and using reinforcement learning principles.
     """
 
-    def __init__(
-        self, name: str = "q_learning_agent", config: Optional[Dict[str, Any]] = None
-    ):
+    def __init__(self, name: str = "q_learning_agent", config: Optional[Dict[str, Any]] = None):
         """Initialize the Q-learning agent."""
         default_config = {
             "learning_rate": 0.1,  # Alpha - how much to update Q-values
@@ -248,9 +246,7 @@ class QLearningAgent(BaseAgent):
         # Decay epsilon
         self._decay_epsilon()
 
-        logger.debug(
-            f"Updated Q({state.to_string()}, {action.to_string()}) = {new_q:.4f}"
-        )
+        logger.debug(f"Updated Q({state.to_string()}, {action.to_string()}) = {new_q:.4f}")
 
     def _init_database(self):
         """Initialize SQLite database for Q-table storage."""
@@ -261,13 +257,12 @@ class QLearningAgent(BaseAgent):
             os.makedirs(os.path.dirname(self.config["db_path"]), exist_ok=True)
 
         # Use check_same_thread=False to avoid threading issues
-        self.db_connection = sqlite3.connect(
-            self.config["db_path"], check_same_thread=False
-        )
+        self.db_connection = sqlite3.connect(self.config["db_path"], check_same_thread=False)
         cursor = self.db_connection.cursor()
 
         # Create Q-table
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS q_table (
                 state_hash TEXT,
                 action_hash TEXT,
@@ -276,10 +271,12 @@ class QLearningAgent(BaseAgent):
                 last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (state_hash, action_hash)
             )
-        """)
+        """
+        )
 
         # Create metrics table
-        cursor.execute("""
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS learning_metrics (
                 episode_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 state_hash TEXT,
@@ -288,7 +285,8 @@ class QLearningAgent(BaseAgent):
                 next_state_hash TEXT,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         self.db_connection.commit()
 
@@ -362,9 +360,7 @@ class QLearningAgent(BaseAgent):
         """Select action using epsilon-greedy policy."""
         return self.select_action(state).action_type
 
-    def _generate_action_parameters(
-        self, action_type: str, state: State
-    ) -> Dict[str, Any]:
+    def _generate_action_parameters(self, action_type: str, state: State) -> Dict[str, Any]:
         """Generate parameters for the given action type."""
         parameters = {}
 
@@ -374,23 +370,13 @@ class QLearningAgent(BaseAgent):
                 "example_type": "positive",
             }
         elif action_type == "clarify_requirements":
-            parameters = {
-                "detail_level": "high" if state.complexity_level == "high" else "medium"
-            }
+            parameters = {"detail_level": "high" if state.complexity_level == "high" else "medium"}
         elif action_type == "add_context":
-            parameters = {
-                "context_type": "technical"
-                if state.complexity_level == "high"
-                else "general"
-            }
+            parameters = {"context_type": "technical" if state.complexity_level == "high" else "general"}
         elif action_type == "simplify_prompt":
             parameters = {"simplification_level": "moderate"}
         elif action_type == "add_constraints":
-            parameters = {
-                "constraint_type": "safety"
-                if state.complexity_level == "high"
-                else "basic"
-            }
+            parameters = {"constraint_type": "safety" if state.complexity_level == "high" else "basic"}
         elif action_type == "optimize_format":
             parameters = {"format_type": "structured"}
 
@@ -437,20 +423,20 @@ class QLearningAgent(BaseAgent):
         avg_q_value = cursor.fetchone()[0] or 0.0
 
         # Get most visited state-action pairs
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT state_hash, action_hash, visit_count 
             FROM q_table 
             ORDER BY visit_count DESC 
             LIMIT 5
-        """)
+        """
+        )
         top_visited = cursor.fetchall()
 
         return {
             "episode_count": self.episode_count,
             "total_rewards": self.total_rewards,
-            "average_reward": self.total_rewards / self.episode_count
-            if self.episode_count > 0
-            else 0.0,
+            "average_reward": self.total_rewards / self.episode_count if self.episode_count > 0 else 0.0,
             "epsilon": self.config["epsilon"],
             "total_q_entries": total_entries,
             "average_q_value": avg_q_value,
@@ -476,9 +462,7 @@ class QLearningAgent(BaseAgent):
         """Export Q-table to JSON file."""
         q_table = {}
         cursor = self.db_connection.cursor()
-        cursor.execute(
-            "SELECT state_hash, action_hash, q_value, visit_count FROM q_table"
-        )
+        cursor.execute("SELECT state_hash, action_hash, q_value, visit_count FROM q_table")
 
         for state_hash, action_hash, q_value, visit_count in cursor.fetchall():
             if state_hash not in q_table:

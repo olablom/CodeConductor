@@ -110,15 +110,11 @@ def test_function():
 
         self.assertGreater(len(issues), 0)
         # Check for print issue (only if logging not in code)
-        print_issues = [
-            issue for issue in issues if "print" in issue.description.lower()
-        ]
+        print_issues = [issue for issue in issues if "print" in issue.description.lower()]
         if print_issues:
             self.assertTrue(any(issue.severity == "medium" for issue in print_issues))
         self.assertTrue(any(issue.severity == "low" for issue in issues))  # TODO
-        self.assertTrue(
-            any(issue.severity == "high" for issue in issues)
-        )  # bare except
+        self.assertTrue(any(issue.severity == "high" for issue in issues))  # bare except
 
     def test_identify_security_risks(self):
         """Test security risk identification"""
@@ -133,12 +129,8 @@ def dangerous_function():
         risks = self.agent._identify_security_risks(code)
 
         self.assertGreater(len(risks), 0)
-        self.assertTrue(
-            any(risk["severity"] == "critical" for risk in risks)
-        )  # eval, os.system
-        self.assertTrue(
-            any(risk["pattern"] == "hardcoded_secret" for risk in risks)
-        )  # password
+        self.assertTrue(any(risk["severity"] == "critical" for risk in risks))  # eval, os.system
+        self.assertTrue(any(risk["pattern"] == "hardcoded_secret" for risk in risks))  # password
 
     def test_calculate_quality_score(self):
         """Test quality score calculation"""
@@ -238,12 +230,8 @@ def dangerous_function():
 
     def test_review_with_error(self):
         """Test review when an error occurs"""
-        with patch.object(
-            self.agent, "_identify_code_issues", side_effect=Exception("Test error")
-        ):
-            result = self.agent.review_generated_code(
-                "def test(): pass", self.sample_context
-            )
+        with patch.object(self.agent, "_identify_code_issues", side_effect=Exception("Test error")):
+            result = self.agent.review_generated_code("def test(): pass", self.sample_context)
 
             self.assertEqual(result["overall_assessment"], "error")
             self.assertIn("error", result)

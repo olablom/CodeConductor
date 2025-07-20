@@ -114,9 +114,7 @@ class CodeGenAgent(BaseAgent):
     - Language-specific recommendations
     """
 
-    def __init__(
-        self, name: str = "codegen_agent", config: Optional[Dict[str, Any]] = None
-    ):
+    def __init__(self, name: str = "codegen_agent", config: Optional[Dict[str, Any]] = None):
         """Initialize the code generation agent."""
         default_config = {
             "preferred_languages": ["python", "javascript", "typescript", "java", "go"],
@@ -167,9 +165,7 @@ class CodeGenAgent(BaseAgent):
             "recommended_patterns": self._identify_patterns(task_type, language),
             "potential_challenges": self._identify_challenges(requirements, language),
             "estimated_complexity": self._estimate_complexity(requirements, language),
-            "recommended_approach": self._recommend_approach(
-                task_type, language, complexity
-            ),
+            "recommended_approach": self._recommend_approach(task_type, language, complexity),
             "code_quality_focus": self._determine_quality_focus(context),
             "performance_considerations": self._analyze_performance_needs(context),
             "security_considerations": self._analyze_security_needs(context),
@@ -180,9 +176,7 @@ class CodeGenAgent(BaseAgent):
         logger.debug(f"CodeGenAgent analysis completed for {task_type}")
         return analysis
 
-    def propose(
-        self, analysis: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def propose(self, analysis: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate actual code based on analysis and context.
 
@@ -230,9 +224,7 @@ class CodeGenAgent(BaseAgent):
                 confidence = 0.7
             else:
                 # Basic Python template
-                generated_code = self._generate_basic_python_template(
-                    title, description
-                )
+                generated_code = self._generate_basic_python_template(title, description)
                 confidence = 0.6
 
         # Return the generated code
@@ -247,14 +239,10 @@ class CodeGenAgent(BaseAgent):
             "prompt_used": prompt if self.llm else "Fallback generator used",
         }
 
-        logger.info(
-            f"CodeGenAgent generated {len(generated_code)} characters with confidence {confidence:.2f}"
-        )
+        logger.info(f"CodeGenAgent generated {len(generated_code)} characters with confidence {confidence:.2f}")
         return result
 
-    def _build_code_generation_prompt(
-        self, analysis: Dict[str, Any], context: Dict[str, Any]
-    ) -> str:
+    def _build_code_generation_prompt(self, analysis: Dict[str, Any], context: Dict[str, Any]) -> str:
         """Build a prompt for code generation."""
         title = context.get("title", "Generated Application")
         description = context.get("summary", "A generated application")
@@ -311,9 +299,7 @@ if __name__ == "__main__":
     main()
 '''
 
-    def review(
-        self, proposal: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def review(self, proposal: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Review a proposal and provide feedback on quality and improvements.
 
@@ -342,9 +328,7 @@ if __name__ == "__main__":
             "proposal_assessment": self._assess_proposal_quality(proposal),
         }
 
-        logger.debug(
-            f"CodeGenAgent review completed with quality score {review['quality_score']:.2f}"
-        )
+        logger.debug(f"CodeGenAgent review completed with quality score {review['quality_score']:.2f}")
         return review
 
     def _extract_requirements(self, requirements) -> List[str]:
@@ -372,15 +356,10 @@ if __name__ == "__main__":
         for line in lines:
             line = line.strip()
             if line and not line.startswith("#"):
-                if any(
-                    keyword in line.lower()
-                    for keyword in ["must", "should", "need", "require", "implement"]
-                ):
+                if any(keyword in line.lower() for keyword in ["must", "should", "need", "require", "implement"]):
                     key_requirements.append(line)
 
-        return (
-            key_requirements if key_requirements else ["Implement basic functionality"]
-        )
+        return key_requirements if key_requirements else ["Implement basic functionality"]
 
     def _identify_patterns(self, task_type: str, language: str) -> List[str]:
         """Identify recommended design patterns for the task."""
@@ -398,9 +377,7 @@ if __name__ == "__main__":
         if "api" in task_type.lower():
             patterns.extend(["RESTful design", "error handling", "validation"])
         elif "database" in task_type.lower():
-            patterns.extend(
-                ["repository pattern", "data access objects", "transactions"]
-            )
+            patterns.extend(["repository pattern", "data access objects", "transactions"])
         elif "web" in task_type.lower():
             patterns.extend(["MVC pattern", "routing", "middleware"])
 
@@ -416,16 +393,10 @@ if __name__ == "__main__":
         else:
             requirements_text = str(requirements)
 
-        if (
-            "async" in requirements_text.lower()
-            or "concurrent" in requirements_text.lower()
-        ):
+        if "async" in requirements_text.lower() or "concurrent" in requirements_text.lower():
             challenges.append("Concurrency management")
 
-        if (
-            "performance" in requirements_text.lower()
-            or "optimization" in requirements_text.lower()
-        ):
+        if "performance" in requirements_text.lower() or "optimization" in requirements_text.lower():
             challenges.append("Performance optimization")
 
         if "security" in requirements_text.lower():
@@ -464,9 +435,7 @@ if __name__ == "__main__":
 
         return "moderate"  # Default complexity
 
-    def _recommend_approach(
-        self, task_type: str, language: str, complexity: str
-    ) -> str:
+    def _recommend_approach(self, task_type: str, language: str, complexity: str) -> str:
         """Recommend the overall approach for implementation."""
         if "api" in task_type.lower():
             return "RESTful API with proper error handling and validation"
@@ -524,9 +493,7 @@ if __name__ == "__main__":
         considerations = []
         security_level = self.config["security_level"]
 
-        if security_level in ["high", "paranoid"] or context.get(
-            "security_critical", False
-        ):
+        if security_level in ["high", "paranoid"] or context.get("security_critical", False):
             considerations.extend(
                 [
                     "Input validation and sanitization",
@@ -567,9 +534,7 @@ if __name__ == "__main__":
 
         approach = f"Implement {task_type} in {language} using {complexity} complexity approach. "
         approach += f"Focus on {', '.join(analysis.get('code_quality_focus', ['readability']))}. "
-        approach += (
-            f"Use patterns: {', '.join(analysis.get('recommended_patterns', [])[:3])}."
-        )
+        approach += f"Use patterns: {', '.join(analysis.get('recommended_patterns', [])[:3])}."
 
         return approach
 
@@ -745,9 +710,7 @@ if __name__ == "__main__":
         suggestions = []
 
         if analysis.get("performance_considerations"):
-            suggestions.append(
-                "Consider implementing caching for frequently accessed data"
-            )
+            suggestions.append("Consider implementing caching for frequently accessed data")
 
         if analysis.get("security_considerations"):
             suggestions.append("Implement input validation and sanitization")

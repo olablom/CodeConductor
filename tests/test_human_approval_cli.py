@@ -199,9 +199,7 @@ class TestHumanApprovalCLI(unittest.TestCase):
     @patch("cli.human_approval.HumanApprovalCLI.get_user_decision")
     @patch("cli.human_approval.HumanApprovalCLI.edit_proposal")
     @patch("cli.human_approval.HumanApprovalCLI.get_comments")
-    def test_process_approval_edit_then_approve(
-        self, mock_get_comments, mock_edit_proposal, mock_get_decision
-    ):
+    def test_process_approval_edit_then_approve(self, mock_get_comments, mock_edit_proposal, mock_get_decision):
         """Test approval process - edit then approve."""
         # First call returns edit, second call returns approve
         mock_get_decision.side_effect = ["edit", "approve"]

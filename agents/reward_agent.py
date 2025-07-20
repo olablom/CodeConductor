@@ -75,9 +75,7 @@ class RewardAgent(BaseAgent):
     - Generating improvement recommendations
     """
 
-    def __init__(
-        self, name: str = "reward_agent", config: Optional[Dict[str, Any]] = None
-    ):
+    def __init__(self, name: str = "reward_agent", config: Optional[Dict[str, Any]] = None):
         """Initialize the reward agent."""
         super().__init__(name, config)
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
@@ -114,9 +112,7 @@ class RewardAgent(BaseAgent):
             "human_rejection": 0.4,
         }
 
-        self.logger.info(
-            f"RewardAgent '{name}' initialized with weights: {self.weights}"
-        )
+        self.logger.info(f"RewardAgent '{name}' initialized with weights: {self.weights}")
 
     def calculate_reward(
         self,
@@ -159,9 +155,7 @@ class RewardAgent(BaseAgent):
             )
 
             # Apply penalties
-            total_reward = self._apply_penalties(
-                total_reward, test_results, policy_result, human_feedback
-            )
+            total_reward = self._apply_penalties(total_reward, test_results, policy_result, human_feedback)
 
             # Ensure reward is in valid range
             total_reward = max(0.0, min(1.0, total_reward))
@@ -292,9 +286,7 @@ class RewardAgent(BaseAgent):
         reward = base_reward - violation_penalty
         return max(0.0, min(1.0, reward))
 
-    def _calculate_performance_reward(
-        self, performance_metrics: Optional[Dict[str, Any]]
-    ) -> float:
+    def _calculate_performance_reward(self, performance_metrics: Optional[Dict[str, Any]]) -> float:
         """Calculate reward based on performance metrics."""
         if not performance_metrics:
             return 0.5  # Neutral reward if no metrics
@@ -305,12 +297,8 @@ class RewardAgent(BaseAgent):
         cpu_usage = performance_metrics.get("cpu_usage", 50.0)
 
         # Calculate performance score
-        time_score = max(
-            0.0, 1.0 - (response_time - 1.0) / 10.0
-        )  # Penalty for slow response
-        memory_score = max(
-            0.0, 1.0 - (memory_usage - 100.0) / 1000.0
-        )  # Penalty for high memory
+        time_score = max(0.0, 1.0 - (response_time - 1.0) / 10.0)  # Penalty for slow response
+        memory_score = max(0.0, 1.0 - (memory_usage - 100.0) / 1000.0)  # Penalty for high memory
         cpu_score = max(0.0, 1.0 - (cpu_usage - 50.0) / 100.0)  # Penalty for high CPU
 
         performance_score = (time_score + memory_score + cpu_score) / 3.0
@@ -339,10 +327,7 @@ class RewardAgent(BaseAgent):
             penalty += self.penalties["human_rejection"]
 
         # Low quality penalty
-        if (
-            test_results.passed
-            and test_results.passed_tests / max(test_results.total_tests, 1) < 0.8
-        ):
+        if test_results.passed and test_results.passed_tests / max(test_results.total_tests, 1) < 0.8:
             penalty += self.penalties["low_quality"]
 
         return max(0.0, total_reward - penalty)
@@ -365,14 +350,10 @@ class RewardAgent(BaseAgent):
             recommendations.append("Enhance code quality and maintainability")
 
         if feedback_reward < 0.7:
-            recommendations.append(
-                "Address human feedback and improve user satisfaction"
-            )
+            recommendations.append("Address human feedback and improve user satisfaction")
 
         if policy_reward < 0.7:
-            recommendations.append(
-                "Fix policy violations and improve security compliance"
-            )
+            recommendations.append("Fix policy violations and improve security compliance")
 
         if performance_reward < 0.7:
             recommendations.append("Optimize performance and resource usage")
@@ -414,9 +395,7 @@ class RewardAgent(BaseAgent):
             "recommendations": ["Context ready for reward calculation"],
         }
 
-    def propose(
-        self, analysis: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def propose(self, analysis: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Propose reward calculation strategy.
 
@@ -436,9 +415,7 @@ class RewardAgent(BaseAgent):
             "penalties": self.penalties,
         }
 
-    def review(
-        self, proposal: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def review(self, proposal: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Review reward calculation proposal.
 

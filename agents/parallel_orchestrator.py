@@ -52,9 +52,7 @@ class ParallelOrchestrator:
             logger.error(f"❌ Error initializing agents: {e}")
             self.agents = {}
 
-    def run_agent_method(
-        self, agent_name: str, method_name: str, *args, **kwargs
-    ) -> Dict[str, Any]:
+    def run_agent_method(self, agent_name: str, method_name: str, *args, **kwargs) -> Dict[str, Any]:
         """Run a single agent method and return results"""
 
         try:
@@ -114,9 +112,7 @@ class ParallelOrchestrator:
         # Submit tasks to thread pool
         futures = []
         for agent_name, method_name, args in analysis_tasks:
-            future = self.executor.submit(
-                self.run_agent_method, agent_name, method_name, args
-            )
+            future = self.executor.submit(self.run_agent_method, agent_name, method_name, args)
             futures.append(future)
 
         # Collect results
@@ -131,9 +127,7 @@ class ParallelOrchestrator:
                 total_latency += result.get("latency_ms", 0)
 
                 if result["success"]:
-                    logger.info(
-                        f"✅ {agent_name}.analyze completed in {result['latency_ms']:.2f}ms"
-                    )
+                    logger.info(f"✅ {agent_name}.analyze completed in {result['latency_ms']:.2f}ms")
                 else:
                     logger.warning(f"❌ {agent_name}.analyze failed: {result['error']}")
 
@@ -147,9 +141,7 @@ class ParallelOrchestrator:
             "parallel_execution": True,
         }
 
-    def run_parallel_proposal(
-        self, context: Dict[str, Any], analysis_results: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def run_parallel_proposal(self, context: Dict[str, Any], analysis_results: Dict[str, Any]) -> Dict[str, Any]:
         """Run proposal phase in parallel"""
 
         logger.info("💡 Starting parallel proposal phase...")
@@ -164,9 +156,7 @@ class ParallelOrchestrator:
         # Submit tasks to thread pool
         futures = []
         for agent_name, method_name, args in proposal_tasks:
-            future = self.executor.submit(
-                self.run_agent_method, agent_name, method_name, args
-            )
+            future = self.executor.submit(self.run_agent_method, agent_name, method_name, args)
             futures.append(future)
 
         # Collect results
@@ -181,9 +171,7 @@ class ParallelOrchestrator:
                 total_latency += result.get("latency_ms", 0)
 
                 if result["success"]:
-                    logger.info(
-                        f"✅ {agent_name}.propose completed in {result['latency_ms']:.2f}ms"
-                    )
+                    logger.info(f"✅ {agent_name}.propose completed in {result['latency_ms']:.2f}ms")
                 else:
                     logger.warning(f"❌ {agent_name}.propose failed: {result['error']}")
 
@@ -197,9 +185,7 @@ class ParallelOrchestrator:
             "parallel_execution": True,
         }
 
-    def run_parallel_review(
-        self, context: Dict[str, Any], code_samples: List[str]
-    ) -> Dict[str, Any]:
+    def run_parallel_review(self, context: Dict[str, Any], code_samples: List[str]) -> Dict[str, Any]:
         """Run review phase in parallel"""
 
         logger.info("🔍 Starting parallel review phase...")
@@ -213,9 +199,7 @@ class ParallelOrchestrator:
         # Submit tasks to thread pool
         futures = []
         for agent_name, method_name, *args in review_tasks:
-            future = self.executor.submit(
-                self.run_agent_method, agent_name, method_name, *args
-            )
+            future = self.executor.submit(self.run_agent_method, agent_name, method_name, *args)
             futures.append(future)
 
         # Collect results
@@ -233,9 +217,7 @@ class ParallelOrchestrator:
                 total_latency += result.get("latency_ms", 0)
 
                 if result["success"]:
-                    logger.info(
-                        f"✅ {agent_name}.review completed in {result['latency_ms']:.2f}ms"
-                    )
+                    logger.info(f"✅ {agent_name}.review completed in {result['latency_ms']:.2f}ms")
                 else:
                     logger.warning(f"❌ {agent_name}.review failed: {result['error']}")
 
@@ -285,15 +267,11 @@ class ParallelOrchestrator:
                 "analysis_latency_ms": analysis_results["total_latency_ms"],
                 "proposal_latency_ms": proposal_results["total_latency_ms"],
                 "review_latency_ms": review_results["total_latency_ms"],
-                "parallelization_speedup": self._calculate_speedup(
-                    pipeline_results["phases"]
-                ),
+                "parallelization_speedup": self._calculate_speedup(pipeline_results["phases"]),
             }
 
             # Generate final result
-            pipeline_results["final_result"] = self._synthesize_results(
-                pipeline_results["phases"]
-            )
+            pipeline_results["final_result"] = self._synthesize_results(pipeline_results["phases"])
 
             logger.info(f"🎉 Parallel orchestration completed in {total_time:.2f}ms")
 
@@ -306,9 +284,7 @@ class ParallelOrchestrator:
     def _calculate_speedup(self, phases: Dict[str, Any]) -> float:
         """Calculate speedup from parallelization"""
 
-        total_parallel_time = sum(
-            phase.get("total_latency_ms", 0) for phase in phases.values()
-        )
+        total_parallel_time = sum(phase.get("total_latency_ms", 0) for phase in phases.values())
 
         # Estimate sequential time (rough approximation)
         estimated_sequential_time = total_parallel_time * 2.5  # Conservative estimate
@@ -329,9 +305,7 @@ class ParallelOrchestrator:
                 if agent_result.get("success", False):
                     if agent_name not in successful_results:
                         successful_results[agent_name] = {}
-                    successful_results[agent_name][phase_name] = agent_result.get(
-                        "result"
-                    )
+                    successful_results[agent_name][phase_name] = agent_result.get("result")
 
         return {
             "synthesis": "parallel_orchestration",
@@ -352,8 +326,7 @@ class ParallelOrchestrator:
                 latency = agent_result.get("latency_ms", 0)
                 if latency > 1000:  # More than 1 second
                     recommendations.append(
-                        f"Consider optimizing {agent_name}.{agent_result['method']} "
-                        f"(current latency: {latency:.2f}ms)"
+                        f"Consider optimizing {agent_name}.{agent_result['method']} " f"(current latency: {latency:.2f}ms)"
                     )
 
         # Check for failed agents
@@ -365,9 +338,7 @@ class ParallelOrchestrator:
                     failed_agents.append(f"{agent_name}.{agent_result['method']}")
 
         if failed_agents:
-            recommendations.append(
-                f"Investigate failures in: {', '.join(failed_agents)}"
-            )
+            recommendations.append(f"Investigate failures in: {', '.join(failed_agents)}")
 
         if not recommendations:
             recommendations.append("All agents performing well")
@@ -403,9 +374,7 @@ def main():
         print("📊 PARALLEL ORCHESTRATION RESULTS")
         print("=" * 60)
         print(f"Total latency: {results['performance']['total_latency_ms']:.2f}ms")
-        print(
-            f"Speedup factor: {results['performance']['parallelization_speedup']:.2f}x"
-        )
+        print(f"Speedup factor: {results['performance']['parallelization_speedup']:.2f}x")
         print(f"Successful agents: {len(results['final_result']['successful_agents'])}")
 
         if "recommendations" in results["final_result"]:

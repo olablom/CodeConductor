@@ -89,9 +89,7 @@ class TestHumanGate:
             "patterns": ["factory"],
             "risks": ["complexity"],
             "optimization": "add_examples",
-            "agent_analyses": {
-                "codegen": {"agent": "CodeGenAgent", "recommendation": "functional"}
-            },
+            "agent_analyses": {"codegen": {"agent": "CodeGenAgent", "recommendation": "functional"}},
         }
 
         approved, final_proposal = self.human_gate.request_approval(proposal)

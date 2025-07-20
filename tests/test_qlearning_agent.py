@@ -69,15 +69,11 @@ class TestQLearningAgent(unittest.TestCase):
         cursor = conn.cursor()
 
         # Check q_table exists
-        cursor.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='q_table'"
-        )
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='q_table'")
         self.assertIsNotNone(cursor.fetchone())
 
         # Check learning_stats exists
-        cursor.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='learning_stats'"
-        )
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='learning_stats'")
         self.assertIsNotNone(cursor.fetchone())
 
         conn.close()
@@ -244,9 +240,7 @@ class TestQLearningAgent(unittest.TestCase):
         conn = sqlite3.connect(self.temp_db.name)
         cursor = conn.cursor()
 
-        cursor.execute(
-            "SELECT episode_count, average_reward FROM learning_stats ORDER BY id DESC LIMIT 1"
-        )
+        cursor.execute("SELECT episode_count, average_reward FROM learning_stats ORDER BY id DESC LIMIT 1")
         result = cursor.fetchone()
 
         self.assertIsNotNone(result)
@@ -312,9 +306,7 @@ class TestQLearningAgent(unittest.TestCase):
         self.agent.update_q_value(state, action, reward, next_state)
 
         # Check Q-learning formula: Q(s,a) = Q(s,a) + α[r + γ max Q(s',a') - Q(s,a)]
-        expected_q = initial_q + self.agent.learning_rate * (
-            reward + self.agent.discount_factor * 0.7 - initial_q
-        )
+        expected_q = initial_q + self.agent.learning_rate * (reward + self.agent.discount_factor * 0.7 - initial_q)
 
         actual_q = self.agent.get_q_value(state, action)
         self.assertAlmostEqual(actual_q, expected_q, places=4)

@@ -67,9 +67,7 @@ def process_data(data):
 
     def test_analyze_with_error(self):
         """Test analysis with error handling"""
-        with patch.object(
-            self.agent, "_assess_code_quality", side_effect=Exception("Test error")
-        ):
+        with patch.object(self.agent, "_assess_code_quality", side_effect=Exception("Test error")):
             result = self.agent.analyze(self.sample_context)
 
             self.assertIn("error", result)
@@ -98,9 +96,7 @@ def process_data(data):
 
     def test_propose_with_error(self):
         """Test proposal with error handling"""
-        with patch.object(
-            self.agent, "_create_improvement_plan", side_effect=Exception("Test error")
-        ):
+        with patch.object(self.agent, "_create_improvement_plan", side_effect=Exception("Test error")):
             analysis = {"issues_found": [], "recommendations": []}
             result = self.agent.propose(analysis, self.sample_context)
 
@@ -128,9 +124,7 @@ def process_data(data):
 
     def test_review_with_error(self):
         """Test review with error handling"""
-        with patch.object(
-            self.agent, "_assess_feasibility", side_effect=Exception("Test error")
-        ):
+        with patch.object(self.agent, "_assess_feasibility", side_effect=Exception("Test error")):
             proposal = {"improvement_plan": [], "priority_order": []}
             result = self.agent.review(proposal, self.sample_context)
 
@@ -272,9 +266,7 @@ def process_data(data):
         requirements = {"require_type_hints": True}
         constraints = {"security_critical": True}
 
-        recommendations = self.agent._generate_recommendations(
-            analysis, requirements, constraints
-        )
+        recommendations = self.agent._generate_recommendations(analysis, requirements, constraints)
 
         self.assertIsInstance(recommendations, list)
         self.assertGreater(len(recommendations), 0)

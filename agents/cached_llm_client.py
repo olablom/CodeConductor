@@ -150,9 +150,7 @@ class CachedLLMClient:
         if enable_persistence:
             self._load_cache()
 
-    def _generate_cache_key(
-        self, prompt: str, model: str = "default", temperature: float = 0.7
-    ) -> str:
+    def _generate_cache_key(self, prompt: str, model: str = "default", temperature: float = 0.7) -> str:
         """Generate a unique cache key for the request"""
 
         # Create a hash of the request parameters
@@ -194,15 +192,10 @@ class CachedLLMClient:
             evict_key = self.policy.select_eviction_candidate(self.cache)
             if evict_key in self.cache:
                 del self.cache[evict_key]
-                if (
-                    hasattr(self.policy, "access_order")
-                    and evict_key in self.policy.access_order
-                ):
+                if hasattr(self.policy, "access_order") and evict_key in self.policy.access_order:
                     del self.policy.access_order[evict_key]
 
-    def get(
-        self, prompt: str, model: str = "default", temperature: float = 0.7
-    ) -> Optional[str]:
+    def get(self, prompt: str, model: str = "default", temperature: float = 0.7) -> Optional[str]:
         """Get response from cache if available"""
 
         with self.lock:
@@ -278,7 +271,8 @@ class CachedLLMClient:
             cursor = conn.cursor()
 
             # Create table if not exists
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS llm_cache (
                     key TEXT PRIMARY KEY,
                     response TEXT,
@@ -289,7 +283,8 @@ class CachedLLMClient:
                     response_length INTEGER,
                     metadata TEXT
                 )
-            """)
+            """
+            )
 
             # Load cache entries
             cursor.execute("SELECT * FROM llm_cache")
@@ -308,9 +303,7 @@ class CachedLLMClient:
                 ) = row
 
                 # Check if expired
-                if hasattr(self.policy, "is_expired") and self.policy.is_expired(
-                    timestamp
-                ):
+                if hasattr(self.policy, "is_expired") and self.policy.is_expired(timestamp):
                     continue
 
                 cache_entry = {
@@ -346,7 +339,8 @@ class CachedLLMClient:
             cursor = conn.cursor()
 
             # Create table
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS llm_cache (
                     key TEXT PRIMARY KEY,
                     response TEXT,
@@ -357,7 +351,8 @@ class CachedLLMClient:
                     response_length INTEGER,
                     metadata TEXT
                 )
-            """)
+            """
+            )
 
             # Clear existing data
             cursor.execute("DELETE FROM llm_cache")
@@ -391,14 +386,10 @@ class CachedLLMClient:
         """Get cache statistics"""
 
         with self.lock:
-            hit_rate = (
-                self.cache_hits / self.total_requests if self.total_requests > 0 else 0
-            )
+            hit_rate = self.cache_hits / self.total_requests if self.total_requests > 0 else 0
 
             # Calculate cache size metrics
-            total_size = sum(
-                len(entry.get("response", "")) for entry in self.cache.values()
-            )
+            total_size = sum(len(entry.get("response", "")) for entry in self.cache.values())
             avg_response_length = total_size / len(self.cache) if self.cache else 0
 
             # Find most common models
@@ -444,10 +435,7 @@ class CachedLLMClient:
 
             for key in expired_keys:
                 del self.cache[key]
-                if (
-                    hasattr(self.policy, "access_order")
-                    and key in self.policy.access_order
-                ):
+                if hasattr(self.policy, "access_order") and key in self.policy.access_order:
                     del self.policy.access_order[key]
 
             if expired_keys:
@@ -469,9 +457,7 @@ def main():
     print("=" * 50)
 
     # Create client with hybrid policy
-    client = CachedLLMClient(
-        cache_policy="hybrid", max_size=100, ttl_seconds=3600, enable_persistence=True
-    )
+    client = CachedLLMClient(cache_policy="hybrid", max_size=100, ttl_seconds=3600, enable_persistence=True)
 
     # Test prompts
     test_prompts = [

@@ -15,9 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 @celery_app.task(bind=True, name="agents.codegen_analyze")
-def codegen_analyze_task(
-    self, prompt: str, context: Dict[str, Any] = None
-) -> Dict[str, Any]:
+def codegen_analyze_task(self, prompt: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
     """Celery task for CodeGenAgent analysis"""
     try:
         logger.info(f"Starting CodeGenAgent analysis for task {self.request.id}")
@@ -44,9 +42,7 @@ def codegen_analyze_task(
 
 
 @celery_app.task(bind=True, name="agents.codegen_act")
-def codegen_act_task(
-    self, prompt: str, strategy: str, context: Dict[str, Any] = None
-) -> Dict[str, Any]:
+def codegen_act_task(self, prompt: str, strategy: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
     """Celery task for CodeGenAgent action"""
     try:
         logger.info(f"Starting CodeGenAgent action for task {self.request.id}")
@@ -72,9 +68,7 @@ def codegen_act_task(
 
 
 @celery_app.task(bind=True, name="agents.architect_analyze")
-def architect_analyze_task(
-    self, prompt: str, context: Dict[str, Any] = None
-) -> Dict[str, Any]:
+def architect_analyze_task(self, prompt: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
     """Celery task for ArchitectAgent analysis"""
     try:
         logger.info(f"Starting ArchitectAgent analysis for task {self.request.id}")
@@ -100,9 +94,7 @@ def architect_analyze_task(
 
 
 @celery_app.task(bind=True, name="agents.reviewer_analyze")
-def reviewer_analyze_task(
-    self, prompt: str, context: Dict[str, Any] = None
-) -> Dict[str, Any]:
+def reviewer_analyze_task(self, prompt: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
     """Celery task for ReviewerAgent analysis"""
     try:
         logger.info(f"Starting ReviewerAgent analysis for task {self.request.id}")
@@ -128,9 +120,7 @@ def reviewer_analyze_task(
 
 
 @celery_app.task(bind=True, name="agents.policy_check")
-def policy_check_task(
-    self, code: str, context: Dict[str, Any] = None
-) -> Dict[str, Any]:
+def policy_check_task(self, code: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
     """Celery task for PolicyAgent safety check"""
     try:
         logger.info(f"Starting PolicyAgent check for task {self.request.id}")
@@ -156,9 +146,7 @@ def policy_check_task(
 
 
 @celery_app.task(bind=True, name="agents.orchestrator_discussion")
-def orchestrator_discussion_task(
-    self, prompt: str, context: Dict[str, Any] = None
-) -> Dict[str, Any]:
+def orchestrator_discussion_task(self, prompt: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
     """Celery task for orchestrating multi-agent discussion"""
     try:
         logger.info(f"Starting multi-agent discussion for task {self.request.id}")
@@ -194,9 +182,7 @@ def orchestrator_discussion_task(
 
 
 @celery_app.task(bind=True, name="agents.parallel_analysis")
-def parallel_analysis_task(
-    self, prompt: str, context: Dict[str, Any] = None
-) -> Dict[str, Any]:
+def parallel_analysis_task(self, prompt: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
     """Celery task for running all agent analyses in parallel"""
     try:
         logger.info(f"Starting parallel agent analysis for task {self.request.id}")

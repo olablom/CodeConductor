@@ -47,9 +47,7 @@ class ReviewAgent(BaseAgent):
     - Best practices compliance
     """
 
-    def __init__(
-        self, name: str = "ReviewAgent", config: Optional[Dict[str, Any]] = None
-    ):
+    def __init__(self, name: str = "ReviewAgent", config: Optional[Dict[str, Any]] = None):
         super().__init__(name, config)
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
 
@@ -70,9 +68,7 @@ class ReviewAgent(BaseAgent):
             "needs_improvement": 0.3,
         }
 
-        self.logger.info(
-            f"ReviewAgent '{name}' initialized with config: {self.review_config}"
-        )
+        self.logger.info(f"ReviewAgent '{name}' initialized with config: {self.review_config}")
 
     def analyze(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -109,13 +105,9 @@ class ReviewAgent(BaseAgent):
             # Identify specific issues
             analysis_result["issues_found"] = self._identify_issues(code, requirements)
             analysis_result["strengths"] = self._identify_strengths(code)
-            analysis_result["recommendations"] = self._generate_recommendations(
-                analysis_result, requirements, constraints
-            )
+            analysis_result["recommendations"] = self._generate_recommendations(analysis_result, requirements, constraints)
 
-            self.logger.info(
-                f"Analysis completed. Found {len(analysis_result['issues_found'])} issues"
-            )
+            self.logger.info(f"Analysis completed. Found {len(analysis_result['issues_found'])} issues")
             return analysis_result
 
         except Exception as e:
@@ -128,9 +120,7 @@ class ReviewAgent(BaseAgent):
                 "recommendations": [],
             }
 
-    def propose(
-        self, analysis: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def propose(self, analysis: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Propose specific improvements and refactoring suggestions based on analysis.
 
@@ -149,29 +139,19 @@ class ReviewAgent(BaseAgent):
             requirements = context.get("requirements", {})
 
             proposal = {
-                "improvement_plan": self._create_improvement_plan(
-                    issues, recommendations
-                ),
-                "refactoring_suggestions": self._generate_refactoring_suggestions(
-                    analysis
-                ),
+                "improvement_plan": self._create_improvement_plan(issues, recommendations),
+                "refactoring_suggestions": self._generate_refactoring_suggestions(analysis),
                 "security_enhancements": self._propose_security_enhancements(analysis),
-                "performance_optimizations": self._propose_performance_optimizations(
-                    analysis
-                ),
+                "performance_optimizations": self._propose_performance_optimizations(analysis),
                 "code_style_improvements": self._propose_style_improvements(analysis),
                 "testing_improvements": self._propose_testing_improvements(analysis),
-                "documentation_improvements": self._propose_documentation_improvements(
-                    analysis
-                ),
+                "documentation_improvements": self._propose_documentation_improvements(analysis),
                 "priority_order": self._prioritize_improvements(issues, requirements),
                 "estimated_effort": self._estimate_effort(issues),
                 "risk_assessment": self._assess_improvement_risks(analysis),
             }
 
-            self.logger.info(
-                f"Generated proposal with {len(proposal['improvement_plan'])} improvements"
-            )
+            self.logger.info(f"Generated proposal with {len(proposal['improvement_plan'])} improvements")
             return proposal
 
         except Exception as e:
@@ -183,9 +163,7 @@ class ReviewAgent(BaseAgent):
                 "priority_order": [],
             }
 
-    def review(
-        self, proposal: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def review(self, proposal: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Review the proposed improvements and provide feedback on feasibility and impact.
 
@@ -202,23 +180,15 @@ class ReviewAgent(BaseAgent):
             review_result = {
                 "feasibility_assessment": self._assess_feasibility(proposal, context),
                 "impact_analysis": self._analyze_impact(proposal, context),
-                "alternative_suggestions": self._suggest_alternatives(
-                    proposal, context
-                ),
-                "implementation_guidance": self._provide_implementation_guidance(
-                    proposal
-                ),
+                "alternative_suggestions": self._suggest_alternatives(proposal, context),
+                "implementation_guidance": self._provide_implementation_guidance(proposal),
                 "validation_criteria": self._define_validation_criteria(proposal),
                 "rollback_plan": self._create_rollback_plan(proposal),
-                "approval_recommendation": self._make_approval_recommendation(
-                    proposal, context
-                ),
+                "approval_recommendation": self._make_approval_recommendation(proposal, context),
                 "final_score": self._calculate_final_score(proposal, context),
             }
 
-            self.logger.info(
-                f"Review completed. Final score: {review_result['final_score']}"
-            )
+            self.logger.info(f"Review completed. Final score: {review_result['final_score']}")
             return review_result
 
         except Exception as e:
@@ -230,9 +200,7 @@ class ReviewAgent(BaseAgent):
                 "final_score": 0.0,
             }
 
-    def review_generated_code(
-        self, code: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def review_generated_code(self, code: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Review generated code for quality, security, and compliance issues.
 
@@ -281,9 +249,7 @@ class ReviewAgent(BaseAgent):
             # Calculate quality score
             review_result["quality_score"] = self._calculate_quality_score(code)
 
-            self.logger.info(
-                f"Code review completed. Assessment: {review_result['overall_assessment']}"
-            )
+            self.logger.info(f"Code review completed. Assessment: {review_result['overall_assessment']}")
             return review_result
 
         except Exception as e:
@@ -306,9 +272,7 @@ class ReviewAgent(BaseAgent):
             structure_score = self._analyze_code_structure(code)
 
             # Weighted average
-            quality_score = (
-                complexity_score * 0.4 + style_score * 0.3 + structure_score * 0.3
-            )
+            quality_score = complexity_score * 0.4 + style_score * 0.3 + structure_score * 0.3
 
             return min(1.0, max(0.0, quality_score))
 
@@ -356,9 +320,7 @@ class ReviewAgent(BaseAgent):
             return {
                 "issues": security_issues,
                 "overall_security_score": max(0.0, 1.0 - len(security_issues) * 0.2),
-                "risk_level": "high"
-                if any(i["severity"] == "critical" for i in security_issues)
-                else "medium",
+                "risk_level": "high" if any(i["severity"] == "critical" for i in security_issues) else "medium",
             }
 
         except Exception as e:
@@ -442,12 +404,8 @@ class ReviewAgent(BaseAgent):
 
             return {
                 "issues": maintainability_issues,
-                "maintainability_score": max(
-                    0.0, 1.0 - len(maintainability_issues) * 0.15
-                ),
-                "complexity_level": "high"
-                if len(maintainability_issues) > 3
-                else "medium",
+                "maintainability_score": max(0.0, 1.0 - len(maintainability_issues) * 0.15),
+                "complexity_level": "high" if len(maintainability_issues) > 3 else "medium",
             }
 
         except Exception as e:
@@ -458,9 +416,7 @@ class ReviewAgent(BaseAgent):
                 "complexity_level": "unknown",
             }
 
-    def _check_compliance(
-        self, code: str, requirements: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _check_compliance(self, code: str, requirements: Dict[str, Any]) -> Dict[str, Any]:
         """Check compliance with coding standards and requirements."""
         try:
             compliance_issues = []
@@ -507,9 +463,7 @@ class ReviewAgent(BaseAgent):
             # Basic metrics
             total_lines = len(lines)
             non_empty_lines = len([line for line in lines if line.strip()])
-            comment_lines = len(
-                [line for line in lines if line.strip().startswith("#")]
-            )
+            comment_lines = len([line for line in lines if line.strip().startswith("#")])
 
             # Cyclomatic complexity approximation
             complexity_keywords = [
@@ -522,12 +476,7 @@ class ReviewAgent(BaseAgent):
                 "and",
                 "or",
             ]
-            complexity = sum(
-                1
-                for line in lines
-                for keyword in complexity_keywords
-                if keyword in line
-            )
+            complexity = sum(1 for line in lines for keyword in complexity_keywords if keyword in line)
 
             return {
                 "total_lines": total_lines,
@@ -557,9 +506,7 @@ class ReviewAgent(BaseAgent):
 
             return {
                 "test_patterns_found": test_patterns,
-                "has_testing_framework": any(
-                    framework in code for framework in ["unittest", "pytest"]
-                ),
+                "has_testing_framework": any(framework in code for framework in ["unittest", "pytest"]),
                 "has_assertions": "assert" in code,
                 "test_coverage_estimate": min(1.0, test_patterns * 0.2),
             }
@@ -595,9 +542,7 @@ class ReviewAgent(BaseAgent):
                 "documentation_score": 0.0,
             }
 
-    def _identify_issues(
-        self, code: str, requirements: Dict[str, Any]
-    ) -> List[CodeIssue]:
+    def _identify_issues(self, code: str, requirements: Dict[str, Any]) -> List[CodeIssue]:
         """Identify specific code issues."""
         try:
             issues = []
@@ -690,28 +635,20 @@ class ReviewAgent(BaseAgent):
             # Based on quality score
             quality_score = analysis.get("code_quality_score", 0.0)
             if quality_score < 0.7:
-                recommendations.append(
-                    "Improve overall code quality through refactoring"
-                )
+                recommendations.append("Improve overall code quality through refactoring")
 
             # Based on security analysis
-            security_score = analysis.get("security_analysis", {}).get(
-                "overall_security_score", 0.0
-            )
+            security_score = analysis.get("security_analysis", {}).get("overall_security_score", 0.0)
             if security_score < 0.8:
                 recommendations.append("Address security vulnerabilities")
 
             # Based on performance analysis
-            performance_score = analysis.get("performance_analysis", {}).get(
-                "performance_score", 0.0
-            )
+            performance_score = analysis.get("performance_analysis", {}).get("performance_score", 0.0)
             if performance_score < 0.8:
                 recommendations.append("Optimize performance bottlenecks")
 
             # Based on maintainability
-            maintainability_score = analysis.get("maintainability_analysis", {}).get(
-                "maintainability_score", 0.0
-            )
+            maintainability_score = analysis.get("maintainability_analysis", {}).get("maintainability_score", 0.0)
             if maintainability_score < 0.7:
                 recommendations.append("Improve code maintainability")
 
@@ -721,9 +658,7 @@ class ReviewAgent(BaseAgent):
             self.logger.error(f"Error generating recommendations: {e}")
             return []
 
-    def _create_improvement_plan(
-        self, issues: List[CodeIssue], recommendations: List[str]
-    ) -> List[Dict[str, Any]]:
+    def _create_improvement_plan(self, issues: List[CodeIssue], recommendations: List[str]) -> List[Dict[str, Any]]:
         """Create a detailed improvement plan."""
         try:
             plan = []
@@ -740,16 +675,10 @@ class ReviewAgent(BaseAgent):
                 plan.append(
                     {
                         "category": category,
-                        "priority": "high"
-                        if any(
-                            i.severity in ["critical", "high"] for i in category_issues
-                        )
-                        else "medium",
+                        "priority": "high" if any(i.severity in ["critical", "high"] for i in category_issues) else "medium",
                         "issues": category_issues,
                         "action": f"Address {category} issues",
-                        "estimated_effort": "high"
-                        if len(category_issues) > 5
-                        else "medium",
+                        "estimated_effort": "high" if len(category_issues) > 5 else "medium",
                     }
                 )
 
@@ -767,14 +696,10 @@ class ReviewAgent(BaseAgent):
             # Based on complexity metrics
             complexity_metrics = analysis.get("complexity_metrics", {})
             if complexity_metrics.get("complexity_per_line", 0) > 0.5:
-                suggestions.append(
-                    "Break down complex functions into smaller, focused functions"
-                )
+                suggestions.append("Break down complex functions into smaller, focused functions")
 
             if complexity_metrics.get("total_lines", 0) > 100:
-                suggestions.append(
-                    "Consider splitting large files into smaller modules"
-                )
+                suggestions.append("Consider splitting large files into smaller modules")
 
             # Based on maintainability
             maintainability_analysis = analysis.get("maintainability_analysis", {})
@@ -856,18 +781,14 @@ class ReviewAgent(BaseAgent):
             self.logger.error(f"Error proposing testing improvements: {e}")
             return []
 
-    def _propose_documentation_improvements(
-        self, analysis: Dict[str, Any]
-    ) -> List[str]:
+    def _propose_documentation_improvements(self, analysis: Dict[str, Any]) -> List[str]:
         """Propose documentation improvements."""
         try:
             improvements = []
 
             doc_quality = analysis.get("documentation_quality", {})
             if doc_quality.get("documentation_score", 0) < 0.6:
-                improvements.append(
-                    "Add comprehensive docstrings to all functions and classes"
-                )
+                improvements.append("Add comprehensive docstrings to all functions and classes")
                 improvements.append("Create README with setup and usage instructions")
                 improvements.append("Add inline comments for complex logic")
 
@@ -877,9 +798,7 @@ class ReviewAgent(BaseAgent):
             self.logger.error(f"Error proposing documentation improvements: {e}")
             return []
 
-    def _prioritize_improvements(
-        self, issues: List[CodeIssue], requirements: Dict[str, Any]
-    ) -> List[str]:
+    def _prioritize_improvements(self, issues: List[CodeIssue], requirements: Dict[str, Any]) -> List[str]:
         """Prioritize improvements based on severity and requirements."""
         try:
             # Sort issues by severity weight
@@ -902,9 +821,7 @@ class ReviewAgent(BaseAgent):
     def _estimate_effort(self, issues: List[CodeIssue]) -> str:
         """Estimate effort required for improvements."""
         try:
-            total_severity = sum(
-                self.severity_weights.get(issue.severity, 0) for issue in issues
-            )
+            total_severity = sum(self.severity_weights.get(issue.severity, 0) for issue in issues)
 
             if total_severity > 5.0:
                 return "high"
@@ -931,10 +848,7 @@ class ReviewAgent(BaseAgent):
             if analysis.get("code_quality_score", 0) < 0.5:
                 risks["breaking_changes"] = "medium"
 
-            if (
-                analysis.get("performance_analysis", {}).get("performance_score", 0)
-                < 0.6
-            ):
+            if analysis.get("performance_analysis", {}).get("performance_score", 0) < 0.6:
                 risks["performance_impact"] = "medium"
 
             return risks
@@ -943,9 +857,7 @@ class ReviewAgent(BaseAgent):
             self.logger.error(f"Error assessing improvement risks: {e}")
             return {"breaking_changes": "unknown", "performance_impact": "unknown"}
 
-    def _assess_feasibility(
-        self, proposal: Dict[str, Any], context: Dict[str, Any]
-    ) -> str:
+    def _assess_feasibility(self, proposal: Dict[str, Any], context: Dict[str, Any]) -> str:
         """Assess feasibility of proposed improvements."""
         try:
             improvement_plan = proposal.get("improvement_plan", [])
@@ -964,9 +876,7 @@ class ReviewAgent(BaseAgent):
             self.logger.error(f"Error assessing feasibility: {e}")
             return "unknown"
 
-    def _analyze_impact(
-        self, proposal: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _analyze_impact(self, proposal: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze impact of proposed improvements."""
         try:
             return {
@@ -980,9 +890,7 @@ class ReviewAgent(BaseAgent):
             self.logger.error(f"Error analyzing impact: {e}")
             return {}
 
-    def _suggest_alternatives(
-        self, proposal: Dict[str, Any], context: Dict[str, Any]
-    ) -> List[str]:
+    def _suggest_alternatives(self, proposal: Dict[str, Any], context: Dict[str, Any]) -> List[str]:
         """Suggest alternative approaches."""
         try:
             alternatives = []
@@ -998,9 +906,7 @@ class ReviewAgent(BaseAgent):
             self.logger.error(f"Error suggesting alternatives: {e}")
             return []
 
-    def _provide_implementation_guidance(
-        self, proposal: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def _provide_implementation_guidance(self, proposal: Dict[str, Any]) -> Dict[str, Any]:
         """Provide implementation guidance for improvements."""
         try:
             return {
@@ -1069,23 +975,15 @@ class ReviewAgent(BaseAgent):
             self.logger.error(f"Error creating rollback plan: {e}")
             return {}
 
-    def _make_approval_recommendation(
-        self, proposal: Dict[str, Any], context: Dict[str, Any]
-    ) -> str:
+    def _make_approval_recommendation(self, proposal: Dict[str, Any], context: Dict[str, Any]) -> str:
         """Make approval recommendation based on analysis."""
         try:
             feasibility = proposal.get("feasibility_assessment", "unknown")
             risk_assessment = proposal.get("risk_assessment", {})
 
-            if (
-                feasibility == "high"
-                and risk_assessment.get("breaking_changes") == "low"
-            ):
+            if feasibility == "high" and risk_assessment.get("breaking_changes") == "low":
                 return "approve"
-            elif (
-                feasibility == "medium"
-                and risk_assessment.get("breaking_changes") == "low"
-            ):
+            elif feasibility == "medium" and risk_assessment.get("breaking_changes") == "low":
                 return "approve_with_caution"
             else:
                 return "reject"
@@ -1094,9 +992,7 @@ class ReviewAgent(BaseAgent):
             self.logger.error(f"Error making approval recommendation: {e}")
             return "reject"
 
-    def _calculate_final_score(
-        self, proposal: Dict[str, Any], context: Dict[str, Any]
-    ) -> float:
+    def _calculate_final_score(self, proposal: Dict[str, Any], context: Dict[str, Any]) -> float:
         """Calculate final review score."""
         try:
             # Base score from original analysis
@@ -1135,12 +1031,7 @@ class ReviewAgent(BaseAgent):
                 "and",
                 "or",
             ]
-            complexity = sum(
-                1
-                for line in lines
-                for keyword in complexity_keywords
-                if keyword in line
-            )
+            complexity = sum(1 for line in lines for keyword in complexity_keywords if keyword in line)
 
             # Normalize complexity score (lower is better)
             complexity_score = max(0.0, 1.0 - (complexity / max(1, len(lines))) * 2)
@@ -1159,9 +1050,7 @@ class ReviewAgent(BaseAgent):
             for line in lines:
                 if line.strip() and len(line) > 120:  # Line too long
                     style_issues += 1
-                if (
-                    line.strip() and not line.startswith(" ") and "def " in line
-                ):  # Missing indentation
+                if line.strip() and not line.startswith(" ") and "def " in line:  # Missing indentation
                     style_issues += 1
 
             # Normalize style score (lower issues is better)
@@ -1351,22 +1240,16 @@ class ReviewAgent(BaseAgent):
 
         # Basic recommendations
         if "print(" in code and "logging" not in code:
-            recommendations.append(
-                "Consider using logging instead of print statements for better debugging"
-            )
+            recommendations.append("Consider using logging instead of print statements for better debugging")
 
         if "except:" in code:
-            recommendations.append(
-                "Specify exception types in except clauses for better error handling"
-            )
+            recommendations.append("Specify exception types in except clauses for better error handling")
 
         if len(code.split("\n")) > 100:
             recommendations.append("Consider breaking large files into smaller modules")
 
         if not any(keyword in code for keyword in ["def ", "class "]):
-            recommendations.append(
-                "Consider adding functions or classes for better code organization"
-            )
+            recommendations.append("Consider adding functions or classes for better code organization")
 
         # Security recommendations
         risks = self._identify_security_risks(code)
@@ -1425,9 +1308,7 @@ class ReviewAgent(BaseAgent):
 
         if critical_risks:
             safety_assessment["risk_level"] = "critical"
-            safety_assessment["recommendations"].append(
-                "Code contains critical security risks and should not be deployed"
-            )
+            safety_assessment["recommendations"].append("Code contains critical security risks and should not be deployed")
         elif high_risks:
             safety_assessment["risk_level"] = "high"
             safety_assessment["recommendations"].append(
@@ -1435,8 +1316,6 @@ class ReviewAgent(BaseAgent):
             )
         elif risks:
             safety_assessment["risk_level"] = "medium"
-            safety_assessment["recommendations"].append(
-                "Code contains some security risks that should be addressed"
-            )
+            safety_assessment["recommendations"].append("Code contains some security risks that should be addressed")
 
         return safety_assessment

@@ -278,9 +278,7 @@ class PromptOptimizerAgent:
         # Q-learning update
         if next_state:
             next_state_hash = next_state.to_hash()
-            next_max_q = max(
-                self._get_q_value(next_state_hash, a) for a in self.actions
-            )
+            next_max_q = max(self._get_q_value(next_state_hash, a) for a in self.actions)
             target_q = reward + self.discount_factor * next_max_q
         else:
             target_q = reward
@@ -300,9 +298,7 @@ class PromptOptimizerAgent:
 
         total_states = len(self.q_table)
         total_actions = sum(len(actions) for actions in self.q_table.values())
-        all_q_values = [
-            q for actions in self.q_table.values() for q in actions.values()
-        ]
+        all_q_values = [q for actions in self.q_table.values() for q in actions.values()]
         avg_q_value = np.mean(all_q_values) if all_q_values else 0.0
 
         return {
@@ -407,9 +403,7 @@ if __name__ == "__main__":
         print(f"Mutated: {mutated}")
 
         # Test reward calculation
-        reward = prompt_optimizer.calculate_reward(
-            passed=True, blocked=False, iterations=1, complexity=0.8, base_reward=30.0
-        )
+        reward = prompt_optimizer.calculate_reward(passed=True, blocked=False, iterations=1, complexity=0.8, base_reward=30.0)
         print(f"Reward: {reward}")
 
         # Update Q-table

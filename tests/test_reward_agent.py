@@ -134,9 +134,7 @@ class TestRewardAgent(unittest.TestCase):
             high_violations=0,
         )
 
-        result = self.agent.calculate_reward(
-            perfect_test, perfect_quality, perfect_feedback, perfect_policy
-        )
+        result = self.agent.calculate_reward(perfect_test, perfect_quality, perfect_feedback, perfect_policy)
 
         self.assertGreater(result["total_reward"], 0.9)
         self.assertEqual(result["reward_level"], "excellent")
@@ -180,9 +178,7 @@ class TestRewardAgent(unittest.TestCase):
             high_violations=3,
         )
 
-        result = self.agent.calculate_reward(
-            poor_test, poor_quality, poor_feedback, poor_policy
-        )
+        result = self.agent.calculate_reward(poor_test, poor_quality, poor_feedback, poor_policy)
 
         self.assertLess(result["total_reward"], 0.3)
         self.assertIn(result["reward_level"], ["poor", "needs_improvement"])
@@ -361,9 +357,7 @@ class TestRewardAgent(unittest.TestCase):
             approved=True,
         )
 
-        penalized_reward = self.agent._apply_penalties(
-            base_reward, test_failure, policy_pass, feedback_approve
-        )
+        penalized_reward = self.agent._apply_penalties(base_reward, test_failure, policy_pass, feedback_approve)
 
         self.assertLess(penalized_reward, base_reward)
 
@@ -390,9 +384,7 @@ class TestRewardAgent(unittest.TestCase):
 
     def test_calculate_reward_with_error(self):
         """Test reward calculation when an error occurs"""
-        with patch.object(
-            self.agent, "_calculate_test_reward", side_effect=Exception("Test error")
-        ):
+        with patch.object(self.agent, "_calculate_test_reward", side_effect=Exception("Test error")):
             result = self.agent.calculate_reward(
                 self.sample_test_result,
                 self.sample_code_quality,

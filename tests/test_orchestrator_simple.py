@@ -185,9 +185,7 @@ class TestAgentOrchestratorSimple(unittest.TestCase):
             ),
         ]
 
-        orchestrator = AgentOrchestrator(
-            agents=disagreeing_agents, config={"max_rounds": 1}
-        )
+        orchestrator = AgentOrchestrator(agents=disagreeing_agents, config={"max_rounds": 1})
         result = orchestrator.run_discussion(self.sample_context)
 
         self.assertFalse(result["consensus_reached"])
@@ -256,9 +254,7 @@ class TestAgentOrchestratorSimple(unittest.TestCase):
         strategies = ["majority", "unanimous", "weighted_majority"]
 
         for strategy in strategies:
-            orchestrator = AgentOrchestrator(
-                agents=self.mock_agents, config={"consensus_strategy": strategy}
-            )
+            orchestrator = AgentOrchestrator(agents=self.mock_agents, config={"consensus_strategy": strategy})
             result = orchestrator.run_discussion(self.sample_context)
 
             self.assertIsNotNone(result)
@@ -289,9 +285,7 @@ class TestDiscussionRound(unittest.TestCase):
 
     def test_discussion_round_defaults(self):
         """Test DiscussionRound with default values"""
-        round_obj = DiscussionRound(
-            round_id=1, task_context={}, analyses=[], proposals=[]
-        )
+        round_obj = DiscussionRound(round_id=1, task_context={}, analyses=[], proposals=[])
 
         self.assertEqual(round_obj.round_id, 1)
         self.assertIsNone(round_obj.consensus)

@@ -54,9 +54,7 @@ class TestArchitectAgent(unittest.TestCase):
     @pytest.mark.xfail(reason="Temporarily disabled for CI - will fix in Phase 12")
     def test_init_with_config(self):
         """Test ArchitectAgent initialization with config"""
-        config = {
-            "architect": {"default_pattern": "microservices", "preferred_cloud": "AWS"}
-        }
+        config = {"architect": {"default_pattern": "microservices", "preferred_cloud": "AWS"}}
         agent = ArchitectAgent("TestAgent", config)
         self.assertEqual(
             agent.architect_config,
@@ -79,9 +77,7 @@ class TestArchitectAgent(unittest.TestCase):
     @pytest.mark.xfail(reason="Temporarily disabled for CI - will fix in Phase 12")
     def test_analyze_with_error(self):
         """Test analysis with error handling"""
-        with patch.object(
-            self.agent, "_analyze_requirements", side_effect=Exception("Test error")
-        ):
+        with patch.object(self.agent, "_analyze_requirements", side_effect=Exception("Test error")):
             result = self.agent.analyze(self.sample_context)
 
             self.assertIn("error", result)
@@ -113,9 +109,7 @@ class TestArchitectAgent(unittest.TestCase):
     @pytest.mark.xfail(reason="Temporarily disabled for CI - will fix in Phase 12")
     def test_propose_with_error(self):
         """Test proposal with error handling"""
-        with patch.object(
-            self.agent, "_design_architecture", side_effect=Exception("Test error")
-        ):
+        with patch.object(self.agent, "_design_architecture", side_effect=Exception("Test error")):
             analysis = {"migration_complexity": "medium"}
             result = self.agent.propose(analysis, self.sample_context)
 
@@ -203,9 +197,7 @@ class TestArchitectAgent(unittest.TestCase):
         }
         current_architecture = {"pattern": "monolithic"}
 
-        scalability = self.agent._analyze_scalability(
-            requirements, current_architecture
-        )
+        scalability = self.agent._analyze_scalability(requirements, current_architecture)
 
         self.assertIn("current_scale", scalability)
         self.assertIn("required_scale", scalability)
@@ -223,9 +215,7 @@ class TestArchitectAgent(unittest.TestCase):
         }
         current_architecture = {"security": "basic"}
 
-        security = self.agent._analyze_security_requirements(
-            requirements, current_architecture
-        )
+        security = self.agent._analyze_security_requirements(requirements, current_architecture)
 
         self.assertIn("current_security", security)
         self.assertIn("required_security", security)
@@ -243,9 +233,7 @@ class TestArchitectAgent(unittest.TestCase):
         }
         current_architecture = {"performance": "adequate"}
 
-        performance = self.agent._analyze_performance_requirements(
-            requirements, current_architecture
-        )
+        performance = self.agent._analyze_performance_requirements(requirements, current_architecture)
 
         self.assertIn("current_performance", performance)
         self.assertIn("required_performance", performance)
@@ -259,9 +247,7 @@ class TestArchitectAgent(unittest.TestCase):
         requirements = {"system_type": "web_application", "scale": "enterprise"}
         current_technologies = ["Python", "PostgreSQL"]
 
-        compatibility = self.agent._assess_technology_compatibility(
-            requirements, current_technologies
-        )
+        compatibility = self.agent._assess_technology_compatibility(requirements, current_technologies)
 
         self.assertIn("compatible_technologies", compatibility)
         self.assertIn("incompatible_technologies", compatibility)
@@ -288,9 +274,7 @@ class TestArchitectAgent(unittest.TestCase):
         requirements = {"scale": "enterprise"}
         constraints = {"budget": "limited"}
 
-        complexity = self.agent._calculate_migration_complexity(
-            current_architecture, requirements, constraints
-        )
+        complexity = self.agent._calculate_migration_complexity(current_architecture, requirements, constraints)
 
         self.assertIn(complexity, ["low", "medium", "high", "unknown"])
 
@@ -362,9 +346,7 @@ class TestArchitectAgent(unittest.TestCase):
         constraints = {"budget": "limited", "existing_infrastructure": "cloud"}
         architecture_design = {"pattern": "microservices"}
 
-        strategy = self.agent._plan_deployment_strategy(
-            requirements, constraints, architecture_design
-        )
+        strategy = self.agent._plan_deployment_strategy(requirements, constraints, architecture_design)
 
         self.assertIn("deployment_model", strategy)
         self.assertIn("infrastructure", strategy)
@@ -394,9 +376,7 @@ class TestArchitectAgent(unittest.TestCase):
         requirements = {"security": "critical", "data_volume": "large"}
         architecture_design = {"pattern": "microservices"}
 
-        security = self.agent._design_security_architecture(
-            requirements, architecture_design
-        )
+        security = self.agent._design_security_architecture(requirements, architecture_design)
 
         self.assertIn("authentication", security)
         self.assertIn("authorization", security)
@@ -412,9 +392,7 @@ class TestArchitectAgent(unittest.TestCase):
         new_architecture = {"pattern": "microservices"}
         constraints = {"time_to_market": "fast"}
 
-        plan = self.agent._create_migration_plan(
-            current_architecture, new_architecture, constraints
-        )
+        plan = self.agent._create_migration_plan(current_architecture, new_architecture, constraints)
 
         self.assertIn("phases", plan)
         self.assertIn("timeline", plan)
@@ -430,9 +408,7 @@ class TestArchitectAgent(unittest.TestCase):
         architecture_design = {"pattern": "microservices"}
         constraints = {"budget": "limited"}
 
-        costs = self.agent._estimate_costs(
-            requirements, architecture_design, constraints
-        )
+        costs = self.agent._estimate_costs(requirements, architecture_design, constraints)
 
         self.assertIn("infrastructure_costs", costs)
         self.assertIn("development_costs", costs)
@@ -451,9 +427,7 @@ class TestArchitectAgent(unittest.TestCase):
         }
         requirements = {"scale": "enterprise"}
 
-        quality = self.agent._assess_architecture_quality(
-            architecture_design, requirements
-        )
+        quality = self.agent._assess_architecture_quality(architecture_design, requirements)
 
         self.assertIn("modularity_score", quality)
         self.assertIn("cohesion_score", quality)
@@ -472,9 +446,7 @@ class TestArchitectAgent(unittest.TestCase):
         }
         requirements = {"scale": "enterprise"}
 
-        assessment = self.agent._assess_scalability(
-            architecture_design, scalability_plan, requirements
-        )
+        assessment = self.agent._assess_scalability(architecture_design, scalability_plan, requirements)
 
         self.assertIn("scalability_score", assessment)
         self.assertIn("bottlenecks", assessment)
@@ -507,9 +479,7 @@ class TestArchitectAgent(unittest.TestCase):
         performance_plan = {"caching_strategy": "Redis", "load_balancing": "HAProxy"}
         requirements = {"performance": "high"}
 
-        evaluation = self.agent._evaluate_performance(
-            architecture_design, performance_plan, requirements
-        )
+        evaluation = self.agent._evaluate_performance(architecture_design, performance_plan, requirements)
 
         self.assertIn("performance_score", evaluation)
         self.assertIn("latency_analysis", evaluation)
@@ -565,9 +535,7 @@ class TestArchitectAgent(unittest.TestCase):
         }
         constraints = {"budget": "limited"}
 
-        evaluation = self.agent._evaluate_risks(
-            architecture_design, migration_plan, constraints
-        )
+        evaluation = self.agent._evaluate_risks(architecture_design, migration_plan, constraints)
 
         self.assertIn("technical_risks", evaluation)
         self.assertIn("business_risks", evaluation)

@@ -22,9 +22,7 @@ class PolicyAgent(BaseAgent):
     - Compliance checking
     """
 
-    def __init__(
-        self, name: str = "policy_agent", config: Optional[Dict[str, Any]] = None
-    ):
+    def __init__(self, name: str = "policy_agent", config: Optional[Dict[str, Any]] = None):
         """Initialize the policy agent."""
         super().__init__(name, config)
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
@@ -94,9 +92,7 @@ class PolicyAgent(BaseAgent):
             r"os\.makedirs\s*\(",
         ]
 
-        self.logger.info(
-            f"PolicyAgent '{name}' initialized with {len(self.dangerous_patterns)} policy categories"
-        )
+        self.logger.info(f"PolicyAgent '{name}' initialized with {len(self.dangerous_patterns)} policy categories")
 
     def check_code_safety(self, code: str) -> Dict[str, Any]:
         """
@@ -135,9 +131,7 @@ class PolicyAgent(BaseAgent):
                             "pattern": pattern,
                             "line": self._get_line_number(code, match.start()),
                             "match": match.group(),
-                            "description": self._get_violation_description(
-                                pattern, severity
-                            ),
+                            "description": self._get_violation_description(pattern, severity),
                         }
 
                         result["violations"].append(violation)
@@ -155,56 +149,40 @@ class PolicyAgent(BaseAgent):
             # Check for hardcoded secrets
             secret_violations = self._check_for_secrets(code)
             result["violations"].extend(secret_violations)
-            result["critical_violations"] += len(
-                [v for v in secret_violations if v["severity"] == "critical"]
-            )
+            result["critical_violations"] += len([v for v in secret_violations if v["severity"] == "critical"])
 
             # Check for network operations
             network_violations = self._check_network_operations(code)
             result["violations"].extend(network_violations)
-            result["high_violations"] += len(
-                [v for v in network_violations if v["severity"] == "high"]
-            )
+            result["high_violations"] += len([v for v in network_violations if v["severity"] == "high"])
 
             # Determine overall safety decision
             if result["critical_violations"] > 0:
                 result["safe"] = False
                 result["decision"] = "block"
                 result["risk_level"] = "critical"
-                result["recommendations"].append(
-                    "Code contains critical safety violations and cannot be executed"
-                )
+                result["recommendations"].append("Code contains critical safety violations and cannot be executed")
             elif result["high_violations"] > 0:
                 result["safe"] = False
                 result["decision"] = "block"
                 result["risk_level"] = "high"
-                result["recommendations"].append(
-                    "Code contains high-risk operations and should be reviewed"
-                )
+                result["recommendations"].append("Code contains high-risk operations and should be reviewed")
             elif result["medium_violations"] > 0:
                 result["safe"] = True
                 result["decision"] = "warn"
                 result["risk_level"] = "medium"
-                result["recommendations"].append(
-                    "Code contains medium-risk operations that should be reviewed"
-                )
+                result["recommendations"].append("Code contains medium-risk operations that should be reviewed")
             elif result["low_violations"] > 0:
                 result["safe"] = True
                 result["decision"] = "pass"
                 result["risk_level"] = "low"
-                result["recommendations"].append(
-                    "Code contains minor issues that should be addressed"
-                )
+                result["recommendations"].append("Code contains minor issues that should be addressed")
 
             # Add general recommendations
             if result["violations"]:
-                result["recommendations"].append(
-                    "Review all violations before deploying to production"
-                )
+                result["recommendations"].append("Review all violations before deploying to production")
 
-            self.logger.info(
-                f"Safety check completed. Decision: {result['decision']}, Risk level: {result['risk_level']}"
-            )
+            self.logger.info(f"Safety check completed. Decision: {result['decision']}, Risk level: {result['risk_level']}")
             return result
 
         except Exception as e:
@@ -338,9 +316,7 @@ class PolicyAgent(BaseAgent):
             "recommendations": ["Context appears to comply with policies"],
         }
 
-    def propose(
-        self, analysis: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def propose(self, analysis: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Propose policy improvements.
 
@@ -359,9 +335,7 @@ class PolicyAgent(BaseAgent):
             "compliance_measures": [],
         }
 
-    def review(
-        self, proposal: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def review(self, proposal: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Review proposal for policy compliance.
 

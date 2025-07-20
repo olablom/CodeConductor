@@ -47,9 +47,7 @@ class QLearningAgent(BaseAgent):
     - Epsilon-greedy exploration
     """
 
-    def __init__(
-        self, name: str = "qlearning_agent", config: Optional[Dict[str, Any]] = None
-    ):
+    def __init__(self, name: str = "qlearning_agent", config: Optional[Dict[str, Any]] = None):
         """Initialize the Q-learning agent."""
         super().__init__(name, config)
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
@@ -85,7 +83,8 @@ class QLearningAgent(BaseAgent):
             cursor = conn.cursor()
 
             # Create Q-table
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS q_table (
                     state_hash TEXT PRIMARY KEY,
                     state_data TEXT NOT NULL,
@@ -94,10 +93,12 @@ class QLearningAgent(BaseAgent):
                     visit_count INTEGER DEFAULT 0,
                     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             # Create statistics table
-            cursor.execute("""
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS learning_stats (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     episode_count INTEGER,
@@ -105,7 +106,8 @@ class QLearningAgent(BaseAgent):
                     epsilon REAL,
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             conn.commit()
             conn.close()
@@ -285,9 +287,7 @@ class QLearningAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"Error setting Q-value: {e}")
 
-    def select_action(
-        self, state: QState, available_actions: Optional[List[QAction]] = None
-    ) -> QAction:
+    def select_action(self, state: QState, available_actions: Optional[List[QAction]] = None) -> QAction:
         """
         Select action using epsilon-greedy strategy.
 
@@ -318,15 +318,11 @@ class QLearningAgent(BaseAgent):
                     best_action = action
 
             selected_action = best_action or random.choice(available_actions)
-            self.logger.debug(
-                f"Exploitation: selected best action {selected_action} with Q-value {best_q_value}"
-            )
+            self.logger.debug(f"Exploitation: selected best action {selected_action} with Q-value {best_q_value}")
 
         return selected_action
 
-    def update_q_value(
-        self, state: QState, action: QAction, reward: float, next_state: QState
-    ):
+    def update_q_value(self, state: QState, action: QAction, reward: float, next_state: QState):
         """
         Update Q-value using Q-learning formula.
 
@@ -342,14 +338,10 @@ class QLearningAgent(BaseAgent):
 
             # Get maximum Q-value for next state
             next_actions = self.get_actions(next_state)
-            max_next_q = max(
-                [self.get_q_value(next_state, a) for a in next_actions], default=0.0
-            )
+            max_next_q = max([self.get_q_value(next_state, a) for a in next_actions], default=0.0)
 
             # Q-learning update formula
-            new_q = current_q + self.learning_rate * (
-                reward + self.discount_factor * max_next_q - current_q
-            )
+            new_q = current_q + self.learning_rate * (reward + self.discount_factor * max_next_q - current_q)
 
             # Update Q-table
             self.set_q_value(state, action, new_q)
@@ -357,9 +349,7 @@ class QLearningAgent(BaseAgent):
             # Decay epsilon
             self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
-            self.logger.debug(
-                f"Updated Q-value: {current_q:.4f} -> {new_q:.4f} (reward: {reward:.4f})"
-            )
+            self.logger.debug(f"Updated Q-value: {current_q:.4f} -> {new_q:.4f} (reward: {reward:.4f})")
 
         except Exception as e:
             self.logger.error(f"Error updating Q-value: {e}")
@@ -411,12 +401,14 @@ class QLearningAgent(BaseAgent):
             min_q_value = cursor.fetchone()[0] or 0.0
 
             # Get recent learning stats
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT episode_count, average_reward, epsilon 
                 FROM learning_stats 
                 ORDER BY timestamp DESC 
                 LIMIT 1
-            """)
+            """
+            )
             recent_stats = cursor.fetchone()
 
             conn.close()
@@ -508,9 +500,7 @@ class QLearningAgent(BaseAgent):
             "learning_ready": True,
         }
 
-    def propose(
-        self, analysis: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def propose(self, analysis: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Propose Q-learning action.
 
@@ -537,9 +527,7 @@ class QLearningAgent(BaseAgent):
             "epsilon": self.epsilon,
         }
 
-    def review(
-        self, proposal: Dict[str, Any], context: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def review(self, proposal: Dict[str, Any], context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Review Q-learning proposal.
 
