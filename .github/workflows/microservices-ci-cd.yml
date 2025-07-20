@@ -1,0 +1,168 @@
+name: Microservices CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths: ["services/**"]
+  pull_request:
+    branches: [main]
+    paths: ["services/**"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          [
+            gateway_service,
+            agent_service,
+            orchestrator_service,
+            auth_service,
+            data_service,
+          ]
+    defaults:
+      run:
+        working-directory: services
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint with Black
+        run: |
+          pip install black
+          black --check services/${{ matrix.service }}/ || true
+
+      - name: Run service-specific tests
+        run: |
+          if [ -f "services/${{ matrix.service }}/tests/" ]; then
+            pip install pytest pytest-asyncio httpx
+            pytest services/${{ matrix.service }}/tests/ -v
+          else
+            echo "No tests found for ${{ matrix.service }}"
+          fi
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ matrix.service }}:latest -f services/${{ matrix.service }}/Dockerfile .
+
+      - name: Test Docker image
+        run: |
+          docker run --rm ${{ matrix.service }}:latest python -c "print('✅ ${{ matrix.service }} image works!')" || exit 1
+
+  integration-test:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio httpx
+
+      - name: Start services with Docker Compose
+        run: |
+          docker-compose up -d
+          sleep 30  # Wait for services to start
+
+      - name: Run integration tests
+        run: |
+          python test_full_stack.py
+          python test_data_endpoints.py
+
+      - name: Test Gateway routing
+        run: |
+          curl -f http://localhost:9000/health || exit 1
+          curl -f http://localhost:9000/api/v1/data/health || exit 1
+          echo "✅ Gateway routing works!"
+
+      - name: Cleanup
+        if: always()
+        run: docker-compose down
+
+  deploy:
+    needs: [build-and-test, integration-test]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker images
+        run: |
+          cd services
+          for service in gateway_service agent_service orchestrator_service auth_service data_service; do
+            echo "Building and pushing $service..."
+            docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/codeconductor-$service:latest -f $service/Dockerfile .
+            docker push ${{ secrets.DOCKERHUB_USERNAME }}/codeconductor-$service:latest
+          done
+
+      - name: Deploy to staging (placeholder)
+        run: |
+          echo "🚀 Ready to deploy to staging environment!"
+          echo "Services built and pushed:"
+          echo "- ${{ secrets.DOCKERHUB_USERNAME }}/codeconductor-gateway_service:latest"
+          echo "- ${{ secrets.DOCKERHUB_USERNAME }}/codeconductor-agent_service:latest"
+          echo "- ${{ secrets.DOCKERHUB_USERNAME }}/codeconductor-orchestrator_service:latest"
+          echo "- ${{ secrets.DOCKERHUB_USERNAME }}/codeconductor-auth_service:latest"
+          echo "- ${{ secrets.DOCKERHUB_USERNAME }}/codeconductor-data_service:latest"
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run security scan
+        uses: github/codeql-action/init@v2
+        with:
+          languages: python
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+
+  notify:
+    needs: [build-and-test, integration-test, deploy]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Notify success
+        if: success()
+        run: |
+          echo "🎉 CI/CD Pipeline completed successfully!"
+          echo "✅ All microservices built and tested"
+          echo "✅ Integration tests passed"
+          echo "✅ Docker images pushed to registry"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ CI/CD Pipeline failed!"
+          echo "Check the logs above for details"

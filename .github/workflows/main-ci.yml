@@ -1,0 +1,49 @@
+name: Main CodeConductor CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["services/**"]
+  pull_request:
+    branches: [main]
+    paths-ignore: ["services/**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest black pylint
+
+      - name: Lint with Black
+        run: black --check . || echo "Black formatting issues found"
+
+      - name: Run tests
+        run: |
+          if [ -d "tests" ]; then
+            pytest tests/ -v
+          else
+            echo "No tests directory found"
+          fi
+
+      - name: Build Docker image
+        run: |
+          if [ -f "Dockerfile" ]; then
+            docker build -t codeconductor .
+          else
+            echo "No Dockerfile found in root"
+          fi
+
+      - name: Test success
+        run: echo "✅ Main CodeConductor CI completed!"

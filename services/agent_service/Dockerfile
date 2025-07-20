@@ -17,7 +17,7 @@ COPY ../requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy service code
-COPY agent_service/ .
+COPY . .
 
 # Copy shared code (if available)
 # COPY ../agents/ ./agents/ 2>/dev/null || true
