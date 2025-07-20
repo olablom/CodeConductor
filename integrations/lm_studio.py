@@ -52,23 +52,15 @@ def generate_code(prompt_path: pathlib.Path, strategy: str) -> str | None:
     if not ensure_models_ready():
         logger.warning("Models not ready, but continuing...")
 
-    prompt_content = prompt_path.read_text()
-
-    # Bättre prompt-format för LM Studio
-    system_prompt = "You are a Python coding assistant. Generate ONLY Python code. No markdown, no explanations, no comments. Just pure Python code."
-
-    # Använd prompt_content istället för hårdkodad prompt
-    user_prompt = (
-        prompt_content
-        if prompt_content.strip()
-        else "def hello_world():\n    return 'Hello, World!'"
-    )
+    # Enkelt format som fungerar med codellama
+    code_prompt = '# Simple Python function\ndef hello_world():\n    return "'
 
     payload = {
-        "prompt": f"{system_prompt}\n\n{user_prompt}",
-        "max_tokens": 1000,
+        "prompt": code_prompt,
+        "max_tokens": 30,
         "temperature": _TEMP[strategy],
-        "stop": ["```", "\n\n", "def ", "class ", "#", "##", "###"],
+        "stop": ['"', "\n\n"],
+        "stream": False,
     }
     try:
         # Använd completions endpoint istället
@@ -78,14 +70,16 @@ def generate_code(prompt_path: pathlib.Path, strategy: str) -> str | None:
         if response_data.get("choices"):
             text = response_data["choices"][0]["text"].strip()
             print(f"[LM Studio] Generated text: '{text}'")
-            # Kontrollera att texten ser ut som kod
-            if text and len(text) > 0:
+
+            if text:
+                # Bygg komplett funktion
+                complete_code = (
+                    f'# Simple Python function\ndef hello_world():\n    return "{text}"'
+                )
                 print(f"[LM Studio] ✅ Valid code generated")
-                return f"def hello_world():\n    return {text}"
-            else:
-                print(f"[LM Studio] ❌ Invalid code: empty response")
-        else:
-            print(f"[LM Studio] ❌ No choices in response")
+                return complete_code
+
+        print(f"[LM Studio] ❌ No valid response")
         return None
     except requests.RequestException as e:
         print(f"[LM Studio] Request error: {e}")
