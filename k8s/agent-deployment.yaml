@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: agent-service
-  namespace: codeconductor
+  namespace: codeconductor-demo
   labels:
     app: codeconductor
     component: agent
@@ -27,8 +27,8 @@ spec:
     spec:
       containers:
         - name: agent
-          image: your-username/codeconductor-agent:latest
-          imagePullPolicy: Always
+          image: codeconductor-agent:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 8001
               name: http
@@ -117,7 +117,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: agent-service
-  namespace: codeconductor
+  namespace: codeconductor-demo
   labels:
     app: codeconductor
     component: agent

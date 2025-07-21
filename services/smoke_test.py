@@ -20,7 +20,7 @@ SERVICES = {
 }
 
 
-async def test_service_health(
+async def check_service_health(
     service_name: str, url: str, client: httpx.AsyncClient
 ) -> bool:
     """Test if a service is healthy"""
@@ -46,7 +46,7 @@ async def test_service_health(
         return False
 
 
-async def test_agent_functionality(client: httpx.AsyncClient) -> bool:
+async def check_agent_functionality(client: httpx.AsyncClient) -> bool:
     """Test basic agent functionality"""
     try:
         print("🧪 Testing Agent Service functionality...", end=" ")
@@ -78,7 +78,7 @@ async def test_agent_functionality(client: httpx.AsyncClient) -> bool:
         return False
 
 
-async def test_orchestrator_functionality(client: httpx.AsyncClient) -> bool:
+async def check_orchestrator_functionality(client: httpx.AsyncClient) -> bool:
     """Test basic orchestrator functionality"""
     try:
         print("🎼 Testing Orchestrator Service functionality...", end=" ")
@@ -111,7 +111,7 @@ async def test_orchestrator_functionality(client: httpx.AsyncClient) -> bool:
         return False
 
 
-async def test_service_communication(client: httpx.AsyncClient) -> bool:
+async def check_service_communication(client: httpx.AsyncClient) -> bool:
     """Test service-to-service communication"""
     try:
         print("🔗 Testing service-to-service communication...", end=" ")
@@ -150,22 +150,22 @@ async def main():
         # Test all services are running
         print("\n📋 Testing service health...")
         for service_name, url in SERVICES.items():
-            healthy = await test_service_health(service_name, url, client)
+            healthy = await check_service_health(service_name, url, client)
             results.append((service_name, "health", healthy))
 
         # Test core functionality
         print("\n🔧 Testing core functionality...")
 
         # Agent service
-        agent_working = await test_agent_functionality(client)
+        agent_working = await check_agent_functionality(client)
         results.append(("agent", "functionality", agent_working))
 
         # Orchestrator service
-        orchestrator_working = await test_orchestrator_functionality(client)
+        orchestrator_working = await check_orchestrator_functionality(client)
         results.append(("orchestrator", "functionality", orchestrator_working))
 
         # Service communication
-        communication_working = await test_service_communication(client)
+        communication_working = await check_service_communication(client)
         results.append(("communication", "service-to-service", communication_working))
 
         # Summary

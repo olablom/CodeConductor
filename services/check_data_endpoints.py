@@ -9,7 +9,7 @@ import requests
 import json
 
 
-def test_health():
+def check_health():  # noqa: N802
     """Test health endpoint."""
     print("=== Testing Health Endpoint ===")
     response = requests.get("http://localhost:9006/health")
@@ -22,7 +22,7 @@ def test_health():
     print()
 
 
-def test_bandit_choose():
+def check_bandit_choose():  # noqa: N802
     """Test bandit choose endpoint."""
     print("=== Testing Bandit Choose Endpoint ===")
     data = {
@@ -40,7 +40,7 @@ def test_bandit_choose():
     print()
 
 
-def test_qlearning_run():
+def check_qlearning_run():  # noqa: N802
     """Test Q-learning run endpoint."""
     print("=== Testing Q-Learning Run Endpoint ===")
     data = {
@@ -62,7 +62,7 @@ def test_qlearning_run():
     print()
 
 
-def test_prompt_optimize():
+def check_prompt_optimize():  # noqa: N802
     """Test prompt optimization endpoint."""
     print("=== Testing Prompt Optimization Endpoint ===")
     data = {
@@ -89,9 +89,9 @@ if __name__ == "__main__":
     print("🚀 Testing Data Service Endpoints")
     print("=" * 50)
 
-    test_health()
-    test_bandit_choose()
-    test_qlearning_run()
-    test_prompt_optimize()
+    check_health()
+    check_bandit_choose()
+    check_qlearning_run()
+    check_prompt_optimize()
 
     print("✅ Testing complete!")

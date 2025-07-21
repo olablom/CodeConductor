@@ -5,12 +5,9 @@ Automatically monitors CI/CD status every 5 minutes until everything is working 
 """
 
 import subprocess
-import sys
 import time
-import json
 import requests
-from datetime import datetime, timezone
-import os
+from datetime import datetime
 
 
 def run_command(cmd):
@@ -36,7 +33,7 @@ def get_workflow_runs():
             return response.json()
         else:
             return None
-    except:
+    except Exception:
         return None
 
 
@@ -135,7 +132,7 @@ def print_status(run, local_services, check_time):
                 minutes = duration_seconds // 60
                 seconds = duration_seconds % 60
                 print(f"   ⏱️ Duration: {minutes}m {seconds}s")
-            except:
+            except Exception:
                 pass
     else:
         print("❌ Could not fetch Microservices CI/CD Pipeline status")
@@ -209,10 +206,10 @@ def main():
                 break
 
             print(f"\n⏰ Next check in 5 minutes... (Press Ctrl+C to stop)")
-            print(f"💡 Tips:")
-            print(f"   • Check logs: https://github.com/olablom/CodeConductor/actions")
-            print(f"   • Local services: python check_ci.py")
-            print(f"   • Manual check: python check_github_actions.py")
+            print("💡 Tips:")
+            print("   • Check logs: https://github.com/olablom/CodeConductor/actions")
+            print("   • Local services: python check_ci.py")
+            print("   • Manual check: python check_github_actions.py")
 
             # Wait 5 minutes
             time.sleep(300)

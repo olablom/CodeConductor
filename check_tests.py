@@ -19,7 +19,7 @@ def run_tests():
         )
         return result.stdout
     except Exception as e:
-        print(f"❌ Error running tests: {e}")
+        print("❌ Error running tests:", e)
         return None
 
 

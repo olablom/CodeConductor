@@ -81,7 +81,7 @@ services:
     image: rabbitmq:3-management
     ports:
       - "9004:5672"
-      - "15673:15672"  # Management UI (changed port to avoid conflict)
+      - "15673:15672" # Management UI (changed port to avoid conflict)
     environment:
       - RABBITMQ_DEFAULT_USER=codeconductor
       - RABBITMQ_DEFAULT_PASS=password
@@ -118,7 +118,6 @@ services:
       - POSTGRES_PASSWORD=password
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - codeconductor-network
     restart: unless-stopped
@@ -165,4 +164,4 @@ volumes:
 
 networks:
   codeconductor-network:
-    driver: bridge 
+    driver: bridge

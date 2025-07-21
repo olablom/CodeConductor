@@ -54,7 +54,7 @@ def check_ci_status():
                     break
         if github_error:
             print(f"⚠️ GitHub check error: {github_error}")
-    except:
+    except Exception:
         print("⚠️ Could not check GitHub Actions")
 
 
@@ -75,7 +75,7 @@ def is_everything_working():
             return True, "All local services running"
 
         return False, "Some local services not running"
-    except:
+    except Exception:
         return False, "Could not check status"
 
 
@@ -110,10 +110,10 @@ def main():
                 break
 
             print(f"\n⏰ Next check in 5 minutes... (Press Ctrl+C to stop)")
-            print(f"💡 Manual checks:")
-            print(f"   • python check_ci.py")
-            print(f"   • python check_github_actions.py")
-            print(f"   • https://github.com/olablom/CodeConductor/actions")
+            print("💡 Manual checks:")
+            print("   • python check_ci.py")
+            print("   • python check_github_actions.py")
+            print("   • https://github.com/olablom/CodeConductor/actions")
 
             # Wait 5 minutes
             time.sleep(300)

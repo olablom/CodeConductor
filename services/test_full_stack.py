@@ -9,7 +9,6 @@ to ensure all services are working together correctly.
 import asyncio
 import httpx
 import json
-import time
 from typing import Dict, Any
 
 
@@ -308,7 +307,7 @@ async def main():
     with open("test_results.json", "w") as f:
         json.dump(results, f, indent=2, default=str)
 
-    print(f"\n📄 Detailed results saved to test_results.json")
+    print("\n📄 Detailed results saved to test_results.json")
 
 
 if __name__ == "__main__":
