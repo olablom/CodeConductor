@@ -11,7 +11,7 @@ import sys
 import tempfile
 import subprocess
 import os
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -73,31 +73,31 @@ class HumanApprovalCLI:
             print(f"📊 Confidence Score: {consensus.get('confidence', 0.0):.2f}")
 
             if "reasoning" in consensus:
-                print(f"\n💭 Reasoning:")
+                print("\n💭 Reasoning:")
                 print(f"   {consensus['reasoning']}")
 
         # Display discussion summary
         if "discussion_summary" in proposal:
             summary = proposal["discussion_summary"]
-            print(f"\n📊 Discussion Summary:")
+            print("\n📊 Discussion Summary:")
 
             if "agent_agreements" in summary:
                 print(f"   🤝 Agent Agreements: {summary['agent_agreements']}")
 
             if "key_points" in summary:
-                print(f"   🔑 Key Points:")
+                print("   🔑 Key Points:")
                 for i, point in enumerate(summary["key_points"], 1):
                     print(f"      {i}. {point}")
 
             if "concerns" in summary:
-                print(f"   ⚠️  Concerns:")
+                print("   ⚠️  Concerns:")
                 for i, concern in enumerate(summary["concerns"], 1):
                     print(f"      {i}. {concern}")
 
         # Display metadata
         if "metadata" in proposal:
             metadata = proposal["metadata"]
-            print(f"\n📋 Metadata:")
+            print("\n📋 Metadata:")
             print(f"   🕒 Timestamp: {metadata.get('timestamp', 'Unknown')}")
             print(f"   🤖 Agents: {', '.join(metadata.get('agent_names', []))}")
             print(f"   ⚙️  Strategy: {metadata.get('consensus_strategy', 'Unknown')}")
@@ -386,10 +386,10 @@ def main():
 
         # Exit with appropriate code
         if result.approved:
-            print(f"\n🚀 Proceeding to code generation...")
+            print("\n🚀 Proceeding to code generation...")
             sys.exit(0)
         else:
-            print(f"\n🛑 Process stopped due to rejection.")
+            print("\n🛑 Process stopped due to rejection.")
             sys.exit(1)
 
     elif args.proposal:
@@ -403,10 +403,10 @@ def main():
 
             # Exit with appropriate code
             if result.approved:
-                print(f"\n🚀 Proceeding to code generation...")
+                print("\n🚀 Proceeding to code generation...")
                 sys.exit(0)
             else:
-                print(f"\n🛑 Process stopped due to rejection.")
+                print("\n🛑 Process stopped due to rejection.")
                 sys.exit(1)
         except FileNotFoundError:
             print(f"❌ Proposal file not found: {args.proposal}")

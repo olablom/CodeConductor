@@ -5,7 +5,6 @@ Wait for all GitHub Actions workflows to be green
 
 import time
 import requests
-import json
 
 
 def check_github_actions():

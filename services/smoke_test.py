@@ -6,9 +6,7 @@ Quick verification that all services are running and responding
 
 import asyncio
 import httpx
-import time
 import sys
-from typing import Dict, List
 
 # Service URLs
 SERVICES = {
@@ -67,7 +65,7 @@ async def check_agent_functionality(client: httpx.AsyncClient) -> bool:
 
         data = response.json()
         if "agent_name" not in data or "result" not in data:
-            print(f"❌ Invalid response format")
+            print("❌ Invalid response format")
             return False
 
         print("✅ Working")
@@ -100,7 +98,7 @@ async def check_orchestrator_functionality(client: httpx.AsyncClient) -> bool:
 
         data = response.json()
         if "discussion_id" not in data:
-            print(f"❌ Invalid response format")
+            print("❌ Invalid response format")
             return False
 
         print("✅ Working")

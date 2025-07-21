@@ -7,7 +7,6 @@ Measures latency for each agent method and identifies bottlenecks.
 
 import time
 import statistics
-import threading
 from pathlib import Path
 from typing import Dict, List, Any, Callable
 import json
@@ -17,7 +16,6 @@ import sys
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from agents.base_agent import BaseAgent
 from agents.codegen_agent import CodeGenAgent
 from agents.architect_agent import ArchitectAgent
 from agents.review_agent import ReviewAgent

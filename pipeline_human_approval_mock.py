@@ -16,7 +16,7 @@ from datetime import datetime
 # Add the project root to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from cli.human_approval import HumanApprovalCLI, ApprovalResult
+from cli.human_approval import HumanApprovalCLI
 
 
 def create_mock_discussion_result(prompt: str, context: dict = None):
@@ -89,7 +89,7 @@ def create_mock_discussion_result(prompt: str, context: dict = None):
         "consensus": {
             "decision": "approve",
             "confidence": 0.88,
-            "reasoning": f"All agents agree this is a well-defined, achievable task. The proposed approach addresses the requirements effectively and follows industry best practices.",
+            "reasoning": "All agents agree this is a well-defined, achievable task. The proposed approach addresses the requirements effectively and follows industry best practices.",
         },
         "discussion_summary": {
             "agent_agreements": 3,
@@ -141,7 +141,7 @@ def run_complete_pipeline(prompt: str, context: dict = None):
 
     discussion_result = create_mock_discussion_result(prompt, context)
 
-    print(f"✅ Discussion completed!")
+    print("✅ Discussion completed!")
     print(f"   Consensus reached: {discussion_result.get('consensus_reached', False)}")
     print(f"   Discussion rounds: {discussion_result.get('discussion_rounds', 0)}")
 

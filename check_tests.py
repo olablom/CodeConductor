@@ -79,7 +79,7 @@ def main():
         print("Raw output:", output)
         return
 
-    print(f"📊 Test Results:")
+    print("📊 Test Results:")
     print(f"   Total: {total}")
     print(f"   Passed: {passed}")
     print(f"   Failed: {failed}")

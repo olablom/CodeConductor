@@ -5,7 +5,6 @@ Shows GPU capabilities and potential, with CPU fallback where needed
 """
 
 import torch
-import numpy as np
 import time
 from datetime import datetime
 
@@ -25,7 +24,7 @@ class GPUPotentialDemo:
             )
             print(f"🔥 GPU Name: {torch.cuda.get_device_name(0)}")
             print(f"🔧 CUDA Version: {torch.version.cuda}")
-            print(f"⚠️  Note: RTX 5090 compatibility limited, but GPU detected!")
+            print("⚠️  Note: RTX 5090 compatibility limited, but GPU detected!")
 
     def print_header(self, title: str):
         """Print formatted header"""
@@ -97,7 +96,7 @@ class GPUPotentialDemo:
                 # Conservative estimate: GPU could be 10-50x faster
                 estimated_gpu_time = (creation_time + computation_time) / 20
                 print(f"   🚀 Estimated GPU time: {estimated_gpu_time:.2f}ms")
-                print(f"   🚀 Potential speedup: 20x faster!")
+                print("   🚀 Potential speedup: 20x faster!")
 
     def test_memory_potential(self):
         """Test memory allocation potential"""
@@ -196,11 +195,11 @@ class GPUPotentialDemo:
             print(f"   🚀 {operation}: {speedup}x faster")
             print(f"      Use case: {use_case}")
 
-        print(f"\n💡 With proper CUDA support, your RTX 5090 could:")
-        print(f"   • Train neural networks 10-50x faster")
-        print(f"   • Run inference in milliseconds")
-        print(f"   • Handle multiple AI models simultaneously")
-        print(f"   • Process large datasets in real-time")
+        print("\n💡 With proper CUDA support, your RTX 5090 could:")
+        print("   • Train neural networks 10-50x faster")
+        print("   • Run inference in milliseconds")
+        print("   • Handle multiple AI models simultaneously")
+        print("   • Process large datasets in real-time")
 
     def show_upgrade_path(self):
         """Show upgrade path for full GPU support"""

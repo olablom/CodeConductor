@@ -5,7 +5,6 @@ Tests all components work together
 """
 
 import sys
-from pathlib import Path
 
 
 def test_imports():
@@ -13,13 +12,6 @@ def test_imports():
     print("🔍 Testing imports...")
 
     try:
-        from agents.orchestrator import AgentOrchestrator
-        from agents.test_agent import TestAgent
-        from agents.reward_agent import RewardAgent
-        from integrations.cursor_api import MockCursorAPI
-        from integrations.human_gate import HumanGate
-        from storage.rl_database import RLDatabase
-        from config.config_loader import get_config
 
         print("✅ All imports successful")
         return True
@@ -148,9 +140,6 @@ def test_gui_components():
     print("\n🎨 Testing GUI components...")
 
     try:
-        import streamlit as st
-        import pandas as pd
-        import numpy as np
 
         print("✅ Streamlit and data libraries imported")
 

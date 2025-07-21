@@ -4,7 +4,6 @@ Fix test failures and update README badge
 """
 
 import subprocess
-import re
 import os
 
 

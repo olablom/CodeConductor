@@ -6,7 +6,7 @@ Auth Service - Hanterar autentisering och godkännande
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, Optional
 import logging
 import uvicorn
 from datetime import datetime, timedelta

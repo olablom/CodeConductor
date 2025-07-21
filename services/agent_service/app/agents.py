@@ -8,7 +8,6 @@ codebase to the microservices architecture.
 import logging
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
-import json
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,6 @@ Uses the user's elegant plugin architecture for CodeConductor v2.0.
 """
 
 from typing import Dict, Any, List
-import json
 from pathlib import Path
 from datetime import datetime
 
@@ -13,7 +12,7 @@ from agents.code_gen import CodeGenAgent
 from agents.architect import ArchitectAgent
 from agents.reviewer import ReviewerAgent
 from agents.prompt_optimizer import prompt_optimizer
-from plugins.base_simple import PluginManager, BaseAgentPlugin
+from plugins.base_simple import PluginManager
 
 
 class SimpleAgentOrchestrator:

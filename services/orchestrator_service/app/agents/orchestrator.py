@@ -9,7 +9,6 @@ import logging
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 from datetime import datetime
-import asyncio
 import httpx
 
 logger = logging.getLogger(__name__)

@@ -4,15 +4,13 @@ GitHub Webhook Integration for CodeConductor
 Automatically triggers CodeConductor pipeline on PR events and posts results back to GitHub.
 """
 
-import json
 import hmac
 import hashlib
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from pathlib import Path
 import subprocess
 import tempfile
-import shutil
 from datetime import datetime
 
 import requests

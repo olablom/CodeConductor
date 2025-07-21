@@ -66,14 +66,14 @@ def test_agent_orchestrator():
 
         # Get agent summary
         agent_summary = orchestrator.get_agent_summary()
-        print(f"📊 Agent Summary:")
+        print("📊 Agent Summary:")
         print(f"  Total agents: {agent_summary['total_agents']}")
         print(f"  Core agents: {agent_summary['core_agents']}")
         print(f"  Plugin agents: {agent_summary['plugin_agents']}")
 
         # Get plugin info
         plugin_info = orchestrator.get_plugin_info()
-        print(f"📦 Plugin Info:")
+        print("📦 Plugin Info:")
         print(f"  Total plugins: {plugin_info['total_plugins']}")
         print(f"  Agent plugins: {plugin_info['agent_plugins']}")
         print(f"  Tool plugins: {plugin_info['tool_plugins']}")
@@ -112,12 +112,12 @@ def dangerous_function():
             "discussion_history": [],
         }
 
-        print(f"🤖 Running multi-agent discussion with simplified plugins...")
+        print("🤖 Running multi-agent discussion with simplified plugins...")
         print(f"📝 Prompt: {test_prompt}")
 
         result = orchestrator.facilitate_discussion(test_prompt, test_context)
 
-        print(f"✅ Discussion completed!")
+        print("✅ Discussion completed!")
         print(f"🎯 Confidence: {result.get('confidence', 'N/A')}")
         print(f"📊 Total analyses: {len(result.get('agent_analyses', {}))}")
 
@@ -177,13 +177,13 @@ def dangerous_function():
         context = {"prompt": "Test security analysis", "discussion_history": []}
 
         analysis = security_plugin.analyze(test_code, context)
-        print(f"🔒 Security analysis completed:")
+        print("🔒 Security analysis completed:")
         print(f"  Security score: {analysis.get('security_score', 'N/A')}")
         print(f"  Vulnerabilities found: {analysis.get('vulnerability_count', 'N/A')}")
         print(f"  Severity: {analysis.get('severity', 'N/A')}")
 
         if analysis.get("recommendations"):
-            print(f"  Recommendations:")
+            print("  Recommendations:")
             for rec in analysis["recommendations"]:
                 print(f"    - {rec}")
 

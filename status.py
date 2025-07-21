@@ -5,7 +5,6 @@ Shows current status of all workflows
 """
 
 import subprocess
-import sys
 from datetime import datetime
 
 

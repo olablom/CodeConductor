@@ -9,10 +9,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
-from pathlib import Path
 import sqlite3
-from datetime import datetime, timedelta
-from typing import Dict, Any, List
 
 from analytics.ml_predictor import create_predictor
 

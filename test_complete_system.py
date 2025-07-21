@@ -55,7 +55,7 @@ def test_complete_system(monkeypatch):
 
     # Visa approval-statistik
     stats = human_gate.get_approval_stats()
-    print(f"\n📈 Approval Statistics:")
+    print("\n📈 Approval Statistics:")
     print(f"  - Total Decisions: {stats['total_decisions']}")
     print(f"  - Approved: {stats['approved']}")
     print(f"  - Rejected: {stats['rejected']}")

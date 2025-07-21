@@ -15,7 +15,7 @@ class GPUShowcase:
     def __init__(self):
         self.base_urls = {
             "cpu_data": "http://localhost:9006",
-            "gpu_data": "http://localhost:8007",
+            "gpu_data": "http://localhost:8009",
             "gateway": "http://localhost:9000",
         }
 
@@ -254,7 +254,7 @@ class GPUShowcase:
                     cpu_data = cpu_response.json()
                     print(f"   CPU: {cpu_data.get('selected_arm', 'Unknown')}")
             except:
-                print(f"   CPU: Error")
+                print("   CPU: Error")
 
             # GPU Bandit
             try:
@@ -283,7 +283,7 @@ class GPUShowcase:
                         f"   GPU: {gpu_data.get('selected_arm', 'Unknown')} (Conf: {gpu_data.get('confidence', 0.0):.3f})"
                     )
             except:
-                print(f"   GPU: Error")
+                print("   GPU: Error")
 
             time.sleep(1)
 

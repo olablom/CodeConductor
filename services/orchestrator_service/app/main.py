@@ -6,11 +6,10 @@ between different AI agents for code generation and analysis tasks.
 """
 
 import logging
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
-from typing import Dict, Any, List
 
 from app.agents.orchestrator import AgentOrchestrator, OrchestratorFactory
 from app.schemas import (
@@ -19,7 +18,6 @@ from app.schemas import (
     DiscussionSummary,
     OrchestratorStatistics,
     HealthResponse,
-    ErrorResponse,
     OrchestrateRequest,
     OrchestrateResponse,
     ConsensusStrategy,

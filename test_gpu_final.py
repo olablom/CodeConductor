@@ -7,7 +7,6 @@ Tests both GPU service and direct PyTorch operations
 import torch
 import time
 import requests
-import json
 
 
 def test_direct_pytorch():

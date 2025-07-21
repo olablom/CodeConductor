@@ -3,7 +3,6 @@
 Test script for distributed execution with Celery
 """
 
-import time
 import subprocess
 import sys
 from pathlib import Path
@@ -14,7 +13,7 @@ def test_celery_setup():
     print("🧪 Testing Celery setup...")
 
     try:
-        from integrations.celery_app import celery_app, is_celery_available, debug_task
+        from integrations.celery_app import is_celery_available, debug_task
 
         # Test if broker is available
         if is_celery_available():
@@ -57,7 +56,7 @@ def test_distributed_orchestrator():
         print("🤖 Running distributed discussion...")
         result = orchestrator.facilitate_discussion(prompt, context)
 
-        print(f"✅ Discussion completed")
+        print("✅ Discussion completed")
         print(f"  Execution mode: {result.get('execution_mode', 'unknown')}")
         print(f"  Plugin count: {result.get('plugin_count', 0)}")
         print(

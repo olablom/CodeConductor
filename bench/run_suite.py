@@ -7,14 +7,12 @@ Runs multiple experiments and saves results for dashboard analysis and reporting
 
 import click
 import pandas as pd
-import numpy as np
 import json
-import pickle
 from pathlib import Path
 from datetime import datetime
 import subprocess
 import sys
-from typing import Dict, List, Any
+from typing import Dict, Any
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -190,7 +188,7 @@ def run_benchmark_suite(
             json.dump(q_summary, f, indent=2)
 
     # Print final summary
-    print(f"\n🎉 Benchmark suite completed!")
+    print("\n🎉 Benchmark suite completed!")
     print(f"📁 Results saved to: {results_dir}")
     print(f"📊 JSON: {json_path}")
     print(f"📈 CSV: {csv_path}")
@@ -202,7 +200,7 @@ def run_benchmark_suite(
     # Print aggregate metrics
     if all_results and "error" not in all_results[0]:
         df_summary = pd.DataFrame(all_results)
-        print(f"\n📊 Aggregate Results:")
+        print("\n📊 Aggregate Results:")
         print(f"   Total experiments: {len(df_summary)}")
         print(f"   Avg reward across all: {df_summary['avg_reward'].mean():.2f}")
         print(f"   Avg pass rate: {df_summary['pass_rate'].mean():.2f}")

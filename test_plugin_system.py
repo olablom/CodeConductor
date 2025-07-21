@@ -3,7 +3,7 @@
 Test script for CodeConductor v2.0 Plugin System
 """
 
-from plugins.base import PluginManager, PluginType
+from plugins.base import PluginManager
 from agents.orchestrator import AgentOrchestrator
 
 
@@ -69,14 +69,14 @@ def test_agent_orchestrator_with_plugins():
 
         # Get agent summary
         agent_summary = orchestrator.get_agent_summary()
-        print(f"📊 Agent Summary:")
+        print("📊 Agent Summary:")
         print(f"  Total agents: {agent_summary['total_agents']}")
         print(f"  Core agents: {agent_summary['core_agents']}")
         print(f"  Plugin agents: {agent_summary['plugin_agents']}")
 
         # Get plugin info
         plugin_info = orchestrator.get_plugin_info()
-        print(f"📦 Plugin Info:")
+        print("📦 Plugin Info:")
         print(f"  Plugins enabled: {plugin_info['plugins_enabled']}")
         print(f"  Total plugins: {plugin_info['total_plugins']}")
         print(f"  Active plugins: {plugin_info['active_plugins']}")
@@ -103,12 +103,12 @@ def test_plugin_analysis():
         test_prompt = "Create a simple calculator function"
         test_context = {"code": "def add(a, b): return a + b", "discussion_history": []}
 
-        print(f"🤖 Running multi-agent discussion with plugins...")
+        print("🤖 Running multi-agent discussion with plugins...")
         print(f"📝 Prompt: {test_prompt}")
 
         result = orchestrator.facilitate_discussion(test_prompt, test_context)
 
-        print(f"✅ Discussion completed!")
+        print("✅ Discussion completed!")
         print(f"🎯 Confidence: {result.get('confidence', 'N/A')}")
         print(f"📊 Total analyses: {len(result.get('agent_analyses', {}))}")
 
@@ -194,14 +194,14 @@ def dangerous_function():
         context = {"code": test_code, "prompt": "Test security analysis"}
 
         analysis = security_agent.analyze(context)
-        print(f"🔒 Security analysis completed:")
+        print("🔒 Security analysis completed:")
         print(f"  Security score: {analysis.get('security_score', 'N/A')}")
         print(f"  Vulnerabilities found: {len(analysis.get('vulnerabilities', []))}")
         print(f"  Severity: {analysis.get('severity', 'N/A')}")
 
         # Test action
         action_result = security_agent.act({"analysis": analysis, "code": test_code})
-        print(f"🛡️ Security action completed:")
+        print("🛡️ Security action completed:")
         print(f"  Action type: {action_result.get('action_type', 'N/A')}")
         print(f"  Changes made: {len(action_result.get('changes_made', []))}")
 

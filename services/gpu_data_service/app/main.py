@@ -9,11 +9,26 @@ import torch.nn as nn
 import torch.optim as optim
 import numpy as np
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import Response
+from prometheus_client import Counter, Histogram, Gauge, generate_latest
+
+# Prometheus metrics
+REQUEST_COUNT = Counter(
+    "codeconductor_requests_total", "Total requests", ["service", "endpoint"]
+)
+INFERENCE_DURATION = Histogram(
+    "codeconductor_inference_duration_seconds",
+    "Inference duration",
+    ["service", "algorithm"],
+)
+GPU_MEMORY = Gauge("codeconductor_gpu_memory_bytes", "GPU memory usage", ["type"])
+BANDIT_SELECTIONS = Counter(
+    "codeconductor_bandit_selections_total", "Bandit arm selections", ["arm"]
+)
+
 from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
-import json
+from typing import List, Dict, Any
 from datetime import datetime
-import uuid
 
 # Check GPU availability
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -158,9 +173,9 @@ async def startup_event():
     global neural_bandit, deep_q_network
     print("🚀 Initializing GPU-powered AI services...")
 
-    # Initialize neural bandit
-    neural_bandit = NeuralBandit(feature_dim=10, num_arms=5)
-    print(f"✅ Neural Bandit initialized on {device}")
+    # Initialize neural bandit with default values (will be recreated dynamically)
+    neural_bandit = None
+    print(f"✅ Neural Bandit will be initialized dynamically on {device}")
 
     # Initialize deep Q-network
     state_size = 20  # Context features
@@ -187,8 +202,12 @@ async def health_check():
 async def neural_bandit_choose(request: BanditRequest):
     global neural_bandit
 
-    if neural_bandit is None:
-        raise HTTPException(status_code=500, detail="Neural bandit not initialized")
+    # Initialize neural bandit dynamically based on request
+    if neural_bandit is None or neural_bandit.num_arms != len(request.arms):
+        print(f"🔄 Reinitializing neural bandit for {len(request.arms)} arms")
+        neural_bandit = NeuralBandit(
+            feature_dim=len(request.features), num_arms=len(request.arms)
+        )
 
     start_time = (
         torch.cuda.Event(enable_timing=True) if torch.cuda.is_available() else None
@@ -403,6 +422,22 @@ async def get_gpu_stats():
         stats["gpu_memory_free_gb"] = torch.cuda.memory_reserved(0) / 1024**3
 
     return stats
+
+
+@app.get("/metrics")
+async def metrics():
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            allocated = torch.cuda.memory_allocated()
+            reserved = torch.cuda.memory_reserved()
+            GPU_MEMORY.labels(type="allocated").set(allocated)
+            GPU_MEMORY.labels(type="reserved").set(reserved)
+    except:
+        pass
+
+    return Response(content=generate_latest(), media_type="text/plain")
 
 
 if __name__ == "__main__":

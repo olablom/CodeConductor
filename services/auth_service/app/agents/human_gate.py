@@ -7,7 +7,7 @@ codebase to the microservices architecture.
 
 import json
 import logging
-from typing import Dict, Any, Tuple, Optional
+from typing import Dict, Any
 from datetime import datetime
 from pathlib import Path
 

@@ -5,12 +5,10 @@ Gateway Service - API Gateway för CodeConductor
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
 import httpx
 import logging
 import uvicorn
 from datetime import datetime
-from typing import Dict, Any
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

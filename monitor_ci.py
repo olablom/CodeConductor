@@ -110,7 +110,7 @@ def print_status(run, local_services, check_time):
             else run["head_commit"]["message"]
         )
 
-        print(f"🔄 Microservices CI/CD Pipeline:")
+        print("🔄 Microservices CI/CD Pipeline:")
         print(f"   {status_emoji} Status: {run['status']}")
         if run.get("conclusion"):
             print(f"   📋 Conclusion: {run['conclusion']}")
@@ -137,7 +137,7 @@ def print_status(run, local_services, check_time):
     else:
         print("❌ Could not fetch Microservices CI/CD Pipeline status")
 
-    print(f"\n🐳 Local Services:")
+    print("\n🐳 Local Services:")
     if local_services:
         for service in local_services:
             print(f"   ✅ {service}")
@@ -205,7 +205,7 @@ def main():
                 print("\n🚀 Your CodeConductor microservices stack is ready!")
                 break
 
-            print(f"\n⏰ Next check in 5 minutes... (Press Ctrl+C to stop)")
+            print("\n⏰ Next check in 5 minutes... (Press Ctrl+C to stop)")
             print("💡 Tips:")
             print("   • Check logs: https://github.com/olablom/CodeConductor/actions")
             print("   • Local services: python check_ci.py")

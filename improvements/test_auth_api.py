@@ -4,7 +4,6 @@
 import pytest
 from fastapi.testclient import TestClient
 from fastapi import status
-import json
 from auth_api_enhanced import app
 
 client = TestClient(app)

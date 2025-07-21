@@ -5,7 +5,6 @@ Basic PyTorch operations that work with current CUDA compatibility
 """
 
 import torch
-import numpy as np
 import time
 from datetime import datetime
 
@@ -108,13 +107,13 @@ class SimpleGPUDemo:
         try:
             # Allocate 100MB tensor
             large_tensor = torch.randn(1000, 1000, 25).to(self.device)  # ~100MB
-            print(f"✅ Successfully allocated 100MB tensor")
+            print("✅ Successfully allocated 100MB tensor")
             print(f"   Shape: {large_tensor.shape}")
             print(f"   Memory after: {torch.cuda.memory_allocated(0) / 1024**3:.1f} GB")
 
             # Allocate another 100MB
             large_tensor2 = torch.randn(1000, 1000, 25).to(self.device)
-            print(f"✅ Successfully allocated another 100MB tensor")
+            print("✅ Successfully allocated another 100MB tensor")
             print(
                 f"   Total allocated: {torch.cuda.memory_allocated(0) / 1024**3:.1f} GB"
             )

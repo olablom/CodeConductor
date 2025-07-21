@@ -41,7 +41,7 @@ def test_multi_agent():
 
     # Visa agent statistics
     stats = orchestrator.get_agent_statistics()
-    print(f"\n🤖 Agent Statistics:")
+    print("\n🤖 Agent Statistics:")
     print(f"Total Agents: {stats['total_agents']}")
     print(f"Agent Names: {stats['agent_names']}")
 

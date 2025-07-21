@@ -5,8 +5,6 @@ Shows the current status of your latest CI/CD runs
 """
 
 import subprocess
-import sys
-import time
 
 
 def run_command(cmd):

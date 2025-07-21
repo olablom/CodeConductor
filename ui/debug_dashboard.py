@@ -102,14 +102,12 @@ except Exception as e:
 # Test imports
 st.header("📦 Import Test")
 try:
-    import plotly.graph_objects as go
 
     st.success("✅ plotly imported successfully")
 except Exception as e:
     st.error(f"❌ plotly import failed: {e}")
 
 try:
-    import numpy as np
 
     st.success("✅ numpy imported successfully")
 except Exception as e:

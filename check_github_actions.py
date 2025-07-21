@@ -5,10 +5,8 @@ Check the status of your GitHub Actions workflows without needing GitHub CLI
 """
 
 import requests
-import json
 import sys
 from datetime import datetime, timezone
-import time
 
 
 def get_workflow_runs(repo_owner, repo_name, token=None):
@@ -93,7 +91,7 @@ def print_workflow_runs(runs_data, limit=10):
 
     runs = runs_data["workflow_runs"][:limit]
 
-    print(f"\n🚀 GitHub Actions Status for CodeConductor")
+    print("\n🚀 GitHub Actions Status for CodeConductor")
     print("=" * 80)
     print(f"📊 Total runs: {runs_data['total_count']}")
     print("=" * 80)

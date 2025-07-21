@@ -6,11 +6,10 @@ for the CodeConductor system, including policy enforcement and human approval ga
 """
 
 import logging
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
-from typing import Dict, Any, List
 
 from app.agents.policy_agent import PolicyAgent
 from app.agents.human_gate import HumanGate
@@ -26,7 +25,6 @@ from app.schemas import (
     CodeSafetyRequest,
     CodeSafetyResponse,
     HealthResponse,
-    ErrorResponse,
     HumanApprovalStats,
     HumanApprovalSummary,
 )

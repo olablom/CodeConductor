@@ -6,8 +6,6 @@ Checks if Kubernetes is ready and provides deployment status
 
 import subprocess
 import time
-import sys
-import os
 
 
 def run_command(cmd, check=True):
@@ -21,7 +19,7 @@ def run_command(cmd, check=True):
         return result.stdout.strip()
     except subprocess.TimeoutExpired:
         return None
-    except Exception as e:
+    except Exception:
         return None
 
 

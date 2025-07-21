@@ -8,7 +8,6 @@ codebase to the microservices architecture.
 import logging
 import json
 import random
-import math
 import hashlib
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass

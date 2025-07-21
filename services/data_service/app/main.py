@@ -6,11 +6,11 @@ for the CodeConductor system.
 """
 
 import logging
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
-from typing import Dict, Any, List
+from typing import Dict
 
 try:
     import numpy as np
@@ -20,8 +20,8 @@ except ImportError:
 from datetime import datetime
 
 from app.agents.linucb_bandit import LinUCBBandit
-from app.agents.qlearning_agent import QLearningAgent, QState, QAction
-from app.agents.prompt_optimizer import PromptOptimizerAgent, OptimizerState
+from app.agents.qlearning_agent import QLearningAgent
+from app.agents.prompt_optimizer import PromptOptimizerAgent
 from app.schemas import (
     BanditChooseRequest,
     BanditChooseResponse,
@@ -38,7 +38,6 @@ from app.schemas import (
     PromptOptimizeResponse,
     PromptOptimizerStatsResponse,
     HealthResponse,
-    ErrorResponse,
     ModelStateRequest,
     ModelStateResponse,
     ModelResetRequest,

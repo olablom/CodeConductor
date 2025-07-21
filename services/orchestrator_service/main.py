@@ -9,7 +9,6 @@ from pydantic import BaseModel
 from typing import Dict, Any, List, Optional
 import logging
 import uvicorn
-import asyncio
 import httpx
 from datetime import datetime
 import uuid

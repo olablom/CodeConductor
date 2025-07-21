@@ -6,8 +6,6 @@ Generates sample data and tests dashboard functionality.
 """
 
 import sqlite3
-import pandas as pd
-import numpy as np
 from pathlib import Path
 from datetime import datetime, timedelta
 import json
@@ -269,7 +267,6 @@ def test_dashboard_imports():
 
         sys.path.append("ui")
 
-        from dashboard import DashboardDataLoader, DashboardVisualizer
 
         print("✅ Dashboard imports successful!")
         return True

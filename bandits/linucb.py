@@ -1,6 +1,6 @@
 import numpy as np
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import List
 
 
 class LinUCBBandit:

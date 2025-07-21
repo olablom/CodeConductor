@@ -9,7 +9,6 @@ import logging
 import sqlite3
 import json
 import random
-import math
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 from agents.base_agent import BaseAgent
@@ -483,7 +482,7 @@ class QLearningAgent(BaseAgent):
         Returns:
             Analysis results for Q-learning
         """
-        self.logger.info(f"Analyzing context for Q-learning")
+        self.logger.info("Analyzing context for Q-learning")
 
         state = self.get_state(context)
         actions = self.get_actions(state)
@@ -511,7 +510,7 @@ class QLearningAgent(BaseAgent):
         Returns:
             Proposed action
         """
-        self.logger.info(f"Proposing Q-learning action")
+        self.logger.info("Proposing Q-learning action")
 
         state = self.get_state(context)
         action = self.select_action(state)
@@ -538,7 +537,7 @@ class QLearningAgent(BaseAgent):
         Returns:
             Review results
         """
-        self.logger.info(f"Reviewing Q-learning proposal")
+        self.logger.info("Reviewing Q-learning proposal")
 
         return {
             "approved": True,

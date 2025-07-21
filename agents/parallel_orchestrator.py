@@ -5,16 +5,13 @@ Parallel Agent Orchestrator
 Runs agent operations in parallel for improved performance.
 """
 
-import asyncio
-import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any
 import time
 import json
 from pathlib import Path
 import logging
 
-from agents.base_agent import BaseAgent
 from agents.codegen_agent import CodeGenAgent
 from agents.architect_agent import ArchitectAgent
 from agents.review_agent import ReviewAgent

@@ -18,7 +18,7 @@ def test_plugin_integration():
 
         # Check if plugins are loaded
         plugin_info = orchestrator.get_plugin_info()
-        print(f"📊 Plugin Info:")
+        print("📊 Plugin Info:")
         print(f"  Total plugins: {plugin_info['total_plugins']}")
         print(f"  Agent plugins: {plugin_info['agent_plugins']}")
         print(f"  Tool plugins: {plugin_info['tool_plugins']}")
@@ -41,7 +41,7 @@ def dangerous_function():
             "Generate a hello world function", {"code": sample_code}
         )
 
-        print(f"📋 Analysis Result:")
+        print("📋 Analysis Result:")
         print(f"  Consensus: {result.get('consensus', 'No consensus')}")
         print(f"  Confidence: {result.get('confidence', 'Unknown')}")
         print(f"  Agent count: {len(result.get('agent_analyses', []))}")

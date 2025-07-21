@@ -4,10 +4,7 @@ Unit tests for agent components.
 Tests CodeGenAgent, ArchitectAgent, ReviewerAgent with proper mocking.
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
-import tempfile
+from unittest.mock import patch
 
 from agents.code_gen import CodeGenAgent
 from agents.architect import ArchitectAgent

@@ -8,7 +8,6 @@ import unittest
 from unittest.mock import Mock, patch, mock_open
 import json
 import sys
-import tempfile
 import os
 from datetime import datetime
 import subprocess

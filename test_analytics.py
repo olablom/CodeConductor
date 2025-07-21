@@ -3,8 +3,6 @@
 Test script for CodeConductor Analytics functionality
 """
 
-import numpy as np
-from pathlib import Path
 
 
 def test_ml_predictor():
@@ -81,10 +79,6 @@ def test_dashboard_imports():
     print("\n🧪 Testing Dashboard Imports...")
 
     try:
-        import streamlit as st
-        import plotly.express as px
-        import plotly.graph_objects as go
-        import pandas as pd
 
         print("✅ All dashboard dependencies imported successfully")
         return True

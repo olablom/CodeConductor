@@ -10,7 +10,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
-from typing import Dict, Any, List
+from typing import Dict, List
 
 from app.agents import AgentFactory, BaseAgent
 from app.schemas import (
@@ -22,7 +22,6 @@ from app.schemas import (
     AgentReviewResponse,
     AgentStatusResponse,
     HealthResponse,
-    ErrorResponse,
     AgentType,
 )
 

@@ -6,8 +6,6 @@ Simulates high load scenarios to test system performance and stability.
 """
 
 import time
-import threading
-import asyncio
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict, List, Any, Optional
 import json

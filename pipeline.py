@@ -59,10 +59,6 @@ class CodeConductorPipeline:
         from agents.policy_agent import PolicyAgent
         from agents.reward_agent import (
             RewardAgent,
-            TestResult,
-            CodeQualityMetrics,
-            HumanFeedback,
-            PolicyResult,
         )
         from agents.qlearning_agent import QLearningAgent
 
@@ -319,8 +315,6 @@ class CodeConductorPipeline:
         """
         try:
             import tempfile
-            import subprocess
-            import time
             import ast
 
             # Create temporary file with generated code
@@ -491,7 +485,7 @@ def main():
         print(f"Results saved to: {result['results_file']}")
 
         if result["successful_iterations"] > 0:
-            print(f"\nGenerated files:")
+            print("\nGenerated files:")
             for r in result["results"]:
                 if r.get("status") == "completed":
                     print(f"  - {r['output_file']}")

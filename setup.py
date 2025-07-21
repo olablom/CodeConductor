@@ -6,7 +6,6 @@ and reinforcement learning for intelligent code generation.
 """
 
 from setuptools import setup, find_packages
-import os
 
 
 # Read the README file

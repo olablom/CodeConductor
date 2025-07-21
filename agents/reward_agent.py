@@ -386,7 +386,7 @@ class RewardAgent(BaseAgent):
         Returns:
             Analysis results for reward calculation
         """
-        self.logger.info(f"Analyzing context for reward calculation")
+        self.logger.info("Analyzing context for reward calculation")
 
         return {
             "reward_ready": True,
@@ -406,7 +406,7 @@ class RewardAgent(BaseAgent):
         Returns:
             Reward calculation strategy
         """
-        self.logger.info(f"Proposing reward calculation strategy")
+        self.logger.info("Proposing reward calculation strategy")
 
         return {
             "strategy": "comprehensive_reward",
@@ -426,7 +426,7 @@ class RewardAgent(BaseAgent):
         Returns:
             Review results
         """
-        self.logger.info(f"Reviewing reward calculation proposal")
+        self.logger.info("Reviewing reward calculation proposal")
 
         return {
             "approved": True,

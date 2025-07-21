@@ -4,12 +4,10 @@ Tests for HumanGate component.
 Tests human-in-the-loop approval system.
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch
 from pathlib import Path
 import tempfile
 import json
-from datetime import datetime
 
 from integrations.human_gate import HumanGate
 

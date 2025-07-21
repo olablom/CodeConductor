@@ -1,6 +1,5 @@
 from pathlib import Path
 import random
-import textwrap
 
 TEMPLATES_BY_STRATEGY = {
     "conservative": [

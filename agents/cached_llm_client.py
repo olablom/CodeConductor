@@ -8,14 +8,12 @@ Implements smart caching policies (LRU, TTL) for improved performance.
 import time
 import hashlib
 import json
-import pickle
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Dict, Any, Optional
 from pathlib import Path
 import logging
 from collections import OrderedDict
 import threading
 import sqlite3
-from datetime import datetime, timedelta
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -481,17 +479,17 @@ def main():
             # Simulate LLM response
             response = f"Generated response for: {prompt} (response #{i + 1})"
             client.set(prompt, response)
-            print(f"  ❌ Cache MISS: Generated new response")
+            print("  ❌ Cache MISS: Generated new response")
 
     # Test cache hit
-    print(f"\nTesting cache hit...")
+    print("\nTesting cache hit...")
     cached_response = client.get(test_prompts[0])
     if cached_response:
         print(f"  ✅ Cache HIT confirmed: {len(cached_response)} chars")
 
     # Print statistics
     stats = client.get_stats()
-    print(f"\n📊 Cache Statistics:")
+    print("\n📊 Cache Statistics:")
     print(f"  Total requests: {stats['total_requests']}")
     print(f"  Cache hits: {stats['cache_hits']}")
     print(f"  Cache misses: {stats['cache_misses']}")

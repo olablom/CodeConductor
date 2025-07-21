@@ -7,10 +7,8 @@ Uses machine learning to predict code quality, success rates, and provide warnin
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_squared_error, accuracy_score, classification_report
 import joblib
 import sqlite3
 from pathlib import Path

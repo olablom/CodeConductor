@@ -109,7 +109,7 @@ def main():
                 print("\n🚀 Your CodeConductor microservices stack is ready!")
                 break
 
-            print(f"\n⏰ Next check in 5 minutes... (Press Ctrl+C to stop)")
+            print("\n⏰ Next check in 5 minutes... (Press Ctrl+C to stop)")
             print("💡 Manual checks:")
             print("   • python check_ci.py")
             print("   • python check_github_actions.py")

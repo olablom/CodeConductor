@@ -289,7 +289,7 @@ class SecurityAgentPlugin(BaseAgentPlugin):
                         f"import {import_name}",
                         "# import os  # SECURITY: Replaced with pathlib",
                     )
-                    changes.append(f"Replaced os import with pathlib")
+                    changes.append("Replaced os import with pathlib")
 
             elif vuln_type == "hardcoded_secret":
                 # Replace hardcoded secrets with environment variables

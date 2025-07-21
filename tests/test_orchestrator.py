@@ -4,10 +4,9 @@ Unit tests for AgentOrchestrator
 
 import unittest
 import pytest
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
+from unittest.mock import Mock
 import sys
 import os
-import asyncio
 
 # Add the parent directory to the path to import the agents module
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))

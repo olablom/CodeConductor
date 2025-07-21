@@ -121,7 +121,7 @@ class DirectGPUDemo:
         optimizer.step()
 
         training_time = (time.time() - start_time) * 1000
-        print(f"✅ Training completed")
+        print("✅ Training completed")
         print(f"   Loss: {loss.item():.4f}")
         print(f"   Training time: {training_time:.3f}ms")
 
@@ -200,7 +200,7 @@ class DirectGPUDemo:
         optimizer.step()
 
         training_time = (time.time() - start_time) * 1000
-        print(f"✅ Q-learning update completed")
+        print("✅ Q-learning update completed")
         print(f"   Q-value: {q_values[0, action].item():.3f}")
         print(f"   Loss: {loss.item():.4f}")
         print(f"   Training time: {training_time:.3f}ms")
@@ -228,13 +228,13 @@ class DirectGPUDemo:
         try:
             # Try to allocate 1GB tensor
             large_tensor = torch.randn(1024, 1024, 256).to(self.device)  # ~1GB
-            print(f"✅ Successfully allocated 1GB tensor")
+            print("✅ Successfully allocated 1GB tensor")
             print(f"   Shape: {large_tensor.shape}")
             print(f"   Memory after: {torch.cuda.memory_allocated(0) / 1024**3:.1f} GB")
 
             # Try to allocate another 1GB
             large_tensor2 = torch.randn(1024, 1024, 256).to(self.device)
-            print(f"✅ Successfully allocated another 1GB tensor")
+            print("✅ Successfully allocated another 1GB tensor")
             print(
                 f"   Total allocated: {torch.cuda.memory_allocated(0) / 1024**3:.1f} GB"
             )

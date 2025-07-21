@@ -6,7 +6,6 @@ Triggers a new CI run to confirm all workflows are working
 
 import subprocess
 import time
-import sys
 from datetime import datetime
 
 

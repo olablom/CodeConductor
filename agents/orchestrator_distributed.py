@@ -4,18 +4,14 @@ Distributed AgentOrchestrator using Celery for parallel execution
 
 import time
 import logging
-from typing import Dict, Any, List, Optional
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, Any, List
 from omegaconf import OmegaConf
 
-from integrations.celery_app import celery_app, is_celery_available, get_celery_stats
+from integrations.celery_app import is_celery_available, get_celery_stats
 from agents.celery_agents import (
     codegen_analyze_task,
     architect_analyze_task,
     reviewer_analyze_task,
-    policy_check_task,
-    orchestrator_discussion_task,
-    parallel_analysis_task,
 )
 
 logger = logging.getLogger(__name__)

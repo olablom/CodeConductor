@@ -308,7 +308,7 @@ class PolicyAgent(BaseAgent):
         Returns:
             Policy analysis results
         """
-        self.logger.info(f"Analyzing context for policy compliance")
+        self.logger.info("Analyzing context for policy compliance")
 
         return {
             "policy_compliance": True,
@@ -327,7 +327,7 @@ class PolicyAgent(BaseAgent):
         Returns:
             Policy improvement proposals
         """
-        self.logger.info(f"Generating policy improvement proposals")
+        self.logger.info("Generating policy improvement proposals")
 
         return {
             "policy_improvements": [],
@@ -346,6 +346,6 @@ class PolicyAgent(BaseAgent):
         Returns:
             Policy review results
         """
-        self.logger.info(f"Reviewing proposal for policy compliance")
+        self.logger.info("Reviewing proposal for policy compliance")
 
         return {"policy_compliant": True, "risk_level": "low", "recommendations": []}

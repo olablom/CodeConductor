@@ -6,9 +6,7 @@ Simple CodeConductor Dashboard - Core functionality only
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import sqlite3
-import json
 from pathlib import Path
 
 st.set_page_config(page_title="CodeConductor Dashboard", page_icon="🎼", layout="wide")

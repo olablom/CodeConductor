@@ -6,7 +6,6 @@ Automatically creates issues from project roadmap
 
 import json
 from datetime import datetime, timedelta
-from typing import Dict, List, Any
 
 
 class GitHubIssuesGenerator:

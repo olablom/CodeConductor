@@ -17,7 +17,7 @@ def test_simple_model_manager():
 
         # Get model information
         model_info = model_manager.get_model_info()
-        print(f"📊 Model Information:")
+        print("📊 Model Information:")
         print(f"  Server URL: {model_info['server_url']}")
         print(f"  Default model: {model_info['default_model']}")
         print(f"  Configured models: {len(model_info['configured_models'])}")
@@ -26,7 +26,7 @@ def test_simple_model_manager():
         print(f"  LM Studio CLI available: {model_info['lm_studio_cli_available']}")
 
         # List downloaded models
-        print(f"\n📦 Downloaded models:")
+        print("\n📦 Downloaded models:")
         downloaded_models = model_manager.list_downloaded_models()
         for i, model in enumerate(downloaded_models, 1):
             print(f"  {i}. {model}")
@@ -35,7 +35,7 @@ def test_simple_model_manager():
             print("  No models downloaded")
 
         # List local models
-        print(f"\n🚀 Currently loaded models:")
+        print("\n🚀 Currently loaded models:")
         local_models = model_manager.list_local_models()
         for i, model in enumerate(local_models, 1):
             print(f"  {i}. {model}")
@@ -44,7 +44,7 @@ def test_simple_model_manager():
             print("  No models currently loaded")
 
         # Test model checking
-        print(f"\n🔧 Testing model availability:")
+        print("\n🔧 Testing model availability:")
         if model_info["configured_models"]:
             test_model = model_info["configured_models"][0]
             is_downloaded = model_manager.is_model_downloaded(test_model)
@@ -56,7 +56,7 @@ def test_simple_model_manager():
             print("  No configured models to test")
 
         # Test recommended models
-        print(f"\n💡 Recommended models (from downloaded):")
+        print("\n💡 Recommended models (from downloaded):")
         recommended = model_manager.recommend_models()
         for i, model in enumerate(recommended, 1):
             print(f"  {i}. {model}")
@@ -86,7 +86,7 @@ def test_model_setup():
 
             # Check updated config
             model_info = model_manager.get_model_info()
-            print(f"📊 Updated configuration:")
+            print("📊 Updated configuration:")
             print(f"  Configured models: {len(model_info['configured_models'])}")
             print(f"  Default model: {model_info['default_model']}")
         else:
@@ -123,7 +123,7 @@ def test_config_update():
 
                 # Verify update
                 model_info = model_manager.get_model_info()
-                print(f"📊 Updated configuration:")
+                print("📊 Updated configuration:")
                 print(f"  Configured models: {model_info['configured_models']}")
                 print(f"  Default model: {model_info['default_model']}")
             else:

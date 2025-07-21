@@ -1,7 +1,6 @@
 import requests
 import pathlib
 import logging
-from typing import Optional
 
 logger = logging.getLogger("LMStudio")
 
@@ -140,13 +139,13 @@ Add the implementation."""
 
                 text = "\n".join(fixed_lines)
 
-                print(f"[LM Studio] ✅ Valid code generated (post-processed)")
+                print("[LM Studio] ✅ Valid code generated (post-processed)")
                 return text
 
-        print(f"[LM Studio] ❌ No valid response")
+        print("[LM Studio] ❌ No valid response")
 
         # Fallback: Generate realistic FastAPI code when LM Studio fails
-        print(f"[LM Studio] 🔄 Generating fallback FastAPI code...")
+        print("[LM Studio] 🔄 Generating fallback FastAPI code...")
 
         if (
             "microservices" in prompt_content.lower()
@@ -219,10 +218,10 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)'''
 
-            print(f"[LM Studio] ✅ Fallback FastAPI code generated")
+            print("[LM Studio] ✅ Fallback FastAPI code generated")
             return fallback_code
 
-        print(f"[LM Studio] ❌ No fallback available")
+        print("[LM Studio] ❌ No fallback available")
         return None
     except requests.RequestException as e:
         print(f"[LM Studio] Request error: {e}")

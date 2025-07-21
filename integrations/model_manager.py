@@ -6,7 +6,6 @@ Manages local LLM models via LM Studio CLI and integrates with existing LM Studi
 
 import requests
 import subprocess
-import json
 import logging
 from pathlib import Path
 from typing import List, Dict, Optional, Any

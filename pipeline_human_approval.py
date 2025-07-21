@@ -11,13 +11,12 @@ This script demonstrates the complete workflow:
 import sys
 import os
 import json
-from datetime import datetime
 
 # Add the project root to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from agents.orchestrator_simple import SimpleAgentOrchestrator
-from cli.human_approval import HumanApprovalCLI, ApprovalResult
+from cli.human_approval import HumanApprovalCLI
 
 
 def run_complete_pipeline(prompt: str, context: dict = None):
@@ -47,7 +46,7 @@ def run_complete_pipeline(prompt: str, context: dict = None):
     print("\n🔄 Starting agent discussion...")
     discussion_result = orchestrator.facilitate_discussion(prompt, context or {})
 
-    print(f"✅ Discussion completed!")
+    print("✅ Discussion completed!")
     print(f"   Consensus reached: {discussion_result.get('consensus_reached', False)}")
     print(f"   Discussion rounds: {discussion_result.get('discussion_rounds', 0)}")
 

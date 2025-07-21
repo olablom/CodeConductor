@@ -2,7 +2,6 @@
 Celery application for distributed task execution in CodeConductor
 """
 
-import os
 from celery import Celery
 from omegaconf import OmegaConf
 import logging

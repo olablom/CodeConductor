@@ -7,8 +7,6 @@ Tests the entire microservices stack end-to-end
 import pytest
 import httpx
 import asyncio
-import time
-from typing import Dict, Any
 import logging
 
 # Setup logging

@@ -11,15 +11,12 @@ Features:
 
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import sqlite3
 import json
 from pathlib import Path
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
-import threading
+from typing import Dict, Any
 import time
 
 # Page config

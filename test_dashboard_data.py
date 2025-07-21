@@ -4,7 +4,6 @@ Test dashboard data loading without Streamlit
 """
 
 import sys
-from pathlib import Path
 
 # Add ui directory to path
 sys.path.append("ui")
@@ -61,13 +60,13 @@ def test_dashboard_data():
 
     # Show some sample data
     if not q_table_df.empty:
-        print(f"\n📊 Sample Q-table data:")
+        print("\n📊 Sample Q-table data:")
         print(f"   Average Q-value: {q_table_df['q_value'].mean():.3f}")
         print(f"   Max Q-value: {q_table_df['q_value'].max():.3f}")
         print(f"   Total visits: {q_table_df['visit_count'].sum()}")
 
     if not pipeline_df.empty:
-        print(f"\n📈 Sample pipeline data:")
+        print("\n📈 Sample pipeline data:")
         print(f"   Average reward: {pipeline_df['reward'].mean():.3f}")
         print(f"   Average pass rate: {pipeline_df['pass_rate'].mean():.3f}")
         print(f"   Total iterations: {len(pipeline_df)}")
