@@ -1024,8 +1024,12 @@ class DashboardConnector:
 
     async def _execute_task(self, task_description: str):
         """Execute task and stream events"""
-        # Execute the streaming function directly
-        await self.orchestrator.execute_task_with_streaming(task_description)
+        # Execute the streaming function and collect events
+        async for event in self.orchestrator.execute_task_with_streaming(
+            task_description
+        ):
+            # Put each event in the queue for dashboard processing
+            self.event_queue.put(event)
 
     def get_events(self) -> list[DashboardEvent]:
         """Get all pending events"""

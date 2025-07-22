@@ -144,6 +144,12 @@ with st.sidebar:
 if "connector" in st.session_state:
     process_events_in_dashboard(st.session_state.connector)
 
+    # Auto-refresh when task is running
+    current_task = st.session_state.get("current_task", {})
+    if current_task and current_task.get("status") == "running":
+        time.sleep(1)
+        st.rerun()
+
 # Main content area
 tab1, tab2, tab3, tab4 = st.tabs(
     ["🗨️ Live Chat", "📈 Metrics", "🏆 Performance", "📜 History"]
