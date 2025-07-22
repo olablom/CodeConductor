@@ -62,13 +62,14 @@ class StreamingOrchestrator(MultiStepOrchestrator):
         self.start_time = datetime.now()
 
         # Start event
-        await self._emit_event(
-            EventType.TASK_START,
-            {
+        start_event = DashboardEvent(
+            type=EventType.TASK_START,
+            data={
                 "description": task_description,
                 "complexity": self._analyze_task_complexity(task_description),
             },
         )
+        yield start_event
 
         try:
             # Generate workflow plan
@@ -80,15 +81,16 @@ class StreamingOrchestrator(MultiStepOrchestrator):
                 self.current_step = i + 1
 
                 # Step start
-                await self._emit_event(
-                    EventType.AGENT_THINKING,
-                    {
+                thinking_event = DashboardEvent(
+                    type=EventType.AGENT_THINKING,
+                    data={
                         "step": self.current_step,
                         "total_steps": self.total_steps,
                         "description": step["description"],
                         "agent": step["agent"],
                     },
                 )
+                yield thinking_event
 
                 # Execute agent with full context
                 agent_response = await self._execute_agent(
@@ -103,26 +105,28 @@ class StreamingOrchestrator(MultiStepOrchestrator):
                 )
 
                 # Agent message
-                await self._emit_event(
-                    EventType.AGENT_MESSAGE,
-                    {
+                message_event = DashboardEvent(
+                    type=EventType.AGENT_MESSAGE,
+                    data={
                         "agent": step["agent"],
                         "message": agent_response.get("output", ""),
                         "confidence": agent_response.get("confidence", 0.95),
                         "step": self.current_step,
                     },
                 )
+                yield message_event
 
                 # Check if human approval needed
                 if agent_response.get("needs_approval", False):
-                    await self._emit_event(
-                        EventType.HUMAN_APPROVAL_NEEDED,
-                        {
+                    approval_event = DashboardEvent(
+                        type=EventType.HUMAN_APPROVAL_NEEDED,
+                        data={
                             "agent": step["agent"],
                             "suggestion": agent_response.get("output", ""),
                             "step": self.current_step,
                         },
                     )
+                    yield approval_event
 
                     # Wait for approval (in real implementation)
                     approved = await self._wait_for_approval()
@@ -130,24 +134,27 @@ class StreamingOrchestrator(MultiStepOrchestrator):
                         continue
 
                 # Step complete
-                await self._emit_event(
-                    EventType.STEP_COMPLETE,
-                    {"step": self.current_step, "success": True},
+                step_complete_event = DashboardEvent(
+                    type=EventType.STEP_COMPLETE,
+                    data={"step": self.current_step, "success": True},
                 )
+                yield step_complete_event
 
             # Task complete
-            await self._emit_event(
-                EventType.TASK_COMPLETE,
-                {
+            task_complete_event = DashboardEvent(
+                type=EventType.TASK_COMPLETE,
+                data={
                     "success": True,
                     "total_time": (datetime.now() - self.start_time).total_seconds(),
                 },
             )
+            yield task_complete_event
 
         except Exception as e:
-            await self._emit_event(
-                EventType.ERROR, {"error": str(e), "step": self.current_step}
+            error_event = DashboardEvent(
+                type=EventType.ERROR, data={"error": str(e), "step": self.current_step}
             )
+            yield error_event
             raise
 
     async def _wait_for_approval(self) -> bool:
