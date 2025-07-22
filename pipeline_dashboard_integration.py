@@ -90,11 +90,16 @@ class StreamingOrchestrator(MultiStepOrchestrator):
                     },
                 )
 
-                # Execute agent
+                # Execute agent with full context
                 agent_response = await self._execute_agent(
                     step["agent"],
                     step["task"],
-                    context=workflow_plan.get("context", {}),
+                    context={
+                        **workflow_plan.get("context", {}),
+                        "original_task": task_description,
+                        "current_step": self.current_step,
+                        "total_steps": self.total_steps,
+                    },
                 )
 
                 # Agent message
@@ -222,23 +227,28 @@ class StreamingOrchestrator(MultiStepOrchestrator):
             steps = [
                 {
                     "agent": "ArchitectAgent",
-                    "task": "Design system architecture",
-                    "description": "Planning system architecture and design",
+                    "task": f"Design architecture for: {task_description}",
+                    "description": f"Planning system architecture for {task_description}",
                 },
                 {
                     "agent": "CodeGenAgent",
-                    "task": "Generate implementation code",
-                    "description": "Implementing the solution with clean code",
+                    "task": f"Generate implementation code for: {task_description}",
+                    "description": f"Implementing {task_description} with clean code",
                 },
                 {
                     "agent": "ReviewAgent",
-                    "task": "Review generated code",
-                    "description": "Code quality review and optimization",
+                    "task": f"Review generated code for: {task_description}",
+                    "description": f"Code quality review for {task_description}",
                 },
                 {
                     "agent": "PolicyAgent",
-                    "task": "Security and safety analysis",
-                    "description": "Security validation and safety compliance",
+                    "task": f"Security and safety analysis for: {task_description}",
+                    "description": f"Security validation for {task_description}",
+                },
+                {
+                    "agent": "TestAgent",
+                    "task": f"Generate comprehensive test suite for: {task_description}",
+                    "description": f"Create unit tests for {task_description}",
                 },
             ]
 
