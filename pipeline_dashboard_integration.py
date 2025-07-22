@@ -1070,6 +1070,8 @@ def process_events_in_dashboard(connector: DashboardConnector):
                 "start_time": event.timestamp,
                 "status": "running",
             }
+            # Store task description for export
+            st.session_state.current_task_description = event.data["description"]
 
         elif event.type == EventType.AGENT_MESSAGE:
             message = {
@@ -1080,6 +1082,10 @@ def process_events_in_dashboard(connector: DashboardConnector):
                 "step": event.data.get("step", 0),
             }
             st.session_state.messages.append(message)
+
+            # Store agent output for export
+            agent_name = event.data["agent"]
+            st.session_state.agent_outputs[agent_name] = event.data["message"]
 
         elif event.type == EventType.AGENT_THINKING:
             # Update progress indicator

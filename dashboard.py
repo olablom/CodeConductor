@@ -1,6 +1,7 @@
 import streamlit as st
 import asyncio
 import json
+import os
 from datetime import datetime
 import plotly.graph_objects as go
 import plotly.express as px
@@ -15,6 +16,10 @@ from pipeline_dashboard_integration import (
     process_events_in_dashboard,
 )
 
+# Import export utilities
+from utils.export_utils import exporter
+from utils.task_templates import template_library
+
 # Page config
 st.set_page_config(
     page_title="CodeConductor AI Dashboard",
@@ -23,10 +28,83 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Custom CSS for better styling
-st.markdown(
-    """
+# Initialize theme
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
+
+
+# Custom CSS for better styling with dark mode support
+def get_css(dark_mode: bool):
+    if dark_mode:
+        return """
 <style>
+    /* Dark theme */
+    .stApp {
+        background-color: #0e1117;
+        color: #fafafa;
+    }
+    
+    .agent-message {
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 10px;
+        animation: fadeIn 0.5s;
+        background-color: #1e1e1e;
+        border: 1px solid #333;
+    }
+    .architect { background-color: #1a237e; border-left: 4px solid #2196F3; }
+    .codegen { background-color: #1b5e20; border-left: 4px solid #4CAF50; }
+    .reviewer { background-color: #e65100; border-left: 4px solid #FF9800; }
+    .policy { background-color: #4a148c; border-left: 4px solid #9C27B0; }
+    .test { background-color: #0d47a1; border-left: 4px solid #2196F3; }
+    
+    .metric-card {
+        background-color: #1e1e1e;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        border: 1px solid #333;
+    }
+    
+    .status-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+    .status-active { background-color: #4CAF50; }
+    .status-idle { background-color: #FFC107; }
+    .status-error { background-color: #F44336; }
+    
+    /* Dark theme overrides */
+    .stTextInput > div > div > input {
+        background-color: #1e1e1e;
+        color: #fafafa;
+        border: 1px solid #333;
+    }
+    
+    .stButton > button {
+        background-color: #2196F3;
+        color: white;
+        border: none;
+    }
+    
+    .stButton > button:hover {
+        background-color: #1976D2;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+"""
+    else:
+        return """
+<style>
+    /* Light theme */
     .agent-message {
         padding: 10px;
         margin: 5px 0;
@@ -37,11 +115,7 @@ st.markdown(
     .codegen { background-color: #e8f5e9; border-left: 4px solid #4CAF50; }
     .reviewer { background-color: #fff3e0; border-left: 4px solid #FF9800; }
     .policy { background-color: #f3e5f5; border-left: 4px solid #9C27B0; }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+    .test { background-color: #e1f5fe; border-left: 4px solid #2196F3; }
     
     .metric-card {
         background-color: #f5f5f5;
@@ -61,10 +135,17 @@ st.markdown(
     .status-active { background-color: #4CAF50; }
     .status-idle { background-color: #FFC107; }
     .status-error { background-color: #F44336; }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
-""",
-    unsafe_allow_html=True,
-)
+"""
+
+
+# Apply CSS
+st.markdown(get_css(st.session_state.dark_mode), unsafe_allow_html=True)
 
 # Initialize session state
 if "messages" not in st.session_state:
@@ -90,6 +171,10 @@ if "pending_approvals" not in st.session_state:
     st.session_state.pending_approvals = []
 if "progress" not in st.session_state:
     st.session_state.progress = {"current": 0, "total": 0}
+if "agent_outputs" not in st.session_state:
+    st.session_state.agent_outputs = {}
+if "current_task_description" not in st.session_state:
+    st.session_state.current_task_description = ""
 
 # Header
 st.title("🎯 CodeConductor AI Dashboard")
@@ -99,8 +184,52 @@ st.markdown("**Real-time monitoring of your AI coding assistant**")
 with st.sidebar:
     st.header("🎮 Control Panel")
 
-    # Task Input
-    st.subheader("New Task")
+    # Dark mode toggle
+    dark_mode = st.toggle("🌙 Dark Mode", value=st.session_state.dark_mode)
+    if dark_mode != st.session_state.dark_mode:
+        st.session_state.dark_mode = dark_mode
+        st.rerun()
+
+    # Task Templates
+    st.subheader("🎯 Task Templates")
+
+    # Template selection
+    template_categories = template_library.get_categories()
+    selected_category = st.selectbox(
+        "Choose category:", ["All Categories"] + template_categories
+    )
+
+    if selected_category == "All Categories":
+        templates = template_library.get_all_templates()
+    else:
+        templates = template_library.get_templates_by_category(selected_category)
+
+    # Template selection
+    if templates:
+        template_names = [t.name for t in templates]
+        selected_template_name = st.selectbox("Choose template:", template_names)
+
+        # Show template details
+        selected_template = next(
+            t for t in templates if t.name == selected_template_name
+        )
+
+        with st.expander(f"📋 {selected_template.name}"):
+            st.write(f"**Description:** {selected_template.description}")
+            st.write(f"**Difficulty:** {selected_template.difficulty}")
+            st.write(f"**Estimated Time:** {selected_template.estimated_time}")
+            st.write(f"**Tags:** {', '.join(selected_template.tags)}")
+            st.write(f"**Example Output:** {selected_template.example_output}")
+
+            if st.button(
+                f"Use Template: {selected_template.name}",
+                key=f"use_{selected_template.name}",
+            ):
+                st.session_state.task_input = selected_template.template
+                st.success(f"✅ Template loaded: {selected_template.name}")
+
+    # Custom Task Input
+    st.subheader("✏️ Custom Task")
     task_description = st.text_area(
         "Task Description",
         height=100,
@@ -236,6 +365,46 @@ with tab1:
                         st.success("Approved!")
                     if st.button("❌", key=f"reject_{msg['timestamp']}"):
                         st.error("Rejected!")
+
+    # Export functionality
+    if st.session_state.agent_outputs and st.session_state.current_task_description:
+        st.divider()
+        st.subheader("📁 Export Generated Code")
+
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.info(
+                f"Ready to export code for: **{st.session_state.current_task_description}**"
+            )
+            st.write(
+                f"Generated by {len(st.session_state.agent_outputs)} agents: {', '.join(st.session_state.agent_outputs.keys())}"
+            )
+
+        with col2:
+            if st.button("📥 Export as ZIP", type="primary"):
+                try:
+                    zip_path = exporter.create_export_zip(
+                        st.session_state.current_task_description,
+                        st.session_state.agent_outputs,
+                    )
+
+                    # Read the ZIP file for download
+                    with open(zip_path, "rb") as f:
+                        zip_data = f.read()
+
+                    # Create download button
+                    st.download_button(
+                        label="Download ZIP",
+                        data=zip_data,
+                        file_name=os.path.basename(zip_path),
+                        mime="application/zip",
+                        key="export_zip",
+                    )
+
+                    st.success("✅ Export ready! Click 'Download ZIP' to save.")
+
+                except Exception as e:
+                    st.error(f"Export failed: {str(e)}")
 
 with tab2:
     # Metrics Dashboard
