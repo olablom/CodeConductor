@@ -189,6 +189,125 @@ class QueryDispatcher:
         # Dispatch to healthy models
         return await self.dispatch(prompt)
 
+    async def dispatch_to_best_models(
+        self, prompt: str, min_models: int = 2, max_models: int = 5
+    ) -> Dict[str, Any]:
+        """
+        Dispatch to the best available models based on health and performance.
+        """
+        logger.info(f"🎯 Dispatching to best models ({min_models}-{max_models})...")
+
+        # Get best models
+        best_models = await self.model_manager.get_best_models(min_models, max_models)
+
+        if not best_models:
+            logger.warning("⚠️ No best models available, falling back to all models")
+            return await self.dispatch(prompt)
+
+        if len(best_models) < min_models:
+            logger.warning(
+                f"⚠️ Only {len(best_models)} best models available (need {min_models})"
+            )
+            # Continue with what we have
+
+        logger.info(
+            f"✅ Using {len(best_models)} best models: {[m.id for m in best_models]}"
+        )
+
+        # Dispatch to best models
+        return await self.dispatch_to_models(best_models, prompt)
+
+    async def dispatch_to_models(
+        self, models: List[ModelInfo], prompt: str
+    ) -> Dict[str, Any]:
+        """
+        Dispatch to specific models.
+        """
+        logger.info(f"🚀 Dispatching to {len(models)} specific models...")
+
+        # Query all models in parallel
+        async with ClientSession() as session:
+            tasks = [self._query_model(session, model, prompt) for model in models]
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Process results
+        results = {}
+        for i, response in enumerate(responses):
+            if isinstance(response, Exception):
+                model_id = models[i].id if i < len(models) else f"unknown_{i}"
+                logger.error(f"❌ Exception for {model_id}: {response}")
+                results[model_id] = {"error": str(response), "model": model_id}
+            else:
+                model_id, data = response
+                results[model_id] = data
+
+        # Log summary
+        success_count = sum(1 for r in results.values() if "error" not in r)
+        error_count = len(results) - success_count
+        logger.info(
+            f"📊 Dispatch complete: {success_count} success, {error_count} errors"
+        )
+
+        return results
+
+    async def dispatch_with_fallback(
+        self, prompt: str, min_models: int = 2
+    ) -> Dict[str, Any]:
+        """
+        Dispatch with intelligent fallback strategies.
+        """
+        logger.info(f"🔄 Dispatching with fallback (min: {min_models})...")
+
+        # Try best models first
+        results = await self.dispatch_to_best_models(prompt, min_models)
+
+        success_count = sum(1 for r in results.values() if "error" not in r)
+
+        if success_count >= min_models:
+            logger.info(
+                f"✅ Got {success_count} successful responses, no fallback needed"
+            )
+            return results
+
+        logger.warning(
+            f"⚠️ Only {success_count} successful responses, trying fallback..."
+        )
+
+        # Fallback 1: Try all models
+        all_results = await self.dispatch(prompt)
+        all_success_count = sum(1 for r in all_results.values() if "error" not in r)
+
+        if all_success_count > success_count:
+            logger.info(
+                f"✅ Fallback improved results: {all_success_count} vs {success_count}"
+            )
+            return all_results
+
+        # Fallback 2: Try with longer timeout
+        logger.info("⏰ Trying with extended timeout...")
+        original_timeout = self.timeout
+        self.timeout = min(60, original_timeout * 2)  # Double timeout, max 60s
+
+        try:
+            extended_results = await self.dispatch(prompt)
+            extended_success_count = sum(
+                1 for r in extended_results.values() if "error" not in r
+            )
+
+            if extended_success_count > success_count:
+                logger.info(
+                    f"✅ Extended timeout helped: {extended_success_count} vs {success_count}"
+                )
+                return extended_results
+        finally:
+            self.timeout = original_timeout
+
+        # Return best available results
+        logger.warning(
+            f"⚠️ All fallbacks exhausted, returning best available: {success_count} responses"
+        )
+        return results
+
 
 # Convenience functions
 async def dispatch_prompt(

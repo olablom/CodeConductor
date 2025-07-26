@@ -35,7 +35,8 @@ class ModelManager:
     def __init__(self):
         self.lm_studio_endpoint = "http://localhost:1234/v1"
         self.ollama_endpoint = "http://localhost:11434"
-        self.timeout = 5.0  # seconds
+        self.timeout = 30.0  # seconds
+        self.health_timeout = 10.0  # shorter timeout for health checks
 
     async def list_models(self) -> List[ModelInfo]:
         """
@@ -67,6 +68,18 @@ class ModelManager:
 
         return all_models
 
+    async def health_check(self, model_id: str) -> bool:
+        """Check health of a specific model by ID."""
+        # Get all models and find the one we're looking for
+        all_models = await self.list_models()
+        model_info = next((m for m in all_models if m.id == model_id), None)
+
+        if not model_info:
+            logger.warning(f"⚠️ Model {model_id} not found")
+            return False
+
+        return await self.check_health(model_info)
+
     async def check_health(self, model_info: ModelInfo) -> bool:
         """
         Perform health check on a specific model.
@@ -93,34 +106,121 @@ class ModelManager:
             return False
 
     async def check_all_health(self, models: List[ModelInfo]) -> Dict[str, bool]:
-        """
-        Check health of all models in parallel.
+        """Check health of all models in parallel."""
+        logger.info(f"🏥 Checking health of {len(models)} models...")
 
-        Args:
-            models: List of ModelInfo objects
+        health_tasks = []
+        for model in models:
+            task = self.health_check(model.id)
+            health_tasks.append(task)
 
-        Returns:
-            Dict mapping model IDs to health status
-        """
-        logger.info(f"🏥 Health checking {len(models)} models...")
-
-        # Run health checks in parallel
-        health_tasks = [self.check_health(model) for model in models]
         health_results = await asyncio.gather(*health_tasks, return_exceptions=True)
 
-        # Map results to model IDs
         health_status = {}
         for model, result in zip(models, health_results):
-            if isinstance(result, Exception):
-                logger.error(f"Health check exception for {model.id}: {result}")
-                health_status[model.id] = False
-            else:
+            if isinstance(result, bool):
                 health_status[model.id] = result
+                status = "✅" if result else "❌"
+                logger.info(
+                    f"{status} {model.id}: {'healthy' if result else 'unhealthy'}"
+                )
+            else:
+                health_status[model.id] = False
+                logger.warning(f"❌ {model.id}: health check failed - {result}")
 
         healthy_count = sum(health_status.values())
-        logger.info(f"✅ {healthy_count}/{len(models)} models are healthy")
+        logger.info(
+            f"📊 Health check complete: {healthy_count}/{len(models)} models healthy"
+        )
 
         return health_status
+
+    async def get_best_models(
+        self, min_models: int = 2, max_models: int = 5
+    ) -> List[ModelInfo]:
+        """Get the best available models based on health and performance."""
+        logger.info(f"🎯 Selecting best {min_models}-{max_models} models...")
+
+        # Get all models
+        all_models = await self.list_models()
+        if not all_models:
+            logger.warning("⚠️ No models available")
+            return []
+
+        # Check health of all models
+        health_status = await self.check_all_health(all_models)
+
+        # Filter to healthy models
+        healthy_models = [
+            model for model in all_models if health_status.get(model.id, False)
+        ]
+
+        if len(healthy_models) < min_models:
+            logger.warning(
+                f"⚠️ Only {len(healthy_models)} healthy models available (need {min_models})"
+            )
+            # Return all healthy models even if below minimum
+            return healthy_models
+
+        # Sort by performance metrics (success rate, response time)
+        def model_score(model: ModelInfo) -> float:
+            # Higher success rate = better score
+            success_rate = getattr(model, "success_rate", 0.5)
+            # Lower response time = better score (normalized to 0-1)
+            response_time = getattr(model, "response_time", 10.0)
+            time_score = max(0, 1 - (response_time / 30.0))  # 30s = 0 score
+
+            # Weighted combination
+            return (success_rate * 0.7) + (time_score * 0.3)
+
+        # Sort by score and take top models
+        sorted_models = sorted(healthy_models, key=model_score, reverse=True)
+        selected_models = sorted_models[:max_models]
+
+        logger.info(f"✅ Selected {len(selected_models)} best models:")
+        for i, model in enumerate(selected_models, 1):
+            score = model_score(model)
+            logger.info(f"  {i}. {model.id} (score: {score:.2f})")
+
+        return selected_models
+
+    async def auto_recovery(self, model_id: str) -> bool:
+        """Attempt to recover a failed model."""
+        logger.info(f"🔄 Attempting auto-recovery for {model_id}...")
+
+        # Get all models and find the one we're looking for
+        all_models = await self.list_models()
+        model_info = next((m for m in all_models if m.id == model_id), None)
+
+        if not model_info:
+            logger.warning(f"⚠️ Model {model_id} not found")
+            return False
+
+        # Try health check
+        try:
+            is_healthy = await self.health_check(model_id)
+            if is_healthy:
+                logger.info(f"✅ {model_id} recovered successfully")
+                return True
+        except Exception as e:
+            logger.warning(f"⚠️ Health check failed during recovery: {e}")
+
+        # Try to restart model (if supported)
+        try:
+            if model_info.provider == "ollama":
+                # For Ollama, we could try to restart the model
+                logger.info(f"🔄 Attempting to restart Ollama model {model_id}...")
+                # This would require Ollama API calls to restart the model
+                # For now, just log the attempt
+                logger.info(f"📝 Manual restart required for {model_id}")
+            elif model_info.provider == "lm_studio":
+                logger.info(
+                    f"📝 Manual restart required for LM Studio model {model_id}"
+                )
+        except Exception as e:
+            logger.warning(f"⚠️ Recovery attempt failed: {e}")
+
+        return False
 
     async def list_healthy_models(self) -> List[str]:
         """
@@ -150,9 +250,14 @@ class ModelManager:
                     models = []
 
                     for model_data in data.get("data", []):
+                        model_id = model_data.get("id", "unknown")
+                        # Skip embedding models (they don't support chat/completions)
+                        if "embedding" in model_id.lower():
+                            continue
+
                         model_info = ModelInfo(
-                            id=model_data.get("id", "unknown"),
-                            name=model_data.get("id", "unknown"),
+                            id=model_id,
+                            name=model_id,
                             provider="lm_studio",
                             endpoint=self.lm_studio_endpoint,
                             is_available=True,
@@ -204,19 +309,16 @@ class ModelManager:
         """Check if LM Studio model is healthy."""
         try:
             async with aiohttp.ClientSession() as session:
-                # Try a simple completion request
-                payload = {
-                    "model": model_info.id,
-                    "messages": [{"role": "user", "content": "Hello"}],
-                    "max_tokens": 10,
-                }
-
-                async with session.post(
-                    f"{self.lm_studio_endpoint}/chat/completions",
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=self.timeout),
+                # Just check if the model is listed (simpler than completion)
+                async with session.get(
+                    f"{self.lm_studio_endpoint}/models",
+                    timeout=aiohttp.ClientTimeout(total=self.health_timeout),
                 ) as response:
-                    return response.status == 200
+                    if response.status == 200:
+                        data = await response.json()
+                        model_ids = [m.get("id") for m in data.get("data", [])]
+                        return model_info.id in model_ids
+                    return False
 
         except Exception as e:
             logger.error(f"LM Studio health check error for {model_info.id}: {e}")
@@ -226,15 +328,16 @@ class ModelManager:
         """Check if Ollama model is healthy."""
         try:
             async with aiohttp.ClientSession() as session:
-                # Try a simple completion request
-                payload = {"model": model_info.id, "prompt": "Hello", "stream": False}
-
-                async with session.post(
-                    f"{self.ollama_endpoint}/api/generate",
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=self.timeout),
+                # Just check if the model is listed (simpler than completion)
+                async with session.get(
+                    f"{self.ollama_endpoint}/api/tags",
+                    timeout=aiohttp.ClientTimeout(total=self.health_timeout),
                 ) as response:
-                    return response.status == 200
+                    if response.status == 200:
+                        data = await response.json()
+                        model_names = [m.get("name") for m in data.get("models", [])]
+                        return model_info.id in model_names
+                    return False
 
         except Exception as e:
             logger.error(f"Ollama health check error for {model_info.id}: {e}")

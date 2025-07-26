@@ -103,15 +103,20 @@ class EnsembleEngine:
 
             # Dispatch queries in parallel
             async with QueryDispatcher(timeout=request.timeout) as dispatcher:
-                results = await dispatcher.dispatch_parallel(
+                raw_results = await dispatcher.dispatch_parallel(
                     models, request.task_description, request.context
                 )
 
+            # Convert raw results to format expected by consensus calculator
+            formatted_results = self._format_results_for_consensus(raw_results)
+
             # Calculate consensus
-            consensus_result = self.consensus_calculator.calculate_consensus(results)
+            consensus_result = self.consensus_calculator.calculate_consensus(
+                formatted_results
+            )
 
             # Update model statistics
-            for result in results:
+            for result in formatted_results:
                 if result.success:
                     self.model_manager.update_model_stats(
                         result.model_id, True, result.response_time
@@ -127,7 +132,7 @@ class EnsembleEngine:
                 consensus=consensus_result.consensus,
                 confidence=consensus_result.confidence,
                 disagreements=consensus_result.disagreements,
-                model_responses=results,
+                model_responses=formatted_results,
                 execution_time=execution_time,
             )
 
@@ -148,6 +153,48 @@ class EnsembleEngine:
                 model_responses=[],
                 execution_time=execution_time,
             )
+
+    def _format_results_for_consensus(self, raw_results: Dict[str, Any]) -> List[Any]:
+        """Convert raw dispatch results to format expected by consensus calculator."""
+        formatted_results = []
+
+        for model_id, response_data in raw_results.items():
+            # Create a result object with success/response attributes
+            result_obj = type(
+                "Result",
+                (),
+                {
+                    "model_id": model_id,
+                    "success": "error" not in response_data,
+                    "response": self._extract_response_content(response_data),
+                    "response_time": 0.0,  # We don't track this in ensemble engine
+                },
+            )()
+            formatted_results.append(result_obj)
+
+        return formatted_results
+
+    def _extract_response_content(self, response_data: dict) -> str:
+        """Extract the actual response content from model response data."""
+        try:
+            if "error" in response_data:
+                return f"Error: {response_data['error']}"
+
+            # Handle LM Studio format
+            if "choices" in response_data:
+                return response_data["choices"][0]["message"]["content"]
+
+            # Handle Ollama format
+            if "response" in response_data:
+                return response_data["response"]
+
+            # Fallback: return as JSON string
+            import json
+
+            return json.dumps(response_data)
+
+        except Exception as e:
+            return f"Failed to extract response: {e}"
 
     def get_model_status(self) -> Dict[str, Any]:
         """Get status of all models."""

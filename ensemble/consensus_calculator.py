@@ -32,8 +32,38 @@ class ConsensusCalculator:
 
     def calculate_consensus(self, results: List[Dict[str, Any]]) -> ConsensusResult:
         """Calculate consensus from multiple model responses."""
-        # Filter successful responses
-        successful_results = [r for r in results if r.success]
+        # Handle empty results
+        if not results:
+            return ConsensusResult(
+                consensus={},
+                confidence=0.0,
+                disagreements=["No responses provided"],
+                model_agreement={},
+                raw_responses=results,
+            )
+
+        # Filter successful responses and handle different result formats
+        successful_results = []
+        for result in results:
+            try:
+                # Handle both dict and object formats
+                if isinstance(result, dict):
+                    success = result.get("success", False)
+                    response = result.get("response", "")
+                    model_id = result.get("model_id", "unknown")
+                else:
+                    # Assume object with attributes
+                    success = getattr(result, "success", False)
+                    response = getattr(result, "response", "")
+                    model_id = getattr(result, "model_id", "unknown")
+
+                if success and response:
+                    successful_results.append(
+                        {"model_id": model_id, "response": response}
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to process result: {e}")
+                continue
 
         if not successful_results:
             return ConsensusResult(
@@ -48,11 +78,13 @@ class ConsensusCalculator:
         parsed_responses = []
         for result in successful_results:
             try:
-                parsed = self._parse_json_response(result.response)
+                parsed = self._parse_json_response(result["response"])
                 if parsed:
-                    parsed_responses.append((result.model_id, parsed))
+                    parsed_responses.append((result["model_id"], parsed))
             except Exception as e:
-                logger.warning(f"Failed to parse response from {result.model_id}: {e}")
+                logger.warning(
+                    f"Failed to parse response from {result['model_id']}: {e}"
+                )
 
         if not parsed_responses:
             return ConsensusResult(
