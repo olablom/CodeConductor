@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 
 from .model_manager import ModelManager
-from .query_dispatcher import QueryDispatcher, QueryResult
+from .query_dispatcher import QueryDispatcher
 from .consensus_calculator import ConsensusCalculator, ConsensusResult
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ class EnsembleResponse:
     consensus: Dict[str, Any]
     confidence: float
     disagreements: List[str]
-    model_responses: List[QueryResult]
+    model_responses: List[Dict[str, Any]]
     execution_time: float
 
 

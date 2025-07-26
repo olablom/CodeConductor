@@ -99,6 +99,9 @@ dmypy.json
 ehthumbs.db
 Thumbs.db
 
+# CodeConductor cleanup
+cleanup/
+
 # Logs
 *.log
 logs/

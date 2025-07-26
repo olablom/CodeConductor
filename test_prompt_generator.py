@@ -83,11 +83,19 @@ def test_prompt_generator():
 
         try:
             # Generate prompt
-            prompt = generator.generate_prompt(
-                consensus=test_case["consensus"],
-                task_description=test_case["task"],
-                context=context,
-            )
+            consensus_data = {
+                "task": test_case["task"],
+                "approach": test_case["consensus"]["approach"],
+                "requirements": [
+                    f"Implement {test_case['name'].lower()} functionality",
+                    "Include proper error handling",
+                    "Write comprehensive tests",
+                ],
+                "files_needed": test_case["consensus"]["files_needed"],
+                "dependencies": test_case["consensus"]["dependencies"],
+            }
+
+            prompt = generator.generate(consensus_data)
 
             print(f"✅ Generated prompt ({len(prompt)} characters)")
             print("\n📄 Generated Prompt:")

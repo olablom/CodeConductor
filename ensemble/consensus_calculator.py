@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 import logging
 from difflib import SequenceMatcher
-from .query_dispatcher import QueryResult
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class ConsensusResult:
     confidence: float
     disagreements: List[str]
     model_agreement: Dict[str, float]
-    raw_responses: List[QueryResult]
+    raw_responses: List[Dict[str, Any]]
 
 
 class ConsensusCalculator:
@@ -30,7 +30,7 @@ class ConsensusCalculator:
     def __init__(self, min_confidence: float = 0.7):
         self.min_confidence = min_confidence
 
-    def calculate_consensus(self, results: List[QueryResult]) -> ConsensusResult:
+    def calculate_consensus(self, results: List[Dict[str, Any]]) -> ConsensusResult:
         """Calculate consensus from multiple model responses."""
         # Filter successful responses
         successful_results = [r for r in results if r.success]

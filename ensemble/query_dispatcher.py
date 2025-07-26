@@ -1,220 +1,239 @@
+#!/usr/bin/env python3
 """
-Query Dispatcher for LLM Ensemble
-
-Handles parallel query execution with timeout and error handling.
+Query Dispatcher for CodeConductor MVP
+Dispatches prompts to multiple LLM models in parallel with timeout and error handling.
 """
 
 import asyncio
-import aiohttp
 import json
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass
 import logging
-from .model_manager import ModelInfo
+from typing import Dict, Any, List, Tuple, Optional
+from aiohttp import ClientSession, ClientError, ClientTimeout
+from .model_manager import ModelManager, ModelInfo
 
+# Configure logging
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class QueryResult:
-    model_id: str
-    response: str
-    success: bool
-    response_time: float
-    error: Optional[str] = None
+REQUEST_TIMEOUT = 30  # seconds
 
 
 class QueryDispatcher:
-    """Dispatches queries to multiple LLM models in parallel."""
+    """
+    Dispatches prompts to multiple LLM models in parallel, handles timeouts and errors.
+    """
 
-    def __init__(self, timeout: float = 30.0):
+    def __init__(self, timeout: int = REQUEST_TIMEOUT) -> None:
         self.timeout = timeout
-        self.session: Optional[aiohttp.ClientSession] = None
+        self.model_manager = ModelManager()
 
-    async def __aenter__(self):
-        self.session = aiohttp.ClientSession()
-        return self
+    async def _query_lm_studio_model(
+        self, session: ClientSession, model_info: ModelInfo, prompt: str
+    ) -> Tuple[str, Any]:
+        """
+        Send prompt to a single LM Studio model and return (model_id, response_json).
+        """
+        url = f"{model_info.endpoint}/chat/completions"
+        payload = {
+            "model": model_info.id,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": 1024,
+            "temperature": 0.1,
+        }
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self.session:
-            await self.session.close()
-
-    async def dispatch_parallel(
-        self,
-        models: Dict[str, ModelInfo],
-        prompt: str,
-        task_context: Optional[Dict[str, Any]] = None,
-    ) -> List[QueryResult]:
-        """Dispatch query to multiple models in parallel."""
-        if not self.session:
-            self.session = aiohttp.ClientSession()
-
-        tasks = []
-        for model_id, model in models.items():
-            task = self._query_model(model_id, model, prompt, task_context)
-            tasks.append(task)
-
-        # Execute all queries in parallel with timeout
         try:
-            results = await asyncio.wait_for(
-                asyncio.gather(*tasks, return_exceptions=True), timeout=self.timeout
-            )
+            async with session.post(
+                url, json=payload, timeout=ClientTimeout(total=self.timeout)
+            ) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+                logger.info(f"✅ Successfully queried {model_info.id}")
+                return model_info.id, data
         except asyncio.TimeoutError:
-            logger.warning(f"Query timeout after {self.timeout}s")
-            # Cancel remaining tasks
-            for task in tasks:
-                if not task.done():
-                    task.cancel()
-            results = [
-                QueryResult(
-                    model_id="timeout",
-                    response="",
-                    success=False,
-                    response_time=self.timeout,
-                    error="Query timeout",
-                )
-            ]
+            logger.warning(f"⏰ Timeout for {model_info.id}")
+            return model_info.id, {"error": "timeout", "model": model_info.id}
+        except ClientError as e:
+            logger.error(f"❌ HTTP error for {model_info.id}: {e}")
+            return model_info.id, {"error": str(e), "model": model_info.id}
+        except Exception as e:
+            logger.error(f"❌ Unexpected error for {model_info.id}: {e}")
+            return model_info.id, {"error": str(e), "model": model_info.id}
 
-        # Process results
-        processed_results = []
-        for result in results:
-            if isinstance(result, Exception):
-                processed_results.append(
-                    QueryResult(
-                        model_id="error",
-                        response="",
-                        success=False,
-                        response_time=0.0,
-                        error=str(result),
-                    )
-                )
-            else:
-                processed_results.append(result)
+    async def _query_ollama_model(
+        self, session: ClientSession, model_info: ModelInfo, prompt: str
+    ) -> Tuple[str, Any]:
+        """
+        Send prompt to a single Ollama model and return (model_id, response_json).
+        """
+        url = f"{model_info.endpoint}/api/generate"
+        payload = {
+            "model": model_info.id,
+            "prompt": prompt,
+            "stream": False,
+        }
 
-        return processed_results
+        try:
+            async with session.post(
+                url, json=payload, timeout=ClientTimeout(total=self.timeout)
+            ) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+                logger.info(f"✅ Successfully queried {model_info.id}")
+                return model_info.id, data
+        except asyncio.TimeoutError:
+            logger.warning(f"⏰ Timeout for {model_info.id}")
+            return model_info.id, {"error": "timeout", "model": model_info.id}
+        except ClientError as e:
+            logger.error(f"❌ HTTP error for {model_info.id}: {e}")
+            return model_info.id, {"error": str(e), "model": model_info.id}
+        except Exception as e:
+            logger.error(f"❌ Unexpected error for {model_info.id}: {e}")
+            return model_info.id, {"error": str(e), "model": model_info.id}
 
     async def _query_model(
-        self,
-        model_id: str,
-        model: ModelInfo,
-        prompt: str,
-        task_context: Optional[Dict[str, Any]] = None,
-    ) -> QueryResult:
-        """Query a single model."""
-        start_time = asyncio.get_event_loop().time()
+        self, session: ClientSession, model_info: ModelInfo, prompt: str
+    ) -> Tuple[str, Any]:
+        """
+        Send prompt to a single model based on its provider.
+        """
+        if model_info.provider == "lm_studio":
+            return await self._query_lm_studio_model(session, model_info, prompt)
+        elif model_info.provider == "ollama":
+            return await self._query_ollama_model(session, model_info, prompt)
+        else:
+            logger.error(f"❌ Unknown provider: {model_info.provider}")
+            return model_info.id, {
+                "error": f"Unknown provider: {model_info.provider}",
+                "model": model_info.id,
+            }
 
-        try:
-            if "ollama" in model_id:
-                response = await self._query_ollama(model, prompt, task_context)
-            elif "lm_studio" in model_id:
-                response = await self._query_lm_studio(model, prompt, task_context)
+    async def dispatch(
+        self, prompt: str, max_models: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """
+        Dispatch the prompt to healthy models and collect raw responses.
+
+        Args:
+            prompt: The prompt to send to models
+            max_models: Maximum number of models to query (None = all)
+
+        Returns:
+            Dict mapping model IDs to their JSON responses or errors.
+        """
+        logger.info(f"🚀 Dispatching prompt to models...")
+        logger.info(f"📝 Prompt: {prompt[:100]}{'...' if len(prompt) > 100 else ''}")
+
+        # Get available models
+        models = await self.model_manager.list_models()
+        if not models:
+            logger.warning("⚠️ No models available")
+            return {}
+
+        # Limit number of models if specified
+        if max_models:
+            models = models[:max_models]
+            logger.info(f"📊 Limiting to {max_models} models")
+
+        logger.info(f"🎯 Querying {len(models)} models: {[m.id for m in models]}")
+
+        # Query all models in parallel
+        async with ClientSession() as session:
+            tasks = [self._query_model(session, model, prompt) for model in models]
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Process results
+        results = {}
+        for i, response in enumerate(responses):
+            if isinstance(response, Exception):
+                model_id = models[i].id if i < len(models) else f"unknown_{i}"
+                logger.error(f"❌ Exception for {model_id}: {response}")
+                results[model_id] = {"error": str(response), "model": model_id}
             else:
-                raise ValueError(f"Unknown model type: {model_id}")
+                model_id, data = response
+                results[model_id] = data
 
-            response_time = asyncio.get_event_loop().time() - start_time
+        # Log summary
+        success_count = sum(1 for r in results.values() if "error" not in r)
+        error_count = len(results) - success_count
+        logger.info(
+            f"📊 Dispatch complete: {success_count} success, {error_count} errors"
+        )
 
-            return QueryResult(
-                model_id=model_id,
-                response=response,
-                success=True,
-                response_time=response_time,
-            )
+        return results
 
-        except Exception as e:
-            response_time = asyncio.get_event_loop().time() - start_time
-            logger.error(f"Query failed for {model_id}: {e}")
+    async def dispatch_to_healthy_models(self, prompt: str) -> Dict[str, Any]:
+        """
+        Dispatch only to models that pass health checks.
+        """
+        logger.info("🏥 Checking model health before dispatch...")
 
-            return QueryResult(
-                model_id=model_id,
-                response="",
-                success=False,
-                response_time=response_time,
-                error=str(e),
-            )
+        # Get all models
+        models = await self.model_manager.list_models()
+        if not models:
+            logger.warning("⚠️ No models available")
+            return {}
 
-    async def _query_ollama(
-        self,
-        model: ModelInfo,
-        prompt: str,
-        task_context: Optional[Dict[str, Any]] = None,
-    ) -> str:
-        """Query Ollama model."""
-        # Format prompt for code generation
-        formatted_prompt = self._format_code_prompt(prompt, task_context)
+        # Check health of all models
+        health_status = await self.model_manager.check_all_health(models)
 
-        payload = {
-            "model": model.name,
-            "prompt": formatted_prompt,
-            "stream": False,
-            "options": {
-                "temperature": 0.1,  # Low temperature for code generation
-                "top_p": 0.9,
-                "max_tokens": 2048,
-            },
-        }
+        # Filter to healthy models only
+        healthy_models = [
+            model for model in models if health_status.get(model.id, False)
+        ]
 
-        async with self.session.post(model.endpoint, json=payload) as response:
-            if response.status != 200:
-                raise Exception(f"Ollama API error: {response.status}")
+        if not healthy_models:
+            logger.warning("⚠️ No healthy models available")
+            return {}
 
-            data = await response.json()
-            return data.get("response", "")
+        logger.info(f"✅ Found {len(healthy_models)} healthy models")
 
-    async def _query_lm_studio(
-        self,
-        model: ModelInfo,
-        prompt: str,
-        task_context: Optional[Dict[str, Any]] = None,
-    ) -> str:
-        """Query LM Studio model."""
-        # Format prompt for code generation
-        formatted_prompt = self._format_code_prompt(prompt, task_context)
+        # Dispatch to healthy models
+        return await self.dispatch(prompt)
 
-        payload = {
-            "model": model.name,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are an expert software developer. Generate clean, efficient, and well-documented code.",
-                },
-                {"role": "user", "content": formatted_prompt},
-            ],
-            "max_tokens": 2048,
-            "temperature": 0.1,
-            "top_p": 0.9,
-        }
 
-        async with self.session.post(model.endpoint, json=payload) as response:
-            if response.status != 200:
-                raise Exception(f"LM Studio API error: {response.status}")
+# Convenience functions
+async def dispatch_prompt(
+    prompt: str, max_models: Optional[int] = None
+) -> Dict[str, Any]:
+    """Convenience function to dispatch a prompt."""
+    dispatcher = QueryDispatcher()
+    return await dispatcher.dispatch(prompt, max_models)
 
-            data = await response.json()
-            return data.get("choices", [{}])[0].get("message", {}).get("content", "")
 
-    def _format_code_prompt(
-        self, prompt: str, task_context: Optional[Dict[str, Any]] = None
-    ) -> str:
-        """Format prompt for code generation tasks."""
-        formatted = f"""You are an expert software developer. Your task is to:
+async def main():
+    """Demo function to test QueryDispatcher."""
+    print("🚀 CodeConductor Query Dispatcher Demo")
+    print("=" * 50)
 
-{prompt}
+    dispatcher = QueryDispatcher(timeout=10)  # Shorter timeout for demo
 
-Please provide:
-1. A clear approach to solve this problem
-2. The specific files that need to be created or modified
-3. Any dependencies that need to be added
-4. An assessment of complexity (low/medium/high)
+    # Test prompt
+    test_prompt = "What is 2 + 2? Please respond with just the number."
 
-Respond in JSON format:
-{{
-    "approach": "Description of solution approach",
-    "files_needed": ["file1.py", "file2.py"],
-    "dependencies": ["package1", "package2"],
-    "complexity": "low|medium|high",
-    "reasoning": "Brief explanation of your approach"
-}}"""
+    print(f"📝 Sending prompt: {test_prompt}")
+    print()
 
-        if task_context:
-            formatted += f"\n\nContext:\n{json.dumps(task_context, indent=2)}"
+    # Dispatch to all models
+    results = await dispatcher.dispatch(
+        test_prompt, max_models=2
+    )  # Limit to 2 for demo
 
-        return formatted
+    print("📊 Results:")
+    for model_id, response in results.items():
+        print(f"\n🎯 {model_id}:")
+        if "error" in response:
+            print(f"  ❌ Error: {response['error']}")
+        else:
+            # Extract content from response
+            if "choices" in response:
+                content = response["choices"][0]["message"]["content"]
+                print(f"  ✅ Response: {content}")
+            elif "response" in response:
+                print(f"  ✅ Response: {response['response']}")
+            else:
+                print(f"  ✅ Raw response: {json.dumps(response, indent=2)}")
+
+    print(f"\n📈 Summary: {len(results)} models queried")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

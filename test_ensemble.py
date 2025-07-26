@@ -14,6 +14,9 @@ logging.basicConfig(
 )
 
 
+import pytest
+
+@pytest.mark.asyncio
 async def test_ensemble_engine():
     """Test the ensemble engine with a sample task."""
 

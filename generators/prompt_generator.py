@@ -1,653 +1,345 @@
+#!/usr/bin/env python3
 """
-Prompt Generator for CodeConductor
-
+Prompt Generator for CodeConductor MVP
 Converts ensemble consensus to structured prompts for Cursor.
 """
 
 import json
-import re
-from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
-from enum import Enum
 import logging
+from typing import Dict, Any, List, Optional
+from pathlib import Path
+from jinja2 import Environment, FileSystemLoader, Template
+from dataclasses import dataclass
 
+# Configure logging
 logger = logging.getLogger(__name__)
 
 
-class TaskType(Enum):
-    FUNCTION = "function"
-    CLASS = "class"
-    API = "api"
-    TEST = "test"
-    UTILITY = "utility"
-    UNKNOWN = "unknown"
-
-
 @dataclass
-class PromptTemplate:
-    """Template for generating structured prompts."""
+class PromptContext:
+    """Context information for prompt generation."""
 
-    name: str
-    task_type: TaskType
-    template: str
-    required_fields: List[str]
-    optional_fields: List[str]
+    project_structure: str = ""
+    coding_standards: List[str] = None
+    existing_patterns: List[str] = None
+    dependencies: List[str] = None
+    max_tokens: int = 4000
+
+    def __post_init__(self):
+        if self.coding_standards is None:
+            self.coding_standards = [
+                "Use type hints",
+                "Include docstrings",
+                "Follow PEP 8",
+                "Handle errors gracefully",
+            ]
+        if self.existing_patterns is None:
+            self.existing_patterns = []
+        if self.dependencies is None:
+            self.dependencies = []
 
 
 class PromptGenerator:
     """Generates structured prompts from ensemble consensus."""
 
-    def __init__(self):
-        self.templates = self._load_templates()
-        self.context_manager = ContextManager()
+    def __init__(self, template_dir: str = "generators/templates"):
+        self.template_dir = Path(template_dir)
+        self.env = Environment(
+            loader=FileSystemLoader(str(self.template_dir)),
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
+        self._ensure_template_dir()
 
-    def _load_templates(self) -> Dict[str, PromptTemplate]:
-        """Load prompt templates for different task types."""
-        return {
-            "function": PromptTemplate(
-                name="Function Implementation",
-                task_type=TaskType.FUNCTION,
-                template="""## Task: {task_description}
+    def _ensure_template_dir(self):
+        """Ensure template directory exists with default templates."""
+        self.template_dir.mkdir(parents=True, exist_ok=True)
 
-### Approach
-{approach}
+        # Create default template if it doesn't exist
+        default_template = self.template_dir / "prompt.md.j2"
+        if not default_template.exists():
+            self._create_default_template(default_template)
 
-### Requirements
-- **Function Name**: {function_name}
-- **Parameters**: {parameters}
-- **Return Type**: {return_type}
-- **Dependencies**: {dependencies}
-
-### Constraints
-- Use existing patterns in codebase
-- Include proper error handling
-- Add type hints
-- Write docstring
-
-### Expected Files
-- `{main_file}`: Main implementation
-- `{test_file}`: Test suite
-
-### Context
-{context}
-
-### Implementation Notes
-{reasoning}""",
-                required_fields=["task_description", "approach", "function_name"],
-                optional_fields=[
-                    "parameters",
-                    "return_type",
-                    "dependencies",
-                    "context",
-                    "reasoning",
-                ],
-            ),
-            "class": PromptTemplate(
-                name="Class Implementation",
-                task_type=TaskType.CLASS,
-                template="""## Task: {task_description}
+    def _create_default_template(self, template_path: Path):
+        """Create the default Jinja2 template."""
+        template_content = """## Task: {{ consensus.task | default("Implement requested functionality") }}
 
 ### Approach
-{approach}
+{{ consensus.approach | default("Follow standard Python patterns and best practices") }}
 
 ### Requirements
-- **Class Name**: {class_name}
-- **Methods**: {methods}
-- **Attributes**: {attributes}
-- **Dependencies**: {dependencies}
-
-### Constraints
-- Follow existing class patterns
+{% if consensus.requirements %}
+{% for req in consensus.requirements %}
+- {{ req }}
+{% endfor %}
+{% else %}
+- Implement the requested functionality
 - Include proper error handling
-- Add type hints and docstrings
 - Write comprehensive tests
+{% endif %}
 
+{% if consensus.files_needed %}
 ### Expected Files
-- `{main_file}`: Class implementation
-- `{test_file}`: Test suite
+{% for file in consensus.files_needed %}
+- `{{ file }}`: {{ file.split('.')[-1] | upper }} implementation
+{% endfor %}
+{% endif %}
 
-### Context
-{context}
-
-### Implementation Notes
-{reasoning}""",
-                required_fields=["task_description", "approach", "class_name"],
-                optional_fields=[
-                    "methods",
-                    "attributes",
-                    "dependencies",
-                    "context",
-                    "reasoning",
-                ],
-            ),
-            "api": PromptTemplate(
-                name="API Implementation",
-                task_type=TaskType.API,
-                template="""## Task: {task_description}
-
-### Approach
-{approach}
-
-### Requirements
-- **Endpoint**: {endpoint}
-- **Method**: {method}
-- **Parameters**: {parameters}
-- **Response Format**: {response_format}
-- **Dependencies**: {dependencies}
+{% if consensus.dependencies %}
+### Dependencies
+{% for dep in consensus.dependencies %}
+- {{ dep }}
+{% endfor %}
+{% endif %}
 
 ### Constraints
-- Follow RESTful conventions
-- Include proper error handling
-- Add input validation
-- Write integration tests
+{% for standard in context.coding_standards %}
+- {{ standard }}
+{% endfor %}
 
-### Expected Files
-- `{main_file}`: API implementation
-- `{test_file}`: Test suite
-- `{config_file}`: Configuration (if needed)
+{% if context.existing_patterns %}
+### Existing Patterns
+{% for pattern in context.existing_patterns %}
+- {{ pattern }}
+{% endfor %}
+{% endif %}
 
-### Context
-{context}
+{% if context.project_structure %}
+### Project Context
+{{ context.project_structure }}
+{% endif %}
 
-### Implementation Notes
-{reasoning}""",
-                required_fields=["task_description", "approach", "endpoint"],
-                optional_fields=[
-                    "method",
-                    "parameters",
-                    "response_format",
-                    "dependencies",
-                    "context",
-                    "reasoning",
-                ],
-            ),
-            "test": PromptTemplate(
-                name="Test Implementation",
-                task_type=TaskType.TEST,
-                template="""## Task: {task_description}
+### Output Format
+Please provide the code in the following format:
 
-### Approach
-{approach}
+```{{ consensus.language | default("python") }}
+# Your implementation here
+```
 
-### Requirements
-- **Test Target**: {test_target}
-- **Test Cases**: {test_cases}
-- **Framework**: {framework}
-- **Dependencies**: {dependencies}
+```test_{{ consensus.test_file | default("test_implementation") }}.py
+# Your test cases here
+```
 
-### Constraints
-- Achieve 90%+ code coverage
-- Include edge cases
-- Use descriptive test names
-- Mock external dependencies
+Make sure all tests pass and the code follows the specified standards.
+"""
 
-### Expected Files
-- `{test_file}`: Test suite
-- `{fixture_file}`: Test fixtures (if needed)
+        template_path.write_text(template_content)
+        logger.info(f"✅ Created default template: {template_path}")
 
-### Context
-{context}
-
-### Implementation Notes
-{reasoning}""",
-                required_fields=["task_description", "approach", "test_target"],
-                optional_fields=[
-                    "test_cases",
-                    "framework",
-                    "dependencies",
-                    "context",
-                    "reasoning",
-                ],
-            ),
-            "utility": PromptTemplate(
-                name="Utility Implementation",
-                task_type=TaskType.UTILITY,
-                template="""## Task: {task_description}
-
-### Approach
-{approach}
-
-### Requirements
-- **Utility Name**: {utility_name}
-- **Functionality**: {functionality}
-- **Dependencies**: {dependencies}
-
-### Constraints
-- Keep it simple and focused
-- Include proper error handling
-- Add type hints
-- Write tests
-
-### Expected Files
-- `{main_file}`: Utility implementation
-- `{test_file}`: Test suite
-
-### Context
-{context}
-
-### Implementation Notes
-{reasoning}""",
-                required_fields=["task_description", "approach", "utility_name"],
-                optional_fields=[
-                    "functionality",
-                    "dependencies",
-                    "context",
-                    "reasoning",
-                ],
-            ),
-        }
-
-    def generate_prompt(
-        self,
-        consensus: Dict[str, Any],
-        task_description: str,
-        context: Optional[Dict[str, Any]] = None,
+    def generate(
+        self, consensus: Dict[str, Any], context: Optional[PromptContext] = None
     ) -> str:
-        """Generate structured prompt from ensemble consensus."""
+        """
+        Generate a structured prompt from ensemble consensus.
+
+        Args:
+            consensus: Consensus result from ensemble engine
+            context: Optional context information
+
+        Returns:
+            Generated prompt string
+        """
+        logger.info("🎯 Generating prompt from consensus...")
+
+        # Validate consensus
+        self._validate_consensus(consensus)
+
+        # Use default context if none provided
+        if context is None:
+            context = PromptContext()
+
+        # Prepare template data
+        template_data = {"consensus": consensus, "context": context}
+
         try:
-            # Determine task type
-            task_type = self._classify_task(task_description, consensus)
-
-            # Get appropriate template
-            template = self.templates.get(task_type.value, self.templates["function"])
-
-            # Extract and validate fields
-            template_data = self._extract_template_data(
-                consensus, task_description, template
-            )
-
-            # Inject context if provided
-            if context:
-                template_data["context"] = self.context_manager.format_context(context)
-
-            # Generate prompt
-            prompt = template.template.format(**template_data)
+            # Load and render template
+            template = self.env.get_template("prompt.md.j2")
+            prompt = template.render(**template_data)
 
             # Validate prompt length
-            if len(prompt) > 4000:  # Cursor context limit
-                prompt = self._truncate_prompt(prompt, 4000)
+            self._validate_prompt_length(prompt, context.max_tokens)
 
-            logger.info(f"Generated prompt for {task_type.value} task")
+            logger.info(f"✅ Generated prompt ({len(prompt)} chars)")
             return prompt
 
         except Exception as e:
-            logger.error(f"Failed to generate prompt: {e}")
-            return self._generate_fallback_prompt(task_description, consensus)
+            logger.error(f"❌ Failed to generate prompt: {e}")
+            return self._generate_fallback_prompt(consensus, context)
 
-    def _classify_task(
-        self, task_description: str, consensus: Dict[str, Any]
-    ) -> TaskType:
-        """Classify task type based on description and consensus."""
-        description_lower = task_description.lower()
+    def _validate_consensus(self, consensus: Dict[str, Any]):
+        """Validate that consensus contains required fields."""
+        required_fields = ["task", "approach"]
 
-        # Check for specific keywords
-        if any(
-            word in description_lower
-            for word in ["test", "spec", "assert", "pytest", "unittest"]
-        ):
-            return TaskType.TEST
-        elif any(word in description_lower for word in ["class", "object", "model"]):
-            return TaskType.CLASS
-        elif any(
-            word in description_lower
-            for word in ["api", "endpoint", "route", "http", "rest"]
-        ):
-            return TaskType.API
-        elif any(word in description_lower for word in ["utility", "helper", "tool"]):
-            return TaskType.UTILITY
-        elif any(
-            word in description_lower
-            for word in ["function", "def ", "calculate", "compute"]
-        ):
-            return TaskType.FUNCTION
+        for field in required_fields:
+            if field not in consensus:
+                logger.warning(f"⚠️ Missing required field: {field}")
+                consensus[field] = f"Default {field}"
 
-        # Check consensus approach
-        approach = consensus.get("approach", "").lower()
-        if "test" in approach or "pytest" in approach:
-            return TaskType.TEST
-        elif "class" in approach:
-            return TaskType.CLASS
-        elif "api" in approach or "endpoint" in approach or "rest" in approach:
-            return TaskType.API
-        elif "utility" in approach:
-            return TaskType.UTILITY
+        # Ensure requirements is a list
+        if "requirements" not in consensus:
+            consensus["requirements"] = ["Implement requested functionality"]
+        elif not isinstance(consensus["requirements"], list):
+            consensus["requirements"] = [str(consensus["requirements"])]
 
-        return TaskType.FUNCTION  # Default
+    def _validate_prompt_length(self, prompt: str, max_tokens: int):
+        """Validate that prompt doesn't exceed token limits."""
+        # Rough estimation: 1 token ≈ 4 characters
+        estimated_tokens = len(prompt) // 4
 
-    def _extract_template_data(
-        self, consensus: Dict[str, Any], task_description: str, template: PromptTemplate
-    ) -> Dict[str, str]:
-        """Extract and format data for template."""
-        data = {
-            "task_description": task_description,
-            "approach": consensus.get("approach", "Standard implementation approach"),
-            "reasoning": consensus.get(
-                "reasoning", "Follow best practices and existing patterns"
-            ),
-            "dependencies": self._format_dependencies(
-                consensus.get("dependencies", [])
-            ),
-            "context": "Use existing project structure and coding standards",
-        }
-
-        # Extract specific fields based on task type
-        if template.task_type == TaskType.FUNCTION:
-            data.update(self._extract_function_data(consensus, task_description))
-        elif template.task_type == TaskType.CLASS:
-            data.update(self._extract_class_data(consensus, task_description))
-        elif template.task_type == TaskType.API:
-            data.update(self._extract_api_data(consensus, task_description))
-        elif template.task_type == TaskType.TEST:
-            data.update(self._extract_test_data(consensus, task_description))
-        elif template.task_type == TaskType.UTILITY:
-            data.update(self._extract_utility_data(consensus, task_description))
-
-        return data
-
-    def _extract_function_data(
-        self, consensus: Dict[str, Any], task_description: str
-    ) -> Dict[str, str]:
-        """Extract function-specific data."""
-        files_needed = consensus.get("files_needed", ["main.py"])
-        main_file = files_needed[0] if files_needed else "main.py"
-
-        return {
-            "function_name": self._extract_function_name(consensus, task_description),
-            "parameters": self._extract_parameters(consensus, task_description),
-            "return_type": self._extract_return_type(consensus),
-            "main_file": main_file,
-            "test_file": f"test_{main_file.replace('.py', '')}.py",
-        }
-
-    def _extract_class_data(
-        self, consensus: Dict[str, Any], task_description: str
-    ) -> Dict[str, str]:
-        """Extract class-specific data."""
-        files_needed = consensus.get("files_needed", ["main.py"])
-        main_file = files_needed[0] if files_needed else "main.py"
-
-        return {
-            "class_name": self._extract_class_name(consensus, task_description),
-            "methods": self._extract_methods(consensus),
-            "attributes": self._extract_attributes(consensus),
-            "main_file": main_file,
-            "test_file": f"test_{main_file.replace('.py', '')}.py",
-        }
-
-    def _extract_api_data(
-        self, consensus: Dict[str, Any], task_description: str
-    ) -> Dict[str, str]:
-        """Extract API-specific data."""
-        files_needed = consensus.get("files_needed", ["api.py"])
-        main_file = files_needed[0] if files_needed else "api.py"
-
-        return {
-            "endpoint": self._extract_endpoint(consensus, task_description),
-            "method": "GET",  # Default
-            "parameters": self._extract_parameters(consensus, task_description),
-            "response_format": "JSON",
-            "main_file": main_file,
-            "test_file": f"test_{main_file.replace('.py', '')}.py",
-            "config_file": "config.py",
-        }
-
-    def _extract_test_data(
-        self, consensus: Dict[str, Any], task_description: str
-    ) -> Dict[str, str]:
-        """Extract test-specific data."""
-        files_needed = consensus.get("files_needed", ["test_main.py"])
-        test_file = files_needed[0] if files_needed else "test_main.py"
-
-        return {
-            "test_target": self._extract_test_target(consensus, task_description),
-            "test_cases": self._extract_test_cases(consensus),
-            "framework": "pytest",
-            "test_file": test_file,
-            "fixture_file": "conftest.py",
-        }
-
-    def _extract_utility_data(
-        self, consensus: Dict[str, Any], task_description: str
-    ) -> Dict[str, str]:
-        """Extract utility-specific data."""
-        files_needed = consensus.get("files_needed", ["utils.py"])
-        main_file = files_needed[0] if files_needed else "utils.py"
-
-        return {
-            "utility_name": self._extract_utility_name(consensus, task_description),
-            "functionality": consensus.get("approach", "Utility function"),
-            "main_file": main_file,
-            "test_file": f"test_{main_file.replace('.py', '')}.py",
-        }
-
-    def _extract_function_name(
-        self, consensus: Dict[str, Any], task_description: str
-    ) -> str:
-        """Extract function name from consensus."""
-        approach = consensus.get("approach", "")
-
-        # Look for specific function names in task description FIRST
-        if "factorial" in task_description.lower():
-            return "factorial"
-        elif "calculate" in task_description.lower():
-            # Extract the thing being calculated
-            match = re.search(
-                r"calculate\s+(?:the\s+)?(\w+)", task_description, re.IGNORECASE
+        if estimated_tokens > max_tokens:
+            logger.warning(
+                f"⚠️ Prompt may exceed token limit: {estimated_tokens} > {max_tokens}"
             )
-            if match:
-                return f"calculate_{match.group(1)}"
-
-        # Look for common patterns in approach
-        if "function" in approach.lower():
-            # Extract name after "function" or "def"
-            match = re.search(r"(?:function|def)\s+(\w+)", approach, re.IGNORECASE)
-            if match:
-                return match.group(1)
-
-        # Default based on approach
-        if "recursive" in approach.lower():
-            return "recursive_function"
-        elif "iterative" in approach.lower():
-            return "iterative_function"
-
-        return "main_function"
-
-    def _extract_parameters(
-        self, consensus: Dict[str, Any], task_description: str
-    ) -> str:
-        """Extract parameters from consensus."""
-        approach = consensus.get("approach", "")
-
-        # Look for specific parameter patterns FIRST
-        if "factorial" in task_description.lower():
-            return "n: int"
-        elif "calculate" in task_description.lower():
-            # Extract what's being calculated
-            if "number" in task_description.lower():
-                return "number: int"
-            elif "string" in task_description.lower():
-                return "text: str"
-            else:
-                return "value: Any"
-
-        # Look for parameter patterns in approach
-        params = re.findall(r"(\w+):\s*\w+", approach)
-        if params:
-            return ", ".join(params)
-
-        # Default based on task type
-        return "param: Any"
-
-    def _extract_class_name(
-        self, consensus: Dict[str, Any], task_description: str
-    ) -> str:
-        """Extract class name from consensus."""
-        approach = consensus.get("approach", "")
-
-        # Look for class name in task description
-        if "calculator" in task_description.lower():
-            return "Calculator"
-        elif "class" in task_description.lower():
-            # Extract class name after "class"
-            match = re.search(r"class\s+(\w+)", task_description, re.IGNORECASE)
-            if match:
-                return match.group(1)
-
-        # Look in approach
-        match = re.search(r"class\s+(\w+)", approach, re.IGNORECASE)
-        if match:
-            return match.group(1)
-
-        return "MainClass"
-
-    def _extract_endpoint(
-        self, consensus: Dict[str, Any], task_description: str
-    ) -> str:
-        """Extract API endpoint from consensus."""
-        approach = consensus.get("approach", "")
-
-        # Look for endpoint in task description
-        if "authentication" in task_description.lower():
-            return "/auth/login"
-        elif "user" in task_description.lower():
-            return "/api/users"
-
-        # Look in approach
-        match = re.search(r"endpoint[:\s]+([/\w]+)", approach, re.IGNORECASE)
-        if match:
-            return match.group(1)
-
-        return "/api/endpoint"
-
-    def _extract_return_type(self, consensus: Dict[str, Any]) -> str:
-        """Extract return type from consensus."""
-        approach = consensus.get("approach", "")
-        if "int" in approach.lower():
-            return "int"
-        elif "str" in approach.lower():
-            return "str"
-        elif "list" in approach.lower():
-            return "List"
-        elif "dict" in approach.lower():
-            return "Dict"
-        return "Any"
-
-    def _extract_methods(self, consensus: Dict[str, Any]) -> str:
-        """Extract methods from consensus."""
-        return "__init__, main_method"
-
-    def _extract_attributes(self, consensus: Dict[str, Any]) -> str:
-        """Extract attributes from consensus."""
-        return "attribute1, attribute2"
-
-    def _extract_test_target(
-        self, consensus: Dict[str, Any], task_description: str
-    ) -> str:
-        """Extract test target from consensus."""
-        # Look for what's being tested in task description
-        if "factorial" in task_description.lower():
-            return "factorial"
-        elif "function" in task_description.lower():
-            # Extract function name
-            match = re.search(
-                r"test.*?(\w+)\s+function", task_description, re.IGNORECASE
-            )
-            if match:
-                return match.group(1)
-
-        files_needed = consensus.get("files_needed", [])
-        if files_needed:
-            return files_needed[0].replace(".py", "").replace("test_", "")
-        return "main_module"
-
-    def _extract_test_cases(self, consensus: Dict[str, Any]) -> str:
-        """Extract test cases from consensus."""
-        return "Basic functionality, Edge cases, Error handling"
-
-    def _extract_utility_name(
-        self, consensus: Dict[str, Any], task_description: str
-    ) -> str:
-        """Extract utility name from consensus."""
-        approach = consensus.get("approach", "")
-
-        # Look for utility name in task description
-        if "utility" in task_description.lower():
-            match = re.search(r"(\w+)\s+utility", task_description, re.IGNORECASE)
-            if match:
-                return match.group(1)
-
-        # Look in approach
-        match = re.search(r"utility\s+(\w+)", approach, re.IGNORECASE)
-        if match:
-            return match.group(1)
-
-        return "utility_function"
-
-    def _format_dependencies(self, dependencies: List[str]) -> str:
-        """Format dependencies list."""
-        if not dependencies:
-            return "None"
-        return ", ".join(dependencies)
-
-    def _truncate_prompt(self, prompt: str, max_length: int) -> str:
-        """Truncate prompt to fit within limits."""
-        if len(prompt) <= max_length:
-            return prompt
-
-        # Try to truncate from the middle, keeping start and end
-        half_length = max_length // 2
-        start = prompt[:half_length]
-        end = prompt[-half_length:]
-
-        return f"{start}\n\n... (truncated) ...\n\n{end}"
 
     def _generate_fallback_prompt(
-        self, task_description: str, consensus: Dict[str, Any]
+        self, consensus: Dict[str, Any], context: PromptContext
     ) -> str:
-        """Generate a simple fallback prompt if template generation fails."""
-        return f"""## Task: {task_description}
+        """Generate a simple fallback prompt if template fails."""
+        logger.info("🔄 Using fallback prompt generation...")
 
-### Approach
-{consensus.get("approach", "Implement according to requirements")}
+        prompt_parts = [
+            f"## Task: {consensus.get('task', 'Implement functionality')}",
+            f"\n### Approach\n{consensus.get('approach', 'Follow Python best practices')}",
+            "\n### Requirements",
+        ]
 
-### Requirements
-- Implement the requested functionality
-- Follow existing code patterns
-- Include proper error handling
-- Write tests
+        for req in consensus.get(
+            "requirements", ["Implement the requested functionality"]
+        ):
+            prompt_parts.append(f"- {req}")
 
-### Files Needed
-{", ".join(consensus.get("files_needed", ["main.py"]))}
+        prompt_parts.append("\n### Constraints")
+        for standard in context.coding_standards:
+            prompt_parts.append(f"- {standard}")
 
-### Dependencies
-{", ".join(consensus.get("dependencies", []))}
+        prompt_parts.append("\nPlease provide the implementation and tests.")
 
-### Notes
-{consensus.get("reasoning", "Follow best practices")}"""
+        return "\n".join(prompt_parts)
+
+    def generate_code_generation_prompt(
+        self, task: str, files_needed: List[str] = None, dependencies: List[str] = None
+    ) -> str:
+        """
+        Generate a prompt specifically for code generation tasks.
+
+        Args:
+            task: Description of what to implement
+            files_needed: List of files to create/modify
+            dependencies: Required dependencies
+
+        Returns:
+            Structured prompt for code generation
+        """
+        consensus = {
+            "task": task,
+            "approach": "Implement the requested functionality following Python best practices",
+            "requirements": [
+                "Create clean, well-documented code",
+                "Include proper error handling",
+                "Write comprehensive tests",
+                "Follow PEP 8 standards",
+            ],
+            "files_needed": files_needed or [],
+            "dependencies": dependencies or [],
+            "language": "python",
+        }
+
+        return self.generate(consensus)
+
+    def generate_test_prompt(self, implementation_file: str) -> str:
+        """
+        Generate a prompt for creating tests for existing code.
+
+        Args:
+            implementation_file: Path to the implementation file
+
+        Returns:
+            Structured prompt for test generation
+        """
+        consensus = {
+            "task": f"Create comprehensive tests for {implementation_file}",
+            "approach": "Analyze the implementation and create thorough test cases",
+            "requirements": [
+                "Test all public functions and methods",
+                "Include edge cases and error conditions",
+                "Achieve high test coverage",
+                "Use pytest framework",
+            ],
+            "files_needed": [f"test_{implementation_file}"],
+            "language": "python",
+        }
+
+        return self.generate(consensus)
 
 
-class ContextManager:
-    """Manages context injection for prompts."""
+# Convenience functions
+def generate_prompt(
+    consensus: Dict[str, Any], context: Optional[PromptContext] = None
+) -> str:
+    """Generate a prompt from consensus."""
+    generator = PromptGenerator()
+    return generator.generate(consensus, context)
 
-    def format_context(self, context: Dict[str, Any]) -> str:
-        """Format context for inclusion in prompt."""
-        formatted = []
 
-        if "project_structure" in context:
-            formatted.append(f"**Project Structure**: {context['project_structure']}")
+def generate_code_prompt(task: str, files_needed: List[str] = None) -> str:
+    """Generate a code generation prompt."""
+    generator = PromptGenerator()
+    return generator.generate_code_generation_prompt(task, files_needed)
 
-        if "coding_standards" in context:
-            formatted.append(f"**Coding Standards**: {context['coding_standards']}")
 
-        if "existing_patterns" in context:
-            formatted.append(f"**Existing Patterns**: {context['existing_patterns']}")
+async def main():
+    """Demo function to test PromptGenerator."""
+    print("🎯 CodeConductor Prompt Generator Demo")
+    print("=" * 50)
 
-        if "dependencies" in context:
-            formatted.append(
-                f"**Project Dependencies**: {', '.join(context['dependencies'])}"
-            )
+    generator = PromptGenerator()
 
-        if not formatted:
-            return "Use existing project structure and coding standards"
+    # Test 1: Simple consensus
+    print("\n📝 Test 1: Simple consensus...")
+    consensus = {
+        "task": "Create a simple calculator class",
+        "approach": "Implement basic arithmetic operations with error handling",
+        "requirements": [
+            "Add, subtract, multiply, divide methods",
+            "Handle division by zero",
+            "Include type hints",
+        ],
+        "files_needed": ["calculator.py", "test_calculator.py"],
+        "dependencies": ["pytest"],
+    }
 
-        return "\n".join(formatted)
+    prompt = generator.generate(consensus)
+    print("✅ Generated prompt:")
+    print("-" * 30)
+    print(prompt[:500] + "..." if len(prompt) > 500 else prompt)
+
+    # Test 2: With context
+    print("\n📝 Test 2: With context...")
+    context = PromptContext(
+        project_structure="Simple Python project with src/ and tests/ directories",
+        coding_standards=[
+            "Use dataclasses",
+            "Include type hints",
+            "Follow black formatting",
+        ],
+        existing_patterns=["Use dependency injection", "Implement repository pattern"],
+    )
+
+    prompt_with_context = generator.generate(consensus, context)
+    print("✅ Generated prompt with context:")
+    print("-" * 30)
+    print(
+        prompt_with_context[:500] + "..."
+        if len(prompt_with_context) > 500
+        else prompt_with_context
+    )
+
+    print(
+        f"\n🎉 Demo completed! Generated {len(prompt)} and {len(prompt_with_context)} character prompts"
+    )
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    asyncio.run(main())

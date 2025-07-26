@@ -1,0 +1,59 @@
+## Task: {{ consensus.task | default("Implement requested functionality") }}
+
+### Approach
+{{ consensus.approach | default("Follow standard Python patterns and best practices") }}
+
+### Requirements
+{% if consensus.requirements %}
+{% for req in consensus.requirements %}
+- {{ req }}
+{% endfor %}
+{% else %}
+- Implement the requested functionality
+- Include proper error handling
+- Write comprehensive tests
+{% endif %}
+
+{% if consensus.files_needed %}
+### Expected Files
+{% for file in consensus.files_needed %}
+- `{{ file }}`: {{ file.split('.')[-1] | upper }} implementation
+{% endfor %}
+{% endif %}
+
+{% if consensus.dependencies %}
+### Dependencies
+{% for dep in consensus.dependencies %}
+- {{ dep }}
+{% endfor %}
+{% endif %}
+
+### Constraints
+{% for standard in context.coding_standards %}
+- {{ standard }}
+{% endfor %}
+
+{% if context.existing_patterns %}
+### Existing Patterns
+{% for pattern in context.existing_patterns %}
+- {{ pattern }}
+{% endfor %}
+{% endif %}
+
+{% if context.project_structure %}
+### Project Context
+{{ context.project_structure }}
+{% endif %}
+
+### Output Format
+Please provide the code in the following format:
+
+```{{ consensus.language | default("python") }}
+# Your implementation here
+```
+
+```test_{{ consensus.test_file | default("test_implementation") }}.py
+# Your test cases here
+```
+
+Make sure all tests pass and the code follows the specified standards.
