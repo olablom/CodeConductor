@@ -15,6 +15,15 @@
 - ✅ **Feedback Loop** - Iterative improvement with test results
 - ✅ **Full Pipeline** - End-to-end ensemble → prompt → cursor → test → feedback loop
 
+## 🎯 **NEW: Clipboard++ Enhanced Workflow!** 🚀
+
+**CodeConductor now includes advanced clipboard automation:**
+
+- ✅ **Auto-detection** - Automatically detects when Cursor generates code
+- ✅ **Windows Notifications** - Toast notifications for workflow status
+- ✅ **Global Hotkeys** - Keyboard shortcuts from any application
+- ✅ **Enhanced UX** - Seamless workflow with minimal manual intervention
+
 **Test Results:**
 
 - 📦 **Model Discovery**: 7 models found (6 LM Studio + 1 Ollama)
@@ -35,6 +44,12 @@
 ### Core Engine + Prompt Generator + Cursor Integration Demo
 
 ```bash
+# Test the enhanced clipboard workflow (NEW!)
+python demo_enhanced_pipeline.py
+
+# Test global hotkeys functionality
+python test_hotkeys.py
+
 # Test the complete ensemble → prompt → Cursor pipeline
 python demo_cursor_integration.py
 
@@ -100,14 +115,19 @@ python simple_auto_context_manager.py --max-iter 5
 
 ### Cursor Integration (`integrations/`)
 
-- **`cursor_integration.py`** - Clipboard management and code extraction
+- **`cursor_integration.py`** - Enhanced clipboard management and code extraction
+- **`clipboard_monitor.py`** - Auto-detection of Cursor output patterns
+- **`notifications.py`** - Windows toast notifications and sounds
+- **`hotkeys.py`** - Global keyboard shortcuts
 - **`ClipboardManager`** - Copy/paste operations for Cursor workflow
 - **`CodeExtractor`** - Extracts code files from Cursor output
 - **`CursorIntegration`** - Complete Cursor workflow orchestration
 
 ### Demo Scripts
 
-- **`demo_full_auto.py`** - **Complete end-to-end pipeline demo** 🎯
+- **`demo_enhanced_pipeline.py`** - **Enhanced clipboard workflow demo** 🎯
+- **`test_hotkeys.py`** - Global hotkeys test
+- **`demo_full_auto.py`** - Complete end-to-end pipeline demo
 - **`demo_cursor_integration.py`** - Cursor integration demo
 - **`ensemble/demo_core.py`** - Core ensemble smoke test
 

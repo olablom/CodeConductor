@@ -19,6 +19,20 @@ except ImportError:
     pyperclip = None
     CLIPBOARD_AVAILABLE = False
 
+# Import new clipboard enhancements
+try:
+    from .clipboard_monitor import ClipboardMonitor, get_global_monitor
+    from .notifications import (
+        get_notification_manager,
+        notify_prompt_copied,
+        notify_code_detected,
+    )
+    from .hotkeys import get_hotkey_manager, start_global_hotkeys, stop_global_hotkeys
+
+    ENHANCEMENTS_AVAILABLE = True
+except ImportError:
+    ENHANCEMENTS_AVAILABLE = False
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -205,9 +219,19 @@ class CodeExtractor:
 class CursorIntegration:
     """Main integration class for Cursor workflow."""
 
-    def __init__(self):
+    def __init__(self, enable_enhancements: bool = True):
         self.clipboard_manager = ClipboardManager()
         self.code_extractor = CodeExtractor()
+        self.enhancements_enabled = enable_enhancements and ENHANCEMENTS_AVAILABLE
+
+        # Initialize enhancements if available
+        if self.enhancements_enabled:
+            self.clipboard_monitor = get_global_monitor()
+            self.notification_manager = get_notification_manager()
+            self.hotkey_manager = get_hotkey_manager()
+            logger.info("Cursor integration enhancements enabled")
+        else:
+            logger.info("Cursor integration enhancements disabled")
 
     def copy_prompt_to_clipboard(self, prompt: str) -> bool:
         """
@@ -220,7 +244,22 @@ class CursorIntegration:
             True if successful
         """
         logger.info("Copying prompt to clipboard for Cursor...")
-        return self.clipboard_manager.copy_to_clipboard(prompt)
+        success = self.clipboard_manager.copy_to_clipboard(prompt)
+
+        # Show notification if enhancements enabled
+        if success and self.enhancements_enabled:
+            notify_prompt_copied()
+
+        return success
+
+    def read_from_clipboard(self) -> str:
+        """
+        Read content from clipboard.
+
+        Returns:
+            Clipboard content as string
+        """
+        return self.clipboard_manager.read_from_clipboard()
 
     def wait_for_cursor_output(self) -> str:
         """
@@ -238,10 +277,70 @@ class CursorIntegration:
         print("4. Press Enter when ready to continue...")
         print("=" * 60)
 
+        # Store original clipboard content
+        original_content = self.clipboard_manager.read_from_clipboard()
+
+        print(
+            f"⏳ Waiting for clipboard change... (current: {len(original_content)} chars)"
+        )
+
+        # Wait for user input
         input("Press Enter when you have Cursor output ready...")
 
+        # Read new clipboard content
+        new_content = self.clipboard_manager.read_from_clipboard()
+
+        # Check if content changed
+        if new_content == original_content:
+            print("⚠️  Clipboard content hasn't changed. Did you copy Cursor's output?")
+        else:
+            print(
+                f"✅ Clipboard updated: {len(original_content)} → {len(new_content)} chars"
+            )
+
         logger.info("Reading Cursor output from clipboard...")
-        return self.clipboard_manager.read_from_clipboard()
+        return new_content
+
+    def wait_for_cursor_output_auto(self, timeout: float = 60.0) -> str:
+        """
+        Wait for Cursor output using auto-detection.
+
+        Args:
+            timeout: Maximum time to wait in seconds
+
+        Returns:
+            Cursor output as string
+        """
+        if not self.enhancements_enabled:
+            logger.warning("Auto-detection not available, falling back to manual mode")
+            return self.wait_for_cursor_output()
+
+        print("\n" + "=" * 60)
+        print("🤖 AUTO-DETECT MODE ENABLED!")
+        print("=" * 60)
+        print("1. Paste the prompt into Cursor")
+        print("2. Generate the code")
+        print("3. Copy the generated code output")
+        print("4. CodeConductor will auto-detect when ready!")
+        print("=" * 60)
+
+        # Start clipboard monitoring
+        self.clipboard_monitor.start_monitoring()
+
+        # Wait for Cursor output
+        cursor_output = self.clipboard_monitor.wait_for_cursor_output(timeout)
+
+        # Stop monitoring
+        self.clipboard_monitor.stop_monitoring()
+
+        if cursor_output:
+            # Show notification
+            notify_code_detected()
+            print(f"✅ Auto-detected Cursor output! ({len(cursor_output)} chars)")
+            return cursor_output
+        else:
+            print("⚠️  Auto-detection timeout, falling back to manual mode")
+            return self.wait_for_cursor_output()
 
     def extract_and_save_files(
         self, cursor_output: str, output_dir: Path = None
@@ -284,6 +383,39 @@ class CursorIntegration:
 
         logger.info(f"Saved {len(saved_files)} files to {output_dir}")
         return saved_files
+
+    def start_enhanced_workflow(self, callbacks: dict = None):
+        """
+        Start enhanced workflow with hotkeys and notifications.
+
+        Args:
+            callbacks: Dictionary of callback functions for hotkeys
+        """
+        if not self.enhancements_enabled:
+            logger.warning("Enhancements not available")
+            return
+
+        # Default callbacks if none provided
+        if callbacks is None:
+            callbacks = {
+                "copy_prompt": lambda: print("🎯 Copy prompt hotkey pressed"),
+                "paste_from_cursor": lambda: print(
+                    "🤖 Paste from Cursor hotkey pressed"
+                ),
+                "rerun_last_task": lambda: print("🔄 Re-run last task hotkey pressed"),
+                "run_tests": lambda: print("🧪 Run tests hotkey pressed"),
+                "stop_pipeline": lambda: print("🛑 Stop pipeline hotkey pressed"),
+            }
+
+        # Start global hotkeys
+        start_global_hotkeys(callbacks)
+        logger.info("Enhanced workflow started with hotkeys")
+
+    def stop_enhanced_workflow(self):
+        """Stop enhanced workflow."""
+        if self.enhancements_enabled:
+            stop_global_hotkeys()
+            logger.info("Enhanced workflow stopped")
 
     def run_cursor_workflow(self, prompt: str, output_dir: Path = None) -> List[Path]:
         """
