@@ -2,14 +2,15 @@
 
 **Automate the manual "AI → Cursor → Test → Feedback" workflow using local LLM ensemble reasoning, saving 95% development time.**
 
-## 🚀 **CORE ENGINE + PROMPT GENERATOR STATUS: COMPLETE!** ✅
+## 🚀 **CORE ENGINE + PROMPT GENERATOR + CURSOR INTEGRATION STATUS: COMPLETE!** ✅
 
-**CodeConductor's LLM Ensemble Engine and Prompt Generator are now fully functional!** We have successfully implemented:
+**CodeConductor's LLM Ensemble Engine, Prompt Generator, and Cursor Integration are now fully functional!** We have successfully implemented:
 
 - ✅ **Model Manager** - Discovers and manages local LLM models
 - ✅ **Query Dispatcher** - Parallel dispatch to multiple models
 - ✅ **Consensus Calculator** - Analyzes and compares model responses
 - ✅ **Prompt Generator** - Converts consensus to structured prompts
+- ✅ **Cursor Integration** - Clipboard management and code extraction
 - ✅ **Full Pipeline** - End-to-end ensemble → prompt generation
 
 **Test Results:**
@@ -29,9 +30,15 @@
 - LM Studio running on port 1234
 - pytest installed
 
-### Core Engine + Prompt Generator Demo
+### Core Engine + Prompt Generator + Cursor Integration Demo
 
 ```bash
+# Test the complete ensemble → prompt → Cursor pipeline
+python demo_cursor_integration.py
+
+# Test code extraction only
+python demo_cursor_integration.py --extraction-only
+
 # Test the complete ensemble → prompt pipeline
 python demo_ensemble_prompt.py
 
@@ -89,8 +96,16 @@ python simple_auto_context_manager.py --max-iter 5
 - **`templates/prompt.md.j2`** - Jinja2 template for prompt generation
 - **`PromptContext`** - Context management for project-specific information
 
+### Cursor Integration (`integrations/`)
+
+- **`cursor_integration.py`** - Clipboard management and code extraction
+- **`ClipboardManager`** - Copy/paste operations for Cursor workflow
+- **`CodeExtractor`** - Extracts code files from Cursor output
+- **`CursorIntegration`** - Complete Cursor workflow orchestration
+
 ### Demo Scripts
 
+- **`demo_cursor_integration.py`** - Complete ensemble → prompt → Cursor pipeline test
 - **`demo_ensemble_prompt.py`** - Complete ensemble → prompt pipeline test
 - **`demo_full_pipeline.py`** - Complete end-to-end ensemble test
 - **`demo_query_dispatcher.py`** - QueryDispatcher with mock/real models
@@ -109,6 +124,9 @@ CodeConductor-MVP/
 ├── generators/                     # 📝 Prompt generation
 │   ├── prompt_generator.py        # Consensus to prompt conversion
 │   └── templates/                 # Jinja2 templates
+├── integrations/                   # 🔗 External integrations
+│   └── cursor_integration.py      # Cursor clipboard & code extraction
+├── demo_cursor_integration.py     # 🎯 Ensemble → Cursor demo
 ├── demo_ensemble_prompt.py        # 🔗 Ensemble → Prompt demo
 ├── demo_full_pipeline.py          # 🚀 Complete pipeline demo
 ├── demo_query_dispatcher.py       # 📤 QueryDispatcher demo
