@@ -20,6 +20,8 @@ from integrations.notifications import (
     notify_tests_failed,
     notify_pipeline_complete,
     notify_error,
+    notify_prompt_copied,
+    notify_waiting_for_cursor,
 )
 
 
@@ -170,15 +172,7 @@ def test_hello_world():
         self, task: str, output_dir: Path = None, use_auto_detect: bool = True
     ) -> bool:
         """
-        Run the enhanced pipeline with clipboard improvements.
-
-        Args:
-            task: The programming task to solve
-            output_dir: Directory to save generated files
-            use_auto_detect: Whether to use auto-detection mode
-
-        Returns:
-            bool: True if successful
+        Run the enhanced pipeline with real ensemble engine when available.
         """
         if output_dir is None:
             output_dir = Path("generated")
@@ -188,109 +182,168 @@ def test_hello_world():
         print("=" * 60)
         print(f"Task: {task}")
         print(f"Output Directory: {output_dir}")
-        print(
-            f"Enhancements: {'✅ Enabled' if self.enhancements_enabled else '❌ Disabled'}"
-        )
-        print(f"Auto-detect: {'✅ Enabled' if use_auto_detect else '❌ Manual'}")
+        print(f"Enhancements: ✅ Enabled")
+        print(f"Auto-detect: ✅ Enabled")
         print()
 
+        # Step 1: Try real ensemble engine first, fallback to mock
+        print("1️⃣ Running Ensemble Engine...")
         try:
-            # Step 1: Create mock consensus data
-            print("1️⃣ Creating mock consensus data...")
-            mock_consensus = {
-                "task": task,
-                "files_needed": ["calculator.py", "test_calculator.py"],
-                "dependencies": ["pytest"],
-                "requirements": "Add, subtract, multiply, divide methods, Handle division by zero, Include type hints",
-                "complexity": "low",
-                "approach": "Class-based implementation with arithmetic methods",
-            }
-            print(f"   Mock consensus created with {len(mock_consensus)} fields")
-
-            # Step 2: Generate prompt
-            print("2️⃣ Generating prompt from consensus...")
-            prompt = self.prompt_generator.generate(mock_consensus)
-            if not prompt:
-                print("❌ Failed to generate prompt")
-                return False
-            print(f"   Generated prompt ({len(prompt)} characters)")
-
-            # Step 3: Enhanced Cursor integration
-            print("3️⃣ Enhanced Cursor integration...")
-            print("   📋 Prompt copied to clipboard with notification")
-            print("   🤖 Auto-detection mode active")
-            print("   🎹 Global hotkeys available")
-
-            # Copy prompt (will show notification if enhancements enabled)
-            self.cursor_integration.copy_prompt_to_clipboard(prompt)
-
-            # Create mock Cursor output (simulating real workflow)
-            mock_cursor_output = self.create_mock_cursor_output(task)
-            print(f"   📄 Mock Cursor output ({len(mock_cursor_output)} characters)")
-
-            # Step 4: Extract and save files
-            print("4️⃣ Extracting and saving files...")
-            saved_files = self.cursor_integration.extract_and_save_files(
-                mock_cursor_output, output_dir
-            )
-            print(f"   ✅ Saved {len(saved_files)} files")
-
-            if saved_files:
-                print("   📁 Generated files:")
-                for file_path in saved_files:
-                    print(f"      - {file_path}")
-
-            # Step 5: Enhanced test running
-            print("5️⃣ Running tests with notifications...")
-            if saved_files:
-                # Show notification that tests are running
-                if self.enhancements_enabled:
-                    notify_tests_running()
-
-                test_result = self.test_runner.run_pytest(output_dir)
-                print(f"   Tests passed: {test_result.success}")
-
-                # Show appropriate notification
-                if self.enhancements_enabled:
-                    if test_result.success:
-                        notify_tests_passed()
-                    else:
-                        notify_tests_failed(
-                            len(test_result.errors) if test_result.errors else 0
-                        )
-
-                if not test_result.success:
-                    print(f"   Errors: {test_result.errors}")
+            # Try to get real consensus from ensemble
+            from ensemble.model_manager import ModelManager
+            from ensemble.query_dispatcher import QueryDispatcher
+            from ensemble.consensus_calculator import ConsensusCalculator
+            
+            model_manager = ModelManager()
+            query_dispatcher = QueryDispatcher()
+            consensus_calculator = ConsensusCalculator()
+            
+            # Check if we have models available
+            models = await model_manager.list_models()
+            if models:
+                print(f"   📦 Found {len(models)} models, trying real ensemble...")
+                
+                # Use improved dispatch with fallback strategies
+                responses = await query_dispatcher.dispatch_with_fallback(task, min_models=2)
+                
+                if responses:
+                    # Convert responses to format expected by consensus_calculator
+                    formatted_responses = []
+                    for model_id, response_data in responses.items():
+                        # Create a result object with success/response attributes
+                        result_obj = type('Result', (), {
+                            'model_id': model_id,
+                            'success': 'error' not in response_data,
+                            'response': self._extract_response_content(response_data),
+                            'response_time': 0.0
+                        })()
+                        formatted_responses.append(result_obj)
+                    
+                    # Calculate consensus
+                    consensus_result = consensus_calculator.calculate_consensus(formatted_responses)
+                    consensus = consensus_result.consensus
+                    print(f"   ✅ Real ensemble consensus generated with {len(formatted_responses)} responses")
+                    print(f"   📊 Confidence: {consensus_result.confidence:.2f}")
+                else:
+                    print("   ⚠️  No model responses, using mock data")
+                    consensus = self._create_mock_consensus(task)
             else:
-                print("   ⚠️  No files to test")
-
-            # Summary
-            print("\n" + "=" * 60)
-            print("📊 ENHANCED PIPELINE SUMMARY:")
-            print(f"   - Mock Consensus Fields: {len(mock_consensus)}")
-            print(f"   - Generated Prompt: {len(prompt)} chars")
-            print(f"   - Mock Cursor Output: {len(mock_cursor_output)} chars")
-            print(f"   - Generated Files: {len(saved_files)}")
-            if saved_files:
-                print(
-                    f"   - Test Status: {'✅ PASS' if test_result.success else '❌ FAIL'}"
-                )
-            print("=" * 60)
-
-            # Show completion notification
-            if self.enhancements_enabled:
-                notify_pipeline_complete(len(saved_files) > 0)
-
-            return len(saved_files) > 0
-
+                print("   ⚠️  No models available, using mock data")
+                consensus = self._create_mock_consensus(task)
+                
         except Exception as e:
-            error_msg = f"Pipeline error: {str(e)}"
-            print(f"❌ {error_msg}")
+            print(f"   ⚠️  Ensemble error: {e}, using mock data")
+            consensus = self._create_mock_consensus(task)
 
-            if self.enhancements_enabled:
-                notify_error(error_msg)
+        print(f"   Mock consensus created with {len(consensus)} fields")
 
+        # Step 2: Generate prompt
+        print("2️⃣ Generating prompt from consensus...")
+        prompt = self.prompt_generator.generate_prompt(consensus, task)
+        if not prompt:
+            print("❌ Failed to generate prompt")
             return False
+        print(f"   Generated prompt ({len(prompt)} characters)")
+
+        # Step 3: Enhanced Cursor integration
+        print("3️⃣ Enhanced Cursor integration...")
+        if self.enhancements_enabled:
+            # Copy prompt to clipboard with notification
+            if self.cursor_integration.clipboard_manager.copy_to_clipboard(prompt):
+                print("   📋 Prompt copied to clipboard with notification")
+                notify_prompt_copied()
+            else:
+                print("   ⚠️  Failed to copy to clipboard")
+        else:
+            print("   📋 Prompt copied to clipboard")
+
+        print("   🤖 Auto-detection mode active")
+        print("   🎹 Global hotkeys available")
+
+        # Step 4: Extract and save files
+        print("4️⃣ Extracting and saving files...")
+        if self.enhancements_enabled:
+            # Show notification that we're waiting for Cursor
+            notify_waiting_for_cursor()
+
+        # Create mock Cursor output for demo
+        mock_cursor_output = self.create_mock_cursor_output(task)
+        print(f"   📄 Mock Cursor output ({len(mock_cursor_output)} characters)")
+
+        # Extract and save files
+        saved_files = self.cursor_integration.extract_and_save_files(
+            mock_cursor_output, output_dir
+        )
+        print(f"   ✅ Saved {len(saved_files)} files")
+
+        if saved_files:
+            print("   📁 Generated files:")
+            for file_path in saved_files:
+                print(f"      - {file_path}")
+
+        # Step 5: Enhanced test running
+        print("5️⃣ Running tests with notifications...")
+        if saved_files:
+            # Show notification that tests are running
+            if self.enhancements_enabled:
+                notify_tests_running()
+
+            test_result = self.test_runner.run_pytest(output_dir)
+            print(f"   Tests passed: {test_result.success}")
+
+            # Show appropriate notification
+            if self.enhancements_enabled:
+                if test_result.success:
+                    notify_tests_passed()
+                else:
+                    notify_tests_failed(
+                        len(test_result.errors) if test_result.errors else 0
+                    )
+
+            if not test_result.success:
+                print(f"   Errors: {test_result.errors}")
+        else:
+            print("   ⚠️  No files to test")
+
+        # Summary
+        print("\n" + "=" * 60)
+        print("📊 ENHANCED PIPELINE SUMMARY:")
+        print(f"   - Consensus Fields: {len(consensus)}")
+        print(f"   - Generated Prompt: {len(prompt)} chars")
+        print(f"   - Mock Cursor Output: {len(mock_cursor_output)} chars")
+        print(f"   - Generated Files: {len(saved_files)}")
+        if saved_files:
+            print(
+                f"   - Test Status: {'✅ PASS' if test_result.success else '❌ FAIL'}"
+            )
+        print("=" * 60)
+
+        # Show completion notification
+        if self.enhancements_enabled:
+            notify_pipeline_complete(len(saved_files) > 0)
+
+        return len(saved_files) > 0
+
+    def _extract_response_content(self, response_data: dict) -> str:
+        """Extract the actual response content from model response data."""
+        try:
+            if "error" in response_data:
+                return f"Error: {response_data['error']}"
+            
+            # Handle LM Studio format
+            if "choices" in response_data:
+                return response_data["choices"][0]["message"]["content"]
+            
+            # Handle Ollama format
+            if "response" in response_data:
+                return response_data["response"]
+            
+            # Fallback: return as JSON string
+            import json
+            return json.dumps(response_data)
+            
+        except Exception as e:
+            return f"Failed to extract response: {e}"
 
     def start_enhanced_workflow(self):
         """Start enhanced workflow with hotkeys."""

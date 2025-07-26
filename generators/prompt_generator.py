@@ -246,6 +246,42 @@ Make sure all tests pass and the code follows the specified standards.
 
         return self.generate(consensus)
 
+    def generate_prompt(self, consensus, task):
+        """Generate prompt from ensemble consensus and task description"""
+        try:
+            # Use existing generate_test_prompt as fallback with task context
+            if hasattr(consensus, "task") and consensus.task:
+                return self.generate_test_prompt(consensus)
+            else:
+                # Create a minimal prompt with task info
+                prompt_parts = [
+                    f"Task: {task}",
+                    "",
+                    "Please implement the following requirements:",
+                ]
+
+                # Add consensus information if available
+                if hasattr(consensus, "requirements") and consensus.requirements:
+                    for req in consensus.requirements:
+                        prompt_parts.append(f"- {req}")
+                else:
+                    prompt_parts.append(f"- {task}")
+
+                prompt_parts.extend(
+                    [
+                        "",
+                        "Provide clean, well-documented code with comprehensive tests.",
+                        "Handle edge cases and include error handling.",
+                    ]
+                )
+
+                return "\n".join(prompt_parts)
+
+        except Exception as e:
+            self.logger.warning(f"Error generating prompt: {e}")
+            # Fallback to simple task-based prompt
+            return f"Task: {task}\n\nPlease implement this with comprehensive tests and error handling."
+
     def generate_test_prompt(self, implementation_file: str) -> str:
         """
         Generate a prompt for creating tests for existing code.
