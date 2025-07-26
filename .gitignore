@@ -102,6 +102,16 @@ Thumbs.db
 # CodeConductor cleanup
 cleanup/
 
+# Generated files and outputs
+generated/
+generated_code/
+*.generated.py
+*.output.py
+
+# Streamlit
+.streamlit/
+.streamlit/secrets.toml
+
 # Logs
 *.log
 logs/
@@ -109,3 +119,16 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+# Model cache and downloads
+models/
+downloads/
+cache/
+
+# Test outputs
+test_outputs/
+test_results/
+
+# Demo outputs
+demo_outputs/
+demo_results/

@@ -13,60 +13,61 @@ from integrations.cursor_integration import ClipboardManager, CodeExtractor
 
 class TestClipboardManager:
     """Test Clipboard Manager functionality."""
-    
+
     def test_copy_to_clipboard_success(self):
         """Test successful clipboard copy."""
         manager = ClipboardManager()
         test_text = "Test prompt for Cursor"
-        
-        with patch('pyperclip.copy') as mock_copy:
+
+        with patch("pyperclip.copy") as mock_copy:
             result = manager.copy_to_clipboard(test_text)
-            
+
             mock_copy.assert_called_once_with(test_text)
             assert result is True
-    
+
     def test_copy_to_clipboard_failure(self):
         """Test clipboard copy failure."""
         manager = ClipboardManager()
         test_text = "Test prompt for Cursor"
-        
-        with patch('pyperclip.copy', side_effect=Exception("Clipboard error")):
+
+        with patch("pyperclip.copy", side_effect=Exception("Clipboard error")):
             result = manager.copy_to_clipboard(test_text)
-            
+
             assert result is False
-    
+
     def test_read_from_clipboard_success(self):
         """Test successful clipboard read."""
         manager = ClipboardManager()
         expected_text = "Cursor generated code"
-        
-        with patch('pyperclip.paste', return_value=expected_text):
+
+        with patch("pyperclip.paste", return_value=expected_text):
             result = manager.read_from_clipboard()
-            
+
             assert result == expected_text
-    
+
     def test_read_from_clipboard_failure(self):
         """Test clipboard read failure."""
         manager = ClipboardManager()
-        
-        with patch('pyperclip.paste', side_effect=Exception("Clipboard error")):
+
+        with patch("pyperclip.paste", side_effect=Exception("Clipboard error")):
             result = manager.read_from_clipboard()
-            
+
             assert result == ""
-    
+
     def test_clipboard_roundtrip(self):
         """Test clipboard copy and read roundtrip."""
         manager = ClipboardManager()
         test_text = "Roundtrip test: ```python\nprint('hello')\n```"
-        
-        with patch('pyperclip.copy') as mock_copy, \
-             patch('pyperclip.paste', return_value=test_text):
-            
+
+        with (
+            patch("pyperclip.copy") as mock_copy,
+            patch("pyperclip.paste", return_value=test_text),
+        ):
             # Copy to clipboard
             copy_result = manager.copy_to_clipboard(test_text)
             mock_copy.assert_called_once_with(test_text)
             assert copy_result is True
-            
+
             # Read from clipboard
             read_result = manager.read_from_clipboard()
             assert read_result == test_text
@@ -74,7 +75,7 @@ class TestClipboardManager:
 
 class TestCodeExtractor:
     """Test Code Extractor functionality."""
-    
+
     def test_extract_single_file(self):
         """Test extracting single file from Cursor output."""
         extractor = CodeExtractor()
@@ -89,15 +90,15 @@ class TestCodeExtractor:
         
         The function adds two numbers.
         """
-        
+
         result = extractor.extract_cursor_code(cursor_output)
-        
+
         assert len(result) == 1
         file_path, code = result[0]
         assert file_path.name == "calculator.py"
         assert "def add(a, b):" in code
         assert "return a + b" in code
-    
+
     def test_extract_multiple_files(self):
         """Test extracting multiple files from Cursor output."""
         extractor = CodeExtractor()
@@ -130,32 +131,32 @@ class TestCodeExtractor:
             assert calc.add(2, 3) == 5
         ```
         """
-        
+
         result = extractor.extract_cursor_code(cursor_output)
-        
+
         assert len(result) == 3
-        
+
         # Check main.py
         main_file = next((f for f, _ in result if f.name == "main.py"), None)
         assert main_file is not None
-        
+
         # Check calculator.py
         calc_file = next((f for f, _ in result if f.name == "calculator.py"), None)
         assert calc_file is not None
-        
+
         # Check test_calculator.py
         test_file = next((f for f, _ in result if f.name == "test_calculator.py"), None)
         assert test_file is not None
-    
+
     def test_extract_no_code_blocks(self):
         """Test handling output with no code blocks."""
         extractor = CodeExtractor()
         cursor_output = "This is just text with no code blocks."
-        
+
         result = extractor.extract_cursor_code(cursor_output)
-        
+
         assert result == []
-    
+
     def test_extract_code_without_filename(self):
         """Test extracting code blocks without explicit filenames."""
         extractor = CodeExtractor()
@@ -169,15 +170,15 @@ class TestCodeExtractor:
             return n * factorial(n - 1)
         ```
         """
-        
+
         result = extractor.extract_cursor_code(cursor_output)
-        
+
         assert len(result) == 1
         file_path, code = result[0]
         # Should generate default filename
         assert file_path.name.startswith("generated_")
         assert "def factorial(n):" in code
-    
+
     def test_extract_mixed_content(self):
         """Test extracting from mixed content with explanations."""
         extractor = CodeExtractor()
@@ -213,31 +214,35 @@ class TestCodeExtractor:
         
         The calculator keeps a history of operations.
         """
-        
+
         result = extractor.extract_cursor_code(cursor_output)
-        
+
         assert len(result) == 2
-        
+
         # Check calculator.py
-        calc_file, calc_code = next((f, c) for f, c in result if f.name == "calculator.py")
+        calc_file, calc_code = next(
+            (f, c) for f, c in result if f.name == "calculator.py"
+        )
         assert "class Calculator:" in calc_code
         assert "def add(self, a, b):" in calc_code
-        
+
         # Check test_calculator.py
-        test_file, test_code = next((f, c) for f, c in result if f.name == "test_calculator.py")
+        test_file, test_code = next(
+            (f, c) for f, c in result if f.name == "test_calculator.py"
+        )
         assert "def test_calculator_add():" in test_code
         assert "assert calc.add(2, 3) == 5" in test_code
-    
+
     def test_extract_empty_input(self):
         """Test handling empty input."""
         extractor = CodeExtractor()
-        
+
         result = extractor.extract_cursor_code("")
         assert result == []
-        
+
         result = extractor.extract_cursor_code(None)
         assert result == []
-    
+
     def test_extract_with_special_characters(self):
         """Test extracting code with special characters in filenames."""
         extractor = CodeExtractor()
@@ -248,9 +253,9 @@ class TestCodeExtractor:
             return "special"
         ```
         """
-        
+
         result = extractor.extract_cursor_code(cursor_output)
-        
+
         assert len(result) == 1
         file_path, code = result[0]
         assert file_path.name == "my-special_file.py"
@@ -258,4 +263,4 @@ class TestCodeExtractor:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__]) 
+    pytest.main([__file__])

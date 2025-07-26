@@ -1,6 +1,16 @@
+# Core dependencies
 streamlit>=1.28.0
 requests>=2.31.0
 pytest>=7.4.0
+aiohttp>=3.8.0
+pyperclip>=1.8.0
+
+# Data processing and visualization
+pandas>=2.0.0
+plotly>=5.17.0
+numpy>=1.23.0
+
+# LLM and AI dependencies
 torch==2.7.0+cu128
 torchvision
 torchaudio
@@ -8,5 +18,15 @@ transformers>=4.30.0
 accelerate>=0.20.0
 sentencepiece>=0.1.99
 protobuf>=3.20.0
-aiohttp>=3.8.0
-pyperclip>=1.8.0
+
+# Windows-specific (for notifications)
+win10toast>=0.9
+
+# Development and testing
+black>=23.0.0
+flake8>=6.0.0
+coverage>=7.0.0
+
+# Optional: For advanced features
+# openai>=1.0.0  # For OpenAI integration
+# anthropic>=0.7.0  # For Anthropic integration

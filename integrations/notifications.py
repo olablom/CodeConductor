@@ -190,8 +190,19 @@ def get_notification_manager() -> NotificationManager:
 
 
 def notify_prompt_copied():
-    """Global function to notify prompt copied."""
-    get_notification_manager().prompt_copied()
+    """Show notification that prompt was copied to clipboard."""
+    get_notification_manager().show_notification(
+        "🎯 CodeConductor",
+        "📋 Prompt copied to clipboard! Ready for Cursor.",
+        duration=3,
+    )
+
+
+def notify_waiting_for_cursor():
+    """Show notification that we're waiting for Cursor output."""
+    get_notification_manager().show_notification(
+        "🤖 CodeConductor", "⏳ Waiting for Cursor to generate code...", duration=5
+    )
 
 
 def notify_code_detected(file_count: int = 0):
@@ -222,6 +233,13 @@ def notify_pipeline_complete(success: bool = True):
 def notify_error(error_message: str):
     """Global function to notify error."""
     get_notification_manager().error_occurred(error_message)
+
+
+def notify_success(message: str):
+    """Global function to notify success."""
+    get_notification_manager().show_notification(
+        "✅ CodeConductor", message, duration=5, sound=True
+    )
 
 
 if __name__ == "__main__":
