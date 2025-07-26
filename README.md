@@ -2,16 +2,18 @@
 
 **Automate the manual "AI → Cursor → Test → Feedback" workflow using local LLM ensemble reasoning, saving 95% development time.**
 
-## 🚀 **CORE ENGINE + PROMPT GENERATOR + CURSOR INTEGRATION STATUS: COMPLETE!** ✅
+## 🚀 **FULL END-TO-END PIPELINE STATUS: COMPLETE!** 🎉
 
-**CodeConductor's LLM Ensemble Engine, Prompt Generator, and Cursor Integration are now fully functional!** We have successfully implemented:
+**CodeConductor's complete end-to-end pipeline is now fully functional!** We have successfully implemented:
 
 - ✅ **Model Manager** - Discovers and manages local LLM models
 - ✅ **Query Dispatcher** - Parallel dispatch to multiple models
 - ✅ **Consensus Calculator** - Analyzes and compares model responses
 - ✅ **Prompt Generator** - Converts consensus to structured prompts
 - ✅ **Cursor Integration** - Clipboard management and code extraction
-- ✅ **Full Pipeline** - End-to-end ensemble → prompt generation
+- ✅ **Test Runner** - Automated pytest execution and error analysis
+- ✅ **Feedback Loop** - Iterative improvement with test results
+- ✅ **Full Pipeline** - End-to-end ensemble → prompt → cursor → test → feedback loop
 
 **Test Results:**
 
@@ -105,12 +107,9 @@ python simple_auto_context_manager.py --max-iter 5
 
 ### Demo Scripts
 
-- **`demo_cursor_integration.py`** - Complete ensemble → prompt → Cursor pipeline test
-- **`demo_ensemble_prompt.py`** - Complete ensemble → prompt pipeline test
-- **`demo_full_pipeline.py`** - Complete end-to-end ensemble test
-- **`demo_query_dispatcher.py`** - QueryDispatcher with mock/real models
+- **`demo_full_auto.py`** - **Complete end-to-end pipeline demo** 🎯
+- **`demo_cursor_integration.py`** - Cursor integration demo
 - **`ensemble/demo_core.py`** - Core ensemble smoke test
-- **`test_prompt_generator.py`** - PromptGenerator standalone test
 
 ## 📁 Project Structure
 
@@ -126,11 +125,10 @@ CodeConductor-MVP/
 │   └── templates/                 # Jinja2 templates
 ├── integrations/                   # 🔗 External integrations
 │   └── cursor_integration.py      # Cursor clipboard & code extraction
-├── demo_cursor_integration.py     # 🎯 Ensemble → Cursor demo
-├── demo_ensemble_prompt.py        # 🔗 Ensemble → Prompt demo
-├── demo_full_pipeline.py          # 🚀 Complete pipeline demo
-├── demo_query_dispatcher.py       # 📤 QueryDispatcher demo
-├── test_prompt_generator.py       # 📝 PromptGenerator test
+├── runners/                        # 🧪 Test execution
+│   └── test_runner.py             # Pytest execution & error analysis
+├── demo_full_auto.py              # 🎯 Complete end-to-end pipeline demo
+├── demo_cursor_integration.py     # Cursor integration demo
 ├── simple_auto_context_manager.py # Legacy code generation
 ├── prompt.txt                     # Instructions for LLM
 ├── generated/                     # Output directory (default)
@@ -141,6 +139,24 @@ CodeConductor-MVP/
 ```
 
 ## 🔧 CLI Options
+
+### Full Auto Pipeline Demo
+
+```bash
+# Run with default calculator task
+python demo_full_auto.py
+
+# Run with custom task
+python demo_full_auto.py "Create a simple web scraper with error handling"
+
+# Run with task from file
+python demo_full_auto.py --prompt-file my_task.txt
+
+# Custom output directory and iterations
+python demo_full_auto.py --output-dir my_code --max-iterations 5
+```
+
+### Legacy CLI
 
 ```bash
 python simple_auto_context_manager.py [OPTIONS]
