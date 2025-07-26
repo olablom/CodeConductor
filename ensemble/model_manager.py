@@ -111,7 +111,7 @@ class ModelManager:
 
         health_tasks = []
         for model in models:
-            task = self.health_check(model.id)
+            task = self.check_health(model)
             health_tasks.append(task)
 
         health_results = await asyncio.gather(*health_tasks, return_exceptions=True)
@@ -162,16 +162,26 @@ class ModelManager:
             # Return all healthy models even if below minimum
             return healthy_models
 
-        # Sort by performance metrics (success rate, response time)
+        # Sort by performance metrics (simple scoring for now)
         def model_score(model: ModelInfo) -> float:
-            # Higher success rate = better score
-            success_rate = getattr(model, "success_rate", 0.5)
-            # Lower response time = better score (normalized to 0-1)
-            response_time = getattr(model, "response_time", 10.0)
-            time_score = max(0, 1 - (response_time / 30.0))  # 30s = 0 score
-
-            # Weighted combination
-            return (success_rate * 0.7) + (time_score * 0.3)
+            # Simple scoring based on provider and model size
+            base_score = 0.5
+            
+            # Prefer larger models (they tend to be more capable)
+            if "12b" in model.id.lower() or "13b" in model.id.lower():
+                base_score += 0.3
+            elif "7b" in model.id.lower() or "8b" in model.id.lower():
+                base_score += 0.2
+            elif "mini" in model.id.lower():
+                base_score += 0.1
+                
+            # Prefer certain providers
+            if model.provider == "lm_studio":
+                base_score += 0.1
+            elif model.provider == "ollama":
+                base_score += 0.05
+                
+            return base_score
 
         # Sort by score and take top models
         sorted_models = sorted(healthy_models, key=model_score, reverse=True)
@@ -198,7 +208,7 @@ class ModelManager:
 
         # Try health check
         try:
-            is_healthy = await self.health_check(model_id)
+            is_healthy = await self.check_health(model_info)
             if is_healthy:
                 logger.info(f"✅ {model_id} recovered successfully")
                 return True
