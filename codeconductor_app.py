@@ -18,6 +18,7 @@ from ensemble.consensus_calculator import ConsensusCalculator
 from ensemble.hybrid_ensemble import HybridEnsemble
 from generators.prompt_generator import PromptGenerator
 from integrations.notifications import notify_success, notify_error
+from analysis.planner_agent import PlannerAgent
 
 # Page configuration
 st.set_page_config(
@@ -173,6 +174,9 @@ class CodeConductorApp:
                             report = analyze_project(project_path)
                         st.success("✅ Analysis complete!")
                         st.session_state.project_report = report
+                        st.session_state.project_path = (
+                            project_path  # Store for Planner Agent
+                        )
                     except Exception as e:
                         st.error(f"❌ Analysis failed: {e}")
 
@@ -263,7 +267,104 @@ class CodeConductorApp:
             placeholder="Describe what you want to build... (e.g., 'Create a function to validate email addresses')",
         )
 
+        # Planner Agent integration
+        if task.strip():
+            st.markdown("---")
+            st.markdown("### 🧠 Intelligent Planning")
+
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                if st.button("📋 Create Development Plan", use_container_width=True):
+                    self._create_development_plan(task)
+
+            with col2:
+                if st.button("🤖 Generate Cursor Prompts", use_container_width=True):
+                    self._generate_cursor_prompts(task)
+
         return task
+
+    def _create_development_plan(self, task):
+        """Create development plan using Planner Agent"""
+        try:
+            with st.spinner("🧠 Creating intelligent development plan..."):
+                # Initialize planner with current project
+                project_path = st.session_state.get(
+                    "project_path", "test_fastapi_project"
+                )
+                planner = PlannerAgent(project_path)
+
+                # Create plan
+                plan = planner.create_development_plan(task)
+
+                # Store in session state
+                st.session_state.development_plan = plan
+
+                # Display plan
+                self._display_development_plan(plan)
+
+        except Exception as e:
+            st.error(f"Failed to create development plan: {str(e)}")
+
+    def _generate_cursor_prompts(self, task):
+        """Generate Cursor prompts using Planner Agent"""
+        try:
+            with st.spinner("🤖 Generating optimized Cursor prompts..."):
+                # Initialize planner
+                project_path = st.session_state.get(
+                    "project_path", "test_fastapi_project"
+                )
+                planner = PlannerAgent(project_path)
+
+                # Create plan and get prompts
+                plan = planner.create_development_plan(task)
+
+                # Display prompts
+                st.markdown("### 🤖 Generated Cursor Prompts")
+                for i, prompt in enumerate(plan.cursor_prompts, 1):
+                    with st.expander(f"Prompt {i}: {plan.steps[i - 1]['description']}"):
+                        st.text_area(
+                            f"Copy this prompt to Cursor:",
+                            value=prompt,
+                            height=200,
+                            key=f"prompt_{i}",
+                        )
+                        if st.button(f"📋 Copy Prompt {i}", key=f"copy_{i}"):
+                            st.write("✅ Prompt copied to clipboard!")
+
+        except Exception as e:
+            st.error(f"Failed to generate prompts: {str(e)}")
+
+    def _display_development_plan(self, plan):
+        """Display development plan in GUI"""
+        st.markdown("### 📋 Development Plan")
+
+        # Plan overview
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Complexity", plan.estimated_complexity.upper())
+        with col2:
+            st.metric("Steps", len(plan.steps))
+        with col3:
+            st.metric("Dependencies", len(plan.dependencies))
+
+        # Dependencies
+        if plan.dependencies:
+            st.markdown("#### 📦 Dependencies Needed")
+            for dep in plan.dependencies:
+                st.write(f"- `{dep}`")
+
+        # Implementation steps
+        st.markdown("#### 📝 Implementation Steps")
+        for step in plan.steps:
+            with st.expander(f"Step {step['number']}: {step['description']}"):
+                st.write(f"**Estimated time:** {step['estimated_time']}")
+                if step["files_affected"]:
+                    st.write(f"**Files affected:** {', '.join(step['files_affected'])}")
+
+        # Validation criteria
+        st.markdown("#### ✅ Validation Criteria")
+        for criteria in plan.validation_criteria:
+            st.write(f"- {criteria}")
 
     def render_generation_controls(self, task):
         """Render generation controls"""
