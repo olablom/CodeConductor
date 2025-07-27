@@ -152,12 +152,12 @@ class CodeConductorApp:
             # Project Analysis
             st.markdown("---")
             st.markdown("### 📁 Project Analysis")
-            
+
             # Input för sökväg till projektmappen
             project_path = st.text_input(
                 "Add Project Path",
-                value="", 
-                help="Enter the root folder of your codebase"
+                value="",
+                help="Enter the root folder of your codebase",
             )
 
             # Knapp för att starta analys
@@ -166,13 +166,11 @@ class CodeConductorApp:
                     st.error("Please enter a valid project path.")
                 else:
                     try:
-                        from analysis.project_analyzer import ProjectAnalyzer
-                        analyzer = ProjectAnalyzer()
+                        from analysis.project_analyzer import analyze_project
+
                         with st.spinner("🔍 Scanning project..."):
-                            # Fas 1: basic scanning
-                            routes = analyzer.scan_fastapi_routes(project_path)
-                            schema = analyzer.introspect_postgresql()  # Optional DB analysis
-                            report = analyzer.generate_report(routes, schema)
+                            # Use the optimized analyze_project function
+                            report = analyze_project(project_path)
                         st.success("✅ Analysis complete!")
                         st.session_state.project_report = report
                     except Exception as e:
@@ -505,13 +503,15 @@ class CodeConductorApp:
     def render_project_report(self, report):
         """Render project analysis report"""
         st.markdown("### 📊 Project Analysis Report")
-        
+
         # Summary metrics
         col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("FastAPI Routes", len(report.get("routes", [])))
         with col2:
-            st.metric("Database Tables", len(report.get("schema", {}).get("tables", [])))
+            st.metric(
+                "Database Tables", len(report.get("schema", {}).get("tables", []))
+            )
         with col3:
             st.metric("Files Analyzed", report.get("files_analyzed", 0))
 
@@ -522,7 +522,7 @@ class CodeConductorApp:
                 with st.expander(f"{route['method']} {route['path']}", expanded=False):
                     st.write(f"**Function:** {route['function']}")
                     st.write(f"**File:** {route['file']}")
-                    if route.get('parameters'):
+                    if route.get("parameters"):
                         st.write(f"**Parameters:** {route['parameters']}")
 
         # Database Schema
@@ -531,7 +531,7 @@ class CodeConductorApp:
             for table in report["schema"]["tables"]:
                 with st.expander(f"Table: {table['name']}", expanded=False):
                     st.write(f"**Columns:** {len(table['columns'])}")
-                    for col in table['columns']:
+                    for col in table["columns"]:
                         st.write(f"- {col['name']}: {col['type']}")
 
         # AI Recommendations (if available)
@@ -549,7 +549,7 @@ class CodeConductorApp:
                     label="Download JSON Report",
                     data=json.dumps(report, indent=2),
                     file_name="project_analysis.json",
-                    mime="application/json"
+                    mime="application/json",
                 )
         with col2:
             if st.button("📊 Export as CSV"):
@@ -559,34 +559,34 @@ class CodeConductorApp:
                     label="Download CSV Report",
                     data=csv_data,
                     file_name="project_analysis.csv",
-                    mime="text/csv"
+                    mime="text/csv",
                 )
 
     def convert_report_to_csv(self, report):
         """Convert report to CSV format"""
         import io
         import csv
-        
+
         output = io.StringIO()
         writer = csv.writer(output)
-        
+
         # Write routes
         writer.writerow(["Type", "Name", "Details"])
         for route in report.get("routes", []):
-            writer.writerow([
-                "Route", 
-                f"{route['method']} {route['path']}", 
-                f"Function: {route['function']}, File: {route['file']}"
-            ])
-        
+            writer.writerow(
+                [
+                    "Route",
+                    f"{route['method']} {route['path']}",
+                    f"Function: {route['function']}, File: {route['file']}",
+                ]
+            )
+
         # Write tables
         for table in report.get("schema", {}).get("tables", []):
-            writer.writerow([
-                "Table", 
-                table['name'], 
-                f"Columns: {len(table['columns'])}"
-            ])
-        
+            writer.writerow(
+                ["Table", table["name"], f"Columns: {len(table['columns'])}"]
+            )
+
         return output.getvalue()
 
     def run(self):
@@ -605,7 +605,10 @@ class CodeConductorApp:
             self.render_model_status()
 
             # Project Analysis Report (if available)
-            if st.session_state.get("show_project_report", False) and "project_report" in st.session_state:
+            if (
+                st.session_state.get("show_project_report", False)
+                and "project_report" in st.session_state
+            ):
                 self.render_project_report(st.session_state.project_report)
                 st.session_state.show_project_report = False
 
