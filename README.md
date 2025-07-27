@@ -152,6 +152,7 @@ CodeConductor includes a sophisticated RAG (Retrieval-Augmented Generation) syst
 - **Context Retrieval** - Finds relevant documentation and code examples
 
 **RAG Integration Points:**
+
 - **Ensemble Engine** - Augments task descriptions with relevant context
 - **CodeReviewer** - Uses RAG context for better code review suggestions
 - **Streamlit GUI** - Displays RAG context and retrieval statistics
@@ -189,6 +190,7 @@ python test_gui_live_automated.py
 To test the full pipeline with RAG integration:
 
 1. **Start the Streamlit app:**
+
    ```bash
    streamlit run codeconductor_app.py
    ```
@@ -196,11 +198,13 @@ To test the full pipeline with RAG integration:
 2. **Open GUI in browser** (default: `http://localhost:8501`)
 
 3. **Test realistic tasks:**
+
    - "Create a Flask API with user authentication"
    - "Write a Python function to process CSV data"
    - "Implement a merge sort algorithm with detailed docstrings"
 
 4. **Monitor RAG results:**
+
    - Check RAG context panel for local and Stack Overflow results
    - Verify enhanced prompts with relevant context
    - Confirm code quality improvements from RAG integration
