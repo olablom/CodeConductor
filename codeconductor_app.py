@@ -695,6 +695,9 @@ class CodeConductorApp:
                 "reward": results.get("reward", 0.0),
                 "total_tests": results.get("total_tests", 0),
                 "passed_tests": results.get("passed_tests", 0),
+                # Enhanced metrics
+                "cyclomatic_complexity": results.get("cyclomatic_complexity", 0.0),
+                "exec_time_s": results.get("exec_time_s", 0.0),
             }
 
         except Exception as e:
@@ -706,6 +709,9 @@ class CodeConductorApp:
                 "reward": 0.0,
                 "total_tests": 0,
                 "passed_tests": 0,
+                # Enhanced metrics (default values on error)
+                "cyclomatic_complexity": 0.0,
+                "exec_time_s": 0.0,
             }
 
     def _calculate_test_reward(self, test_results: list) -> float:
@@ -722,7 +728,7 @@ class CodeConductorApp:
         """Render test results in the GUI."""
         st.markdown("### 🧪 Automated Test Results")
 
-        # Test metrics
+        # Test metrics - Row 1
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric(
@@ -737,6 +743,56 @@ class CodeConductorApp:
             )
         with col4:
             st.metric("Total Tests", test_results["total_tests"])
+
+        # Enhanced metrics - Row 2
+        st.markdown("#### 📊 Code Quality Metrics")
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            # Code Complexity
+            complexity = test_results.get('cyclomatic_complexity', 0.0)
+            complexity_color = "normal" if complexity <= 3.0 else "inverse"
+            st.metric(
+                "Code Complexity", 
+                f"{complexity:.2f}",
+                delta="Low" if complexity <= 3.0 else "High",
+                delta_color=complexity_color
+            )
+        
+        with col2:
+            # Execution Time
+            exec_time = test_results.get('exec_time_s', 0.0)
+            st.metric(
+                "Execution Time", 
+                f"{exec_time:.3f}s",
+                delta="Fast" if exec_time <= 0.1 else "Slow",
+                delta_color="normal" if exec_time <= 0.1 else "inverse"
+            )
+        
+        with col3:
+            # Average Test Duration
+            test_durations = []
+            for test in test_results.get('test_results', []):
+                if 'duration_s' in test:
+                    test_durations.append(test['duration_s'])
+            
+            avg_duration = sum(test_durations) / len(test_durations) if test_durations else 0.0
+            st.metric(
+                "Avg Test Duration", 
+                f"{avg_duration:.3f}s",
+                delta="Fast" if avg_duration <= 0.05 else "Slow",
+                delta_color="normal" if avg_duration <= 0.05 else "inverse"
+            )
+        
+        with col4:
+            # Performance Score (combination of complexity and speed)
+            performance_score = max(0, 1.0 - (complexity * 0.1 + exec_time * 0.5))
+            st.metric(
+                "Performance Score", 
+                f"{performance_score:.2f}",
+                delta="Good" if performance_score >= 0.7 else "Needs improvement",
+                delta_color="normal" if performance_score >= 0.7 else "inverse"
+            )
 
         # Test details
         with st.expander("📊 Test Details", expanded=False):

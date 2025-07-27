@@ -30,7 +30,11 @@
     "execution_time": null,
     "user_rating": null,
     "notes": "Test-as-Reward: 0.00 (0/3 tests passed)",
-    "reward": 0.0
+    "reward": 0.0,
+    "exec_time_s": null,
+    "cyclomatic_complexity": null,
+    "tests_total": null,
+    "tests_passed": null
   },
   {
     "prompt": "Create functions for basic math operations",
@@ -63,7 +67,11 @@
     "execution_time": null,
     "user_rating": null,
     "notes": "Test-as-Reward: 0.00 (0/3 tests passed)",
-    "reward": 0.0
+    "reward": 0.0,
+    "exec_time_s": null,
+    "cyclomatic_complexity": null,
+    "tests_total": null,
+    "tests_passed": null
   },
   {
     "prompt": "Create functions for basic math operations",
@@ -96,7 +104,11 @@
     "execution_time": null,
     "user_rating": null,
     "notes": "Test-as-Reward: 0.00 (0/3 tests passed)",
-    "reward": 0.0
+    "reward": 0.0,
+    "exec_time_s": null,
+    "cyclomatic_complexity": null,
+    "tests_total": null,
+    "tests_passed": null
   },
   {
     "prompt": "Create a simple math function",
@@ -132,7 +144,11 @@
     "execution_time": null,
     "user_rating": null,
     "notes": "Test-as-Reward: 0.67 (2/3 tests passed)",
-    "reward": 0.6666666666666666
+    "reward": 0.6666666666666666,
+    "exec_time_s": null,
+    "cyclomatic_complexity": null,
+    "tests_total": null,
+    "tests_passed": null
   },
   {
     "prompt": "Create functions for basic math operations",
@@ -165,7 +181,11 @@
     "execution_time": null,
     "user_rating": null,
     "notes": "Test-as-Reward: 0.00 (0/3 tests passed)",
-    "reward": 0.0
+    "reward": 0.0,
+    "exec_time_s": null,
+    "cyclomatic_complexity": null,
+    "tests_total": null,
+    "tests_passed": null
   },
   {
     "prompt": "Create functions for basic math operations",
@@ -198,7 +218,11 @@
     "execution_time": null,
     "user_rating": null,
     "notes": "Test-as-Reward: 0.00 (0/3 tests passed)",
-    "reward": 0.0
+    "reward": 0.0,
+    "exec_time_s": null,
+    "cyclomatic_complexity": null,
+    "tests_total": null,
+    "tests_passed": null
   },
   {
     "prompt": "Create functions for basic math operations",
@@ -231,7 +255,11 @@
     "execution_time": null,
     "user_rating": null,
     "notes": "Test-as-Reward: 0.00 (0/3 tests passed)",
-    "reward": 0.0
+    "reward": 0.0,
+    "exec_time_s": null,
+    "cyclomatic_complexity": null,
+    "tests_total": null,
+    "tests_passed": null
   },
   {
     "prompt": "Create a simple math function",
@@ -267,6 +295,219 @@
     "execution_time": null,
     "user_rating": null,
     "notes": "Test-as-Reward: 0.67 (2/3 tests passed)",
-    "reward": 0.6666666666666666
+    "reward": 0.6666666666666666,
+    "exec_time_s": null,
+    "cyclomatic_complexity": null,
+    "tests_total": null,
+    "tests_passed": null
+  },
+  {
+    "prompt": "Create simple functions",
+    "code": "\ndef hello_world():\n    return \"Hello, World!\"\n\ndef add_numbers(a, b):\n    return a + b\n",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_1_passed",
+          "passed": true,
+          "type": "passed"
+        }
+      ],
+      "total_tests": 1,
+      "passed_tests": 1,
+      "reward": 1.0,
+      "metadata": {
+        "task": "Create simple functions",
+        "generation_timestamp": "2025-07-27T23:08:09.270985",
+        "code_length": 88
+      }
+    },
+    "task_description": "Test execution with 1/1 tests passed",
+    "timestamp": "2025-07-27T23:08:10.860696",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 1.00 (1/1 tests passed)",
+    "reward": 1.0,
+    "exec_time_s": null,
+    "cyclomatic_complexity": null,
+    "tests_total": null,
+    "tests_passed": null
+  },
+  {
+    "prompt": "Dummy prompt",
+    "code": "print(\"Hello World\")",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_pass",
+          "passed": true
+        },
+        {
+          "name": "test_fail",
+          "passed": false
+        }
+      ],
+      "total_tests": 2,
+      "passed_tests": 1,
+      "reward": 0.5,
+      "metadata": {}
+    },
+    "task_description": "Test execution with 1/2 tests passed",
+    "timestamp": "2025-07-27T23:12:10.094214",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.50 (1/2 tests passed)",
+    "reward": 0.5,
+    "exec_time_s": null,
+    "cyclomatic_complexity": null,
+    "tests_total": null,
+    "tests_passed": null
+  },
+  {
+    "prompt": "Dummy prompt",
+    "code": "print(\"Hello World\")",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_pass",
+          "passed": true
+        },
+        {
+          "name": "test_fail",
+          "passed": false
+        }
+      ],
+      "total_tests": 2,
+      "passed_tests": 1,
+      "reward": 0.5,
+      "metadata": {}
+    },
+    "task_description": "Test execution with 1/2 tests passed",
+    "timestamp": "2025-07-27T23:12:30.220870",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.50 (1/2 tests passed)",
+    "reward": 0.5,
+    "exec_time_s": null,
+    "cyclomatic_complexity": null,
+    "tests_total": null,
+    "tests_passed": null
+  },
+  {
+    "prompt": "Dummy prompt",
+    "code": "print(\"Hello World\")",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_pass",
+          "passed": true,
+          "duration_s": 0.0
+        },
+        {
+          "name": "test_fail",
+          "passed": false,
+          "duration_s": 0.0
+        }
+      ],
+      "total_tests": 2,
+      "passed_tests": 1,
+      "reward": 0.5,
+      "metadata": {},
+      "test_durations": [
+        0.0,
+        0.0
+      ]
+    },
+    "task_description": "Test execution with 1/2 tests passed",
+    "timestamp": "2025-07-27T23:21:06.627978",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.50 (1/2 tests passed)",
+    "reward": 0.5,
+    "exec_time_s": 0.0,
+    "cyclomatic_complexity": 0.0,
+    "tests_total": 2,
+    "tests_passed": 1
+  },
+  {
+    "prompt": "test prompt",
+    "code": "print(\"hello\")",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test1",
+          "passed": true,
+          "duration_s": 0.1
+        }
+      ],
+      "total_tests": 1,
+      "passed_tests": 1,
+      "reward": 1.0,
+      "metadata": {
+        "test": "data"
+      },
+      "test_durations": [
+        0.1
+      ]
+    },
+    "task_description": "Test execution with 1/1 tests passed",
+    "timestamp": "2025-07-27T23:21:18.739272",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 1.00 (1/1 tests passed)",
+    "reward": 1.0,
+    "exec_time_s": 0.0,
+    "cyclomatic_complexity": 0.0,
+    "tests_total": 1,
+    "tests_passed": 1
+  },
+  {
+    "prompt": "Create a function to add numbers",
+    "code": "\ndef add(a, b):\n    return a + b\n",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_1",
+          "passed": true,
+          "duration_s": 0.1
+        },
+        {
+          "name": "test_2",
+          "passed": true,
+          "duration_s": 0.2
+        },
+        {
+          "name": "test_3",
+          "passed": false,
+          "duration_s": 0.05
+        }
+      ],
+      "total_tests": 3,
+      "passed_tests": 2,
+      "reward": 0.6666666666666666,
+      "metadata": {
+        "test_type": "enhanced"
+      },
+      "test_durations": [
+        0.1,
+        0.2,
+        0.05
+      ]
+    },
+    "task_description": "Test execution with 2/3 tests passed",
+    "timestamp": "2025-07-27T23:23:00.865485",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.67 (2/3 tests passed)",
+    "reward": 0.6666666666666666,
+    "exec_time_s": 0.0,
+    "cyclomatic_complexity": 1.0,
+    "tests_total": 3,
+    "tests_passed": 2
   }
 ]

@@ -5,12 +5,28 @@ Saves successful prompt-code patterns for analysis and model optimization
 
 import json
 import os
+import time
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 from pathlib import Path
 from dataclasses import dataclass, asdict
 
 PATTERNS_FILE = os.path.join(os.path.dirname(__file__), "patterns.json")
+
+
+def calculate_complexity(code: str) -> float:
+    """
+    Calculate cyclomatic complexity of the provided code.
+    Requires 'radon' library.
+    """
+    try:
+        from radon.complexity import cc_visit
+
+        blocks = cc_visit(code)
+        total = sum(block.complexity for block in blocks)
+        return total / len(blocks) if blocks else 0.0
+    except ImportError:
+        return 0.0
 
 
 @dataclass
@@ -27,6 +43,11 @@ class Pattern:
     user_rating: Optional[int] = None  # 1-5 scale
     notes: Optional[str] = None
     reward: Optional[float] = None  # Test-as-Reward value
+    # New performance and quality metrics
+    exec_time_s: Optional[float] = None  # Execution time in seconds
+    cyclomatic_complexity: Optional[float] = None  # Code complexity
+    tests_total: Optional[int] = None  # Total number of tests
+    tests_passed: Optional[int] = None  # Number of passed tests
 
 
 class LearningSystem:
@@ -81,6 +102,10 @@ class LearningSystem:
         user_rating: Optional[int] = None,
         notes: Optional[str] = None,
         reward: Optional[float] = None,
+        exec_time_s: Optional[float] = None,
+        cyclomatic_complexity: Optional[float] = None,
+        tests_total: Optional[int] = None,
+        tests_passed: Optional[int] = None,
     ) -> bool:
         """
         Save a successful prompt-code pattern
@@ -111,6 +136,10 @@ class LearningSystem:
                 user_rating=user_rating,
                 notes=notes,
                 reward=reward,
+                exec_time_s=exec_time_s,
+                cyclomatic_complexity=cyclomatic_complexity,
+                tests_total=tests_total,
+                tests_passed=tests_passed,
             )
 
             self.patterns.append(pattern)
@@ -125,7 +154,7 @@ class LearningSystem:
         self, prompt: str, code: str, test_results: list, metadata: dict = None
     ) -> float:
         """
-        Calculate and log reward based on test results
+        Calculate and log reward based on test results with enhanced metrics
 
         Args:
             prompt: The prompt that was used
@@ -136,9 +165,24 @@ class LearningSystem:
         Returns:
             Calculated reward value (0.0 to 1.0)
         """
+        # Compute test-based reward
         total = len(test_results)
         passed = sum(1 for t in test_results if t.get("passed", False))
         reward = passed / total if total > 0 else 0.0
+
+        # Compute performance (execution) metrics
+        start = time.time()
+        # Optionally re-run code for performance, or record previous
+        exec_time = time.time() - start
+
+        # Compute code complexity
+        complexity = calculate_complexity(code)
+
+        # Calculate test durations if available
+        test_durations = []
+        for test in test_results:
+            if "duration_s" in test:
+                test_durations.append(test["duration_s"])
 
         # Create validation dict from test results
         validation = {
@@ -147,9 +191,21 @@ class LearningSystem:
             "passed_tests": passed,
             "reward": reward,
             "metadata": metadata or {},
+            "test_durations": test_durations,
         }
 
-        # Save with reward
+        # Merge additional metadata
+        meta = metadata.copy() if metadata else {}
+        meta.update(
+            {
+                "tests_total": total,
+                "tests_passed": passed,
+                "exec_time_s": exec_time,
+                "cyclomatic_complexity": complexity,
+            }
+        )
+
+        # Save with enhanced metrics
         self.save_successful_pattern(
             prompt=prompt,
             code=code,
@@ -157,6 +213,10 @@ class LearningSystem:
             task_description=f"Test execution with {passed}/{total} tests passed",
             reward=reward,
             notes=f"Test-as-Reward: {reward:.2f} ({passed}/{total} tests passed)",
+            exec_time_s=exec_time,
+            cyclomatic_complexity=complexity,
+            tests_total=total,
+            tests_passed=passed,
         )
 
         return reward
