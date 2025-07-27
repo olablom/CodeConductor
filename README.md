@@ -276,23 +276,26 @@ MODEL_CONFIGS = {
 **Advanced AI learning capabilities now integrated:**
 
 ### Test-as-Reward System
+
 - **Automated Reward Calculation** - Calculate rewards (0.0-1.0) based on test pass rates
 - **Pattern Logging** - Save successful prompt-code-test combinations with rewards
 - **Quality Metrics** - Track code quality, test performance, and improvement over time
 - **Integration Ready** - Seamlessly feeds data to RLHF agent
 
 ### RLHF Agent with PPO
+
 - **Proximal Policy Optimization** - State-of-the-art reinforcement learning algorithm
 - **Dynamic Model Selection** - Choose optimal model based on task complexity and historical performance
 - **4 Action Space**:
   - `use_model_A` (default)
-  - `use_model_B` (alternative) 
+  - `use_model_B` (alternative)
   - `retry_with_fix` (improve)
   - `escalate_to_gpt4` (complex tasks)
 - **4D Observation Space**: [test_reward, code_quality, user_feedback, task_complexity]
 - **Training Results**: Episode rewards improved from 1.12 → 1.84 (64% improvement!)
 
 ### Usage Examples
+
 ```bash
 # Test the Test-as-Reward system
 python apply_test_as_reward.py
