@@ -1,0 +1,13 @@
+"""
+Analysis module for CodeConductor MVP.
+
+This module provides project analysis capabilities including:
+- FastAPI route scanning
+- Database schema introspection  
+- Code quality analysis
+- AI-powered recommendations
+"""
+
+from .project_analyzer import ProjectAnalyzer
+
+__all__ = ["ProjectAnalyzer"] 

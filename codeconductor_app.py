@@ -149,6 +149,40 @@ class CodeConductorApp:
                         st.write(f"**Models:** {entry['models_used']}")
                         st.write(f"**Time:** {entry['timestamp']}")
 
+            # Project Analysis
+            st.markdown("---")
+            st.markdown("### 📁 Project Analysis")
+            
+            # Input för sökväg till projektmappen
+            project_path = st.text_input(
+                "Add Project Path",
+                value="", 
+                help="Enter the root folder of your codebase"
+            )
+
+            # Knapp för att starta analys
+            if st.button("🔍 Analyze Project"):
+                if not project_path:
+                    st.error("Please enter a valid project path.")
+                else:
+                    try:
+                        from analysis.project_analyzer import ProjectAnalyzer
+                        analyzer = ProjectAnalyzer()
+                        with st.spinner("🔍 Scanning project..."):
+                            # Fas 1: basic scanning
+                            routes = analyzer.scan_fastapi_routes(project_path)
+                            schema = analyzer.introspect_postgresql()  # Optional DB analysis
+                            report = analyzer.generate_report(routes, schema)
+                        st.success("✅ Analysis complete!")
+                        st.session_state.project_report = report
+                    except Exception as e:
+                        st.error(f"❌ Analysis failed: {e}")
+
+            # Knapp för att visa rapporten (om den finns)
+            if "project_report" in st.session_state:
+                if st.button("📊 View Report"):
+                    st.session_state.show_project_report = True
+
     def render_model_status(self):
         """Render model status dashboard"""
         st.markdown("### 🤖 Model Status Dashboard")
@@ -468,6 +502,93 @@ class CodeConductorApp:
             }
         )
 
+    def render_project_report(self, report):
+        """Render project analysis report"""
+        st.markdown("### 📊 Project Analysis Report")
+        
+        # Summary metrics
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("FastAPI Routes", len(report.get("routes", [])))
+        with col2:
+            st.metric("Database Tables", len(report.get("schema", {}).get("tables", [])))
+        with col3:
+            st.metric("Files Analyzed", report.get("files_analyzed", 0))
+
+        # FastAPI Routes
+        if report.get("routes"):
+            st.markdown("#### 🚀 FastAPI Routes")
+            for route in report["routes"]:
+                with st.expander(f"{route['method']} {route['path']}", expanded=False):
+                    st.write(f"**Function:** {route['function']}")
+                    st.write(f"**File:** {route['file']}")
+                    if route.get('parameters'):
+                        st.write(f"**Parameters:** {route['parameters']}")
+
+        # Database Schema
+        if report.get("schema", {}).get("tables"):
+            st.markdown("#### 🗄️ Database Schema")
+            for table in report["schema"]["tables"]:
+                with st.expander(f"Table: {table['name']}", expanded=False):
+                    st.write(f"**Columns:** {len(table['columns'])}")
+                    for col in table['columns']:
+                        st.write(f"- {col['name']}: {col['type']}")
+
+        # AI Recommendations (if available)
+        if report.get("ai_recommendations"):
+            st.markdown("#### 🤖 AI Recommendations")
+            for rec in report["ai_recommendations"]:
+                st.info(f"**{rec['category']}:** {rec['message']}")
+
+        # Export options
+        st.markdown("#### 📤 Export Options")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📄 Export as JSON"):
+                st.download_button(
+                    label="Download JSON Report",
+                    data=json.dumps(report, indent=2),
+                    file_name="project_analysis.json",
+                    mime="application/json"
+                )
+        with col2:
+            if st.button("📊 Export as CSV"):
+                # Convert report to CSV format
+                csv_data = self.convert_report_to_csv(report)
+                st.download_button(
+                    label="Download CSV Report",
+                    data=csv_data,
+                    file_name="project_analysis.csv",
+                    mime="text/csv"
+                )
+
+    def convert_report_to_csv(self, report):
+        """Convert report to CSV format"""
+        import io
+        import csv
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write routes
+        writer.writerow(["Type", "Name", "Details"])
+        for route in report.get("routes", []):
+            writer.writerow([
+                "Route", 
+                f"{route['method']} {route['path']}", 
+                f"Function: {route['function']}, File: {route['file']}"
+            ])
+        
+        # Write tables
+        for table in report.get("schema", {}).get("tables", []):
+            writer.writerow([
+                "Table", 
+                table['name'], 
+                f"Columns: {len(table['columns'])}"
+            ])
+        
+        return output.getvalue()
+
     def run(self):
         """Main app runner"""
         self.initialize_session_state()
@@ -482,6 +603,11 @@ class CodeConductorApp:
         with col1:
             # Model status
             self.render_model_status()
+
+            # Project Analysis Report (if available)
+            if st.session_state.get("show_project_report", False) and "project_report" in st.session_state:
+                self.render_project_report(st.session_state.project_report)
+                st.session_state.show_project_report = False
 
             # Task input
             task = self.render_task_input()
