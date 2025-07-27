@@ -154,3 +154,6 @@ desktop.ini
 prompt.txt
 *.generated.*
 *.output.*
+
+# Learning patterns storage
+/feedback/patterns.json

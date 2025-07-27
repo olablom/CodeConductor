@@ -25,7 +25,18 @@ CodeConductor MVP is an intelligent development assistant that revolutionizes ho
 - **Privacy First**: All processing happens on your machine
 - **Quality Control**: Human review ensures code meets your standards
 - **Learning**: System improves over time by learning from successful patterns
-- **Flexibility**: Works with any AI code generator (Cursor, GitHub Copilot, etc.)
+- **Flexibility**: Works with any AI code generator (Cursor, GitHub Copilot, etc.)Jag skulle rekommendera att vi först **rensar upp de varningar som du får**, så att koden blir helt framtidssäker innan vi drar igång fler tester eller timeout‑justeringar:
+
+1. **Byt ut `gym` mot `gymnasium`** i alla demo‑ och RLHF‑skript.
+2. **Migrera LangChain‑importer** till `langchain_community.vectorstores` och `langchain_huggingface.embeddings`.
+
+När vi har gjort det kan vi enkelt:
+
+* **Testa med snabbare modeller** (t.ex. phi3\:mini) och mäta responstider.
+* **Finjustera timeout‑värdena**, kanske med en konfigurationsparameter istället för hard‑kodat värde.
+
+Är det okej om vi börjar med att uppdatera de deprecated‑biblioteken? Eller vill du hellre direkt testa nya modeller eller trimma timeouts? 🚀
+
 
 **The Workflow:**
 
@@ -320,6 +331,12 @@ python feedback/rlhf_agent.py --mode demo
 - [x] Complete end-to-end pipeline
 - [x] Test-as-Reward system
 - [x] RLHF agent with PPO
+
+### ✅ PytestRunner Integration
+
+- After code generation, the app now automatically runs your real `pytest` suite (via `pytest-json-report`),
+- parses the JSON report, displays pass/fail and error details in the UI,
+- calculates a reward score based on passed tests and logs prompt→code→reward patterns for RLHF training.
 
 ### Phase 2: Advanced Features 🚧
 
