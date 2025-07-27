@@ -32,11 +32,10 @@ CodeConductor MVP is an intelligent development assistant that revolutionizes ho
 
 När vi har gjort det kan vi enkelt:
 
-* **Testa med snabbare modeller** (t.ex. phi3\:mini) och mäta responstider.
-* **Finjustera timeout‑värdena**, kanske med en konfigurationsparameter istället för hard‑kodat värde.
+- **Testa med snabbare modeller** (t.ex. phi3\:mini) och mäta responstider.
+- **Finjustera timeout‑värdena**, kanske med en konfigurationsparameter istället för hard‑kodat värde.
 
 Är det okej om vi börjar med att uppdatera de deprecated‑biblioteken? Eller vill du hellre direkt testa nya modeller eller trimma timeouts? 🚀
-
 
 **The Workflow:**
 
@@ -289,8 +288,9 @@ MODEL_CONFIGS = {
 ### Test-as-Reward System
 
 - **Automated Reward Calculation** - Calculate rewards (0.0-1.0) based on test pass rates
-- **Pattern Logging** - Save successful prompt-code-test combinations with rewards
-- **Quality Metrics** - Track code quality, test performance, and improvement over time
+- **Enhanced Quality Metrics** - Track cyclomatic complexity, execution time, test duration, and performance scores
+- **Pattern Logging** - Save successful prompt-code-test combinations with rewards and detailed metrics
+- **Real-time GUI Display** - View complexity, performance, and quality metrics in Test Results panel
 - **Integration Ready** - Seamlessly feeds data to RLHF agent
 
 ### RLHF Agent with PPO
@@ -332,11 +332,13 @@ python feedback/rlhf_agent.py --mode demo
 - [x] Test-as-Reward system
 - [x] RLHF agent with PPO
 
-### ✅ PytestRunner Integration
+### ✅ Enhanced Metrics & GUI Integration
 
-- After code generation, the app now automatically runs your real `pytest` suite (via `pytest-json-report`),
-- parses the JSON report, displays pass/fail and error details in the UI,
-- calculates a reward score based on passed tests and logs prompt→code→reward patterns for RLHF training.
+- **PytestRunner Integration** - Automatically runs real `pytest` suite with JSON reporting
+- **Enhanced Quality Metrics** - Tracks cyclomatic complexity, execution time, test duration, and performance scores
+- **Real-time GUI Display** - Shows complexity, performance, and quality metrics in Test Results panel
+- **Advanced Reward Calculation** - Combines test results with code quality metrics for comprehensive scoring
+- **Pattern Logging** - Saves detailed prompt→code→reward patterns with quality metrics for RLHF training
 
 ### Phase 2: Advanced Features 🚧
 
