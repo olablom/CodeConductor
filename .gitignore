@@ -138,11 +138,13 @@ patterns.json
 gui_test_results.json
 simple_test_results.json
 automated_test_results.json
+live_gui_test_results_*.json
 
 # Temporary test files
 test_*.py
 test_functions.py
 test_math.py
+test_gui_live_automated.py
 
 # Vector database
 vector_db/

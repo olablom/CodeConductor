@@ -789,5 +789,51 @@
     "cyclomatic_complexity": 1.0,
     "tests_total": 1,
     "tests_passed": 0
+  },
+  {
+    "prompt": "Create a function to add two numbers",
+    "code": "def add(a, b):\n    return a + b",
+    "validation": {
+      "test_results": [
+        {
+          "passed": true,
+          "name": "test_add"
+        }
+      ]
+    },
+    "task_description": "Simple addition function",
+    "timestamp": "2025-07-28T00:11:46.542099",
+    "model_used": "phi3:mini",
+    "execution_time": null,
+    "user_rating": null,
+    "notes": null,
+    "reward": null,
+    "exec_time_s": 0.05,
+    "cyclomatic_complexity": 1.0,
+    "tests_total": 1,
+    "tests_passed": 1
+  },
+  {
+    "prompt": "Create a function to add two numbers",
+    "code": "def add(a, b):\n    return a + b",
+    "validation": {
+      "test_results": [
+        {
+          "passed": true,
+          "name": "test_add"
+        }
+      ]
+    },
+    "task_description": "Simple addition function",
+    "timestamp": "2025-07-28T00:12:38.504413",
+    "model_used": "phi3:mini",
+    "execution_time": null,
+    "user_rating": null,
+    "notes": null,
+    "reward": null,
+    "exec_time_s": 0.05,
+    "cyclomatic_complexity": 1.0,
+    "tests_total": 1,
+    "tests_passed": 1
   }
 ]

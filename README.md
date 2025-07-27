@@ -141,6 +141,21 @@ streamlit run codeconductor_app.py
 
 **Then open your browser to `http://localhost:8501`**
 
+### 🧠 **RAG System Features**
+
+CodeConductor includes a sophisticated RAG (Retrieval-Augmented Generation) system:
+
+- **Local Vector Database** - ChromaDB indexes all project files (Python, README, JSON)
+- **Stack Overflow Integration** - Fetches relevant external context via API
+- **Prompt Augmentation** - Enhances prompts with local + external context
+- **Pattern Learning** - Saves successful patterns in vector database for future use
+- **Context Retrieval** - Finds relevant documentation and code examples
+
+**RAG Integration Points:**
+- **Ensemble Engine** - Augments task descriptions with relevant context
+- **CodeReviewer** - Uses RAG context for better code review suggestions
+- **Streamlit GUI** - Displays RAG context and retrieval statistics
+
 ### 🧪 **Test the Enhanced Pipeline**
 
 ```bash
@@ -161,7 +176,39 @@ python apply_test_as_reward.py
 
 # Test the RLHF agent (training and inference)
 python feedback/rlhf_agent.py --mode demo
+
+# Test RAG system functionality
+python test_rag_system.py
+
+# Test live GUI with automated testing
+python test_gui_live_automated.py
 ```
+
+### 🎯 **Live GUI Testing**
+
+To test the full pipeline with RAG integration:
+
+1. **Start the Streamlit app:**
+   ```bash
+   streamlit run codeconductor_app.py
+   ```
+
+2. **Open GUI in browser** (default: `http://localhost:8501`)
+
+3. **Test realistic tasks:**
+   - "Create a Flask API with user authentication"
+   - "Write a Python function to process CSV data"
+   - "Implement a merge sort algorithm with detailed docstrings"
+
+4. **Monitor RAG results:**
+   - Check RAG context panel for local and Stack Overflow results
+   - Verify enhanced prompts with relevant context
+   - Confirm code quality improvements from RAG integration
+
+5. **Validate metrics:**
+   - Test pass rate and execution time
+   - Cyclomatic complexity and performance scores
+   - RLHF model selection based on task complexity
 
 ## 🎯 What This Does
 
