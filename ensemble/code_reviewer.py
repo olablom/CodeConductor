@@ -6,11 +6,28 @@ Uses RLHF to select the best model for code review and provides actionable feedb
 
 import logging
 import numpy as np
+import tempfile
+import os
+import subprocess
+import re
 from typing import List, Dict, Any, Optional
 from stable_baselines3 import PPO
 from context.rag_system import RAGSystem
 
 logger = logging.getLogger(__name__)
+
+# Try to import pylint for code quality assessment
+try:
+    # Test if pylint is available
+    result = subprocess.run(['pylint', '--version'], capture_output=True, text=True)
+    PYLINT_AVAILABLE = result.returncode == 0
+    if PYLINT_AVAILABLE:
+        logger.info("✅ pylint is available")
+    else:
+        logger.warning("⚠️ pylint not available. Install with: pip install pylint")
+except Exception:
+    PYLINT_AVAILABLE = False
+    logger.warning("⚠️ pylint not available. Install with: pip install pylint")
 
 
 class CodeReviewer:
@@ -138,7 +155,60 @@ class CodeReviewer:
 
     def estimate_code_quality(self, code: str) -> float:
         """
-        Estimate code quality score (placeholder for actual analysis).
+        Estimate code quality using pylint for accurate assessment.
+
+        Args:
+            code: Code to analyze
+
+        Returns:
+            Quality score between 0.0 and 1.0
+        """
+        if not code or not code.strip():
+            return 0.0
+
+        # Use pylint for accurate code quality assessment
+        if PYLINT_AVAILABLE:
+            try:
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_file:
+                    temp_file.write(code)
+                    temp_file_path = temp_file.name
+
+                # Run pylint via subprocess
+                result = subprocess.run([
+                    'pylint',
+                    temp_file_path,
+                    '--disable=missing-module-docstring,missing-class-docstring,missing-function-docstring',
+                    '--score=yes',
+                    '--output-format=text'
+                ], capture_output=True, text=True, timeout=30)
+                
+                # Clean up temporary file
+                os.unlink(temp_file_path)
+                
+                # Extract score from output
+                score_match = re.search(r'Your code has been rated at ([0-9.]+)/10', result.stdout)
+                if score_match:
+                    score = float(score_match.group(1)) / 10.0
+                    logger.info(f"📊 Pylint score: {score:.2f}/1.0")
+                    return score
+                else:
+                    logger.warning("⚠️ Could not extract score from pylint output")
+                    return self._fallback_code_quality(code)
+                
+            except subprocess.TimeoutExpired:
+                logger.warning("⏰ Pylint timed out, using fallback")
+                return self._fallback_code_quality(code)
+            except Exception as e:
+                logger.error(f"Failed to estimate code quality with pylint: {str(e)}")
+                # Fall back to simple heuristics
+                return self._fallback_code_quality(code)
+        else:
+            logger.warning("⚠️ pylint not available, using fallback quality assessment")
+            return self._fallback_code_quality(code)
+
+    def _fallback_code_quality(self, code: str) -> float:
+        """
+        Fallback code quality assessment using simple heuristics.
 
         Args:
             code: Code to analyze
