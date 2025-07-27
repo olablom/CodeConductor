@@ -9,6 +9,7 @@ CodeConductor MVP is an intelligent development assistant that revolutionizes ho
 ### **Core Philosophy: Human-in-the-Loop is the STRENGTH, not a limitation!**
 
 **What CodeConductor Does:**
+
 - 🤖 **Intelligent Analysis**: Uses 6 local LLMs to analyze your project structure and understand context
 - 🧠 **Smart Planning**: Creates detailed development plans with step-by-step implementation guidance
 - 📝 **Optimized Prompts**: Generates context-aware prompts specifically for Cursor (or any AI code generator)
@@ -17,6 +18,7 @@ CodeConductor MVP is an intelligent development assistant that revolutionizes ho
 - 🔄 **Iterative Improvement**: Continuous feedback loop for better results
 
 **Why This Approach Works:**
+
 - **Cost Effective**: Uses local LLMs (95% cost reduction vs cloud APIs)
 - **Privacy First**: All processing happens on your machine
 - **Quality Control**: Human review ensures code meets your standards
@@ -24,6 +26,7 @@ CodeConductor MVP is an intelligent development assistant that revolutionizes ho
 - **Flexibility**: Works with any AI code generator (Cursor, GitHub Copilot, etc.)
 
 **The Workflow:**
+
 1. **Describe** what you want to build
 2. **Analyze** project context and dependencies
 3. **Plan** implementation steps and approach
@@ -66,6 +69,20 @@ CodeConductor MVP is an intelligent development assistant that revolutionizes ho
 - ✅ **Windows Notifications** - Toast notifications for workflow status
 - ✅ **Global Hotkeys** - Keyboard shortcuts from any application
 - ✅ **Enhanced UX** - Seamless workflow with minimal manual intervention
+
+## 💻 System Requirements
+
+To run CodeConductor effectively, ensure your system meets the following requirements:
+
+- **RAM**: 16GB or more (required for running 6 local LLMs simultaneously)
+- **VRAM**: 8GB or more (recommended for GPU-accelerated models; CPU fallback available)
+- **Storage**: 50GB or more (for local LLM models and dependencies)
+- **CPU**: 8+ cores recommended for optimal performance
+- **OS**: Windows, macOS, or Linux
+- **Python**: 3.10 or higher
+- **Additional Software**: LM Studio (running on port 1234) or Ollama, pytest
+
+_Note_: For systems with limited VRAM, some models can run on CPU with reduced performance.
 
 ## 🚀 Quick Start
 

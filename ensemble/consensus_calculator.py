@@ -11,403 +11,265 @@ from dataclasses import dataclass
 import logging
 from difflib import SequenceMatcher
 from typing import Dict, Any
+import ast
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class ConsensusResult:
-    consensus: Dict[str, Any]
+    """Result of consensus calculation"""
+    consensus: str
     confidence: float
-    disagreements: List[str]
-    model_agreement: Dict[str, float]
-    raw_responses: List[Dict[str, Any]]
+    model_scores: Dict[str, float]
+    reasoning: str
+    code_quality_score: float
+    syntax_valid: bool
 
 
 class ConsensusCalculator:
-    """Calculates consensus from multiple LLM responses."""
-
-    def __init__(self, min_confidence: float = 0.7):
-        self.min_confidence = min_confidence
-
-    def calculate_consensus(self, results: List[Dict[str, Any]]) -> ConsensusResult:
-        """Calculate consensus from multiple model responses."""
-        # Handle empty results
-        if not results:
+    """Enhanced consensus calculator with intelligent scoring"""
+    
+    def __init__(self):
+        self.quality_weights = {
+            'syntax_valid': 0.3,
+            'code_quality': 0.3,
+            'model_confidence': 0.2,
+            'response_length': 0.1,
+            'consistency': 0.1
+        }
+    
+    def calculate_consensus(self, responses: List[Dict[str, Any]]) -> ConsensusResult:
+        """
+        Calculate consensus from multiple model responses with intelligent scoring
+        
+        Args:
+            responses: List of responses from different models
+            
+        Returns:
+            ConsensusResult with best response and scoring details
+        """
+        if not responses:
             return ConsensusResult(
-                consensus={},
+                consensus="",
                 confidence=0.0,
-                disagreements=["No responses provided"],
-                model_agreement={},
-                raw_responses=results,
+                model_scores={},
+                reasoning="No responses provided",
+                code_quality_score=0.0,
+                syntax_valid=False
             )
-
-        # Filter successful responses and handle different result formats
-        successful_results = []
-        for result in results:
-            try:
-                # Handle both dict and object formats
-                if isinstance(result, dict):
-                    success = result.get("success", False)
-                    response = result.get("response", "")
-                    model_id = result.get("model_id", "unknown")
-                else:
-                    # Assume object with attributes
-                    success = getattr(result, "success", False)
-                    response = getattr(result, "response", "")
-                    model_id = getattr(result, "model_id", "unknown")
-
-                if success and response:
-                    successful_results.append(
-                        {"model_id": model_id, "response": response}
-                    )
-            except Exception as e:
-                logger.warning(f"Failed to process result: {e}")
-                continue
-
-        if not successful_results:
-            return ConsensusResult(
-                consensus={},
-                confidence=0.0,
-                disagreements=["No successful responses"],
-                model_agreement={},
-                raw_responses=results,
-            )
-
-        # Parse JSON responses
-        parsed_responses = []
-        for result in successful_results:
-            try:
-                parsed = self._parse_json_response(result["response"])
-                if parsed:
-                    parsed_responses.append((result["model_id"], parsed))
-            except Exception as e:
-                logger.warning(
-                    f"Failed to parse response from {result['model_id']}: {e}"
-                )
-
-        if not parsed_responses:
-            return ConsensusResult(
-                consensus={},
-                confidence=0.0,
-                disagreements=["No valid JSON responses"],
-                model_agreement={},
-                raw_responses=results,
-            )
-
-        # Calculate consensus for each field
-        consensus = {}
-        disagreements = []
-        model_agreement = {}
-
-        # Get all unique fields
-        all_fields = set()
-        for _, response in parsed_responses:
-            all_fields.update(response.keys())
-
-        for field in all_fields:
-            field_values = [response.get(field) for _, response in parsed_responses]
-            field_consensus, field_confidence, field_disagreements = (
-                self._consensus_for_field(field, field_values, parsed_responses)
-            )
-
-            consensus[field] = field_consensus
-            disagreements.extend(field_disagreements)
-
-            # Track model agreement per field
-            for model_id, _ in parsed_responses:
-                if model_id not in model_agreement:
-                    model_agreement[model_id] = {}
-                model_agreement[model_id][field] = field_confidence
-
+        
+        # Score each response
+        scored_responses = []
+        for response in responses:
+            score = self._score_response(response)
+            scored_responses.append({
+                'response': response,
+                'score': score,
+                'model': response.get('model', 'unknown')
+            })
+        
+        # Sort by score (highest first)
+        scored_responses.sort(key=lambda x: x['score'], reverse=True)
+        
+        # Get best response
+        best_response = scored_responses[0]
+        
         # Calculate overall confidence
-        overall_confidence = self._calculate_overall_confidence(
-            consensus, model_agreement, len(parsed_responses)
-        )
-
+        total_score = sum(r['score'] for r in scored_responses)
+        avg_score = total_score / len(scored_responses)
+        
+        # Check consistency between top responses
+        consistency_score = self._calculate_consistency(scored_responses[:3])
+        
+        # Extract code from best response
+        code = self._extract_code(best_response['response'].get('content', ''))
+        
+        # Validate syntax
+        syntax_valid = self._validate_syntax(code)
+        
+        # Calculate code quality
+        code_quality = self._calculate_code_quality(code)
+        
+        # Create model scores dict
+        model_scores = {r['model']: r['score'] for r in scored_responses}
+        
+        # Generate reasoning
+        reasoning = self._generate_reasoning(scored_responses, consistency_score, syntax_valid)
+        
         return ConsensusResult(
-            consensus=consensus,
-            confidence=overall_confidence,
-            disagreements=disagreements,
-            model_agreement=model_agreement,
-            raw_responses=results,
+            consensus=code,
+            confidence=avg_score * consistency_score,
+            model_scores=model_scores,
+            reasoning=reasoning,
+            code_quality_score=code_quality,
+            syntax_valid=syntax_valid
         )
-
-    def _parse_json_response(self, response: str) -> Optional[Dict[str, Any]]:
-        """Parse JSON response, handling common formatting issues."""
-        # Try to extract JSON from response
-        json_match = re.search(r"\{.*\}", response, re.DOTALL)
-        if json_match:
-            json_str = json_match.group()
-            try:
-                return json.loads(json_str)
-            except json.JSONDecodeError:
-                pass
-
-        # Try parsing the entire response as JSON
+    
+    def _score_response(self, response: Dict[str, Any]) -> float:
+        """Score a single response based on multiple criteria"""
+        content = response.get('content', '')
+        model_confidence = response.get('confidence', 0.5)
+        
+        # Extract code
+        code = self._extract_code(content)
+        
+        # 1. Syntax validation (30% weight)
+        syntax_score = 1.0 if self._validate_syntax(code) else 0.0
+        
+        # 2. Code quality (30% weight)
+        quality_score = self._calculate_code_quality(code)
+        
+        # 3. Model confidence (20% weight)
+        confidence_score = model_confidence
+        
+        # 4. Response length (10% weight)
+        length_score = min(len(content) / 1000, 1.0)  # Normalize to 0-1
+        
+        # 5. Consistency with other responses (10% weight)
+        # This will be calculated separately
+        
+        # Calculate weighted score
+        score = (
+            syntax_score * self.quality_weights['syntax_valid'] +
+            quality_score * self.quality_weights['code_quality'] +
+            confidence_score * self.quality_weights['model_confidence'] +
+            length_score * self.quality_weights['response_length']
+        )
+        
+        return score
+    
+    def _extract_code(self, content: str) -> str:
+        """Extract code blocks from response content"""
+        # Look for code blocks
+        code_blocks = re.findall(r'```(?:python)?\n(.*?)\n```', content, re.DOTALL)
+        if code_blocks:
+            return '\n\n'.join(code_blocks)
+        
+        # Look for inline code
+        inline_code = re.findall(r'`([^`]+)`', content)
+        if inline_code:
+            return '\n'.join(inline_code)
+        
+        # If no code blocks found, return the whole content
+        return content
+    
+    def _validate_syntax(self, code: str) -> bool:
+        """Validate Python syntax"""
         try:
-            return json.loads(response.strip())
-        except json.JSONDecodeError:
-            # If not JSON, create a structured response from natural language
-            return self._extract_structure_from_text(response)
-
-    def _extract_structure_from_text(self, text: str) -> Dict[str, Any]:
-        """Extract structured information from natural language response."""
-        # Simple extraction of common patterns
-        structure = {
-            "task": "Implement requested functionality",
-            "approach": "Follow Python best practices",
-            "requirements": [],
-            "language": "python",
-        }
-
-        # Extract language hints
-        if "python" in text.lower():
-            structure["language"] = "python"
-        elif "java" in text.lower():
-            structure["language"] = "java"
-        elif "javascript" in text.lower() or "js" in text.lower():
-            structure["language"] = "javascript"
-
-        # Extract requirements from common patterns
-        requirements = []
-        lines = text.split("\n")
-        for line in lines:
-            line = line.strip()
-            if line.startswith("-") or line.startswith("*"):
-                req = line[1:].strip()
-                if (
-                    req and len(req) > 5 and len(req) < 100
-                ):  # Avoid very short or very long requirements
-                    requirements.append(req)
-            elif "class" in line.lower() and "calculator" in line.lower():
-                requirements.append("Create a calculator class")
-            elif "function" in line.lower() and "validate" in line.lower():
-                requirements.append("Create validation function")
-            elif "add" in line.lower() and (
-                "method" in line.lower() or "function" in line.lower()
-            ):
-                requirements.append("Implement add method")
-            elif "subtract" in line.lower() and (
-                "method" in line.lower() or "function" in line.lower()
-            ):
-                requirements.append("Implement subtract method")
-            elif "multiply" in line.lower() and (
-                "method" in line.lower() or "function" in line.lower()
-            ):
-                requirements.append("Implement multiply method")
-            elif "divide" in line.lower() and (
-                "method" in line.lower() or "function" in line.lower()
-            ):
-                requirements.append("Implement divide method")
-
-        # Clean up requirements - remove duplicates and very long ones
-        if requirements:
-            # Remove duplicates while preserving order
-            seen = set()
-            clean_requirements = []
-            for req in requirements:
-                if req not in seen and len(req) < 80:  # Limit length
-                    seen.add(req)
-                    clean_requirements.append(req)
-            structure["requirements"] = clean_requirements[
-                :5
-            ]  # Limit to 5 requirements
-        else:
-            # Default requirement based on task
-            structure["requirements"] = ["Implement the requested functionality"]
-
-        return structure
-
-    def _consensus_for_field(
-        self,
-        field: str,
-        values: List[Any],
-        parsed_responses: List[Tuple[str, Dict[str, Any]]],
-    ) -> Tuple[Any, float, List[str]]:
-        """Calculate consensus for a specific field."""
-        # Remove None values
-        valid_values = [v for v in values if v is not None]
-
-        if not valid_values:
-            return None, 0.0, [f"No valid values for field '{field}'"]
-
-        if len(valid_values) == 1:
-            return valid_values[0], 1.0, []
-
-        # Handle different field types
-        if field in ["complexity"]:
-            return self._consensus_for_enum_field(field, valid_values, parsed_responses)
-        elif field in ["files_needed", "dependencies"]:
-            return self._consensus_for_list_field(field, valid_values, parsed_responses)
-        elif field in ["approach", "reasoning"]:
-            return self._consensus_for_text_field(field, valid_values, parsed_responses)
-        else:
-            return self._consensus_for_generic_field(
-                field, valid_values, parsed_responses
-            )
-
-    def _consensus_for_enum_field(
-        self,
-        field: str,
-        values: List[Any],
-        parsed_responses: List[Tuple[str, Dict[str, Any]]],
-    ) -> Tuple[Any, float, List[str]]:
-        """Calculate consensus for enum-like fields (e.g., complexity)."""
-        # Count occurrences
-        value_counts = {}
-        for value in values:
-            value_str = str(value).lower().strip()
-            value_counts[value_str] = value_counts.get(value_str, 0) + 1
-
-        # Find most common value
-        most_common = max(value_counts.items(), key=lambda x: x[1])
-        consensus_value = most_common[0]
-        confidence = most_common[1] / len(values)
-
-        disagreements = []
-        if confidence < 1.0:
-            disagreements.append(f"Models disagree on {field}: {value_counts}")
-
-        return consensus_value, confidence, disagreements
-
-    def _consensus_for_list_field(
-        self,
-        field: str,
-        values: List[Any],
-        parsed_responses: List[Tuple[str, Dict[str, Any]]],
-    ) -> Tuple[Any, float, List[str]]:
-        """Calculate consensus for list fields (e.g., files_needed, dependencies)."""
-        # Flatten and normalize list items
-        all_items = []
-        for value in values:
-            if isinstance(value, list):
-                all_items.extend([str(item).lower().strip() for item in value])
-            elif isinstance(value, str):
-                # Try to parse as comma-separated
-                items = [item.strip() for item in value.split(",")]
-                all_items.extend(items)
-
-        # Count item occurrences
-        item_counts = {}
-        for item in all_items:
-            if item:  # Skip empty items
-                item_counts[item] = item_counts.get(item, 0) + 1
-
-        # Select items that appear in majority of responses
-        threshold = len(values) * 0.5  # 50% threshold
-        consensus_items = [
-            item for item, count in item_counts.items() if count >= threshold
-        ]
-
-        confidence = len(consensus_items) / max(len(all_items), 1)
-
-        disagreements = []
-        if len(consensus_items) != len(all_items):
-            disagreements.append(f"Models disagree on {field} items: {item_counts}")
-
-        return consensus_items, confidence, disagreements
-
-    def _consensus_for_text_field(
-        self,
-        field: str,
-        values: List[Any],
-        parsed_responses: List[Tuple[str, Dict[str, Any]]],
-    ) -> Tuple[Any, float, List[str]]:
-        """Calculate consensus for text fields (e.g., approach, reasoning)."""
-        # For text fields, we'll use the most detailed response
-        # or combine multiple responses if they're similar
-
-        # Calculate similarity between responses
-        similarities = []
-        for i, val1 in enumerate(values):
-            for j, val2 in enumerate(values[i + 1 :], i + 1):
-                similarity = SequenceMatcher(None, str(val1), str(val2)).ratio()
-                similarities.append(similarity)
-
-        avg_similarity = sum(similarities) / len(similarities) if similarities else 0.0
-
-        # If responses are very similar, use the longest one
-        if avg_similarity > 0.8:
-            consensus_value = max(values, key=len)
-            confidence = avg_similarity
-            disagreements = []
-        else:
-            # Use the most detailed response
-            consensus_value = max(values, key=len)
-            confidence = 0.5  # Lower confidence for dissimilar responses
-            disagreements = [f"Models have different {field} approaches"]
-
-        return consensus_value, confidence, disagreements
-
-    def _consensus_for_generic_field(
-        self,
-        field: str,
-        values: List[Any],
-        parsed_responses: List[Tuple[str, Dict[str, Any]]],
-    ) -> Tuple[Any, float, List[str]]:
-        """Calculate consensus for generic fields."""
-        # For generic fields, use majority voting
-        value_counts = {}
-        for value in values:
-            value_str = str(value)
-            value_counts[value_str] = value_counts.get(value_str, 0) + 1
-
-        most_common = max(value_counts.items(), key=lambda x: x[1])
-        consensus_value = most_common[0]
-        confidence = most_common[1] / len(values)
-
-        disagreements = []
-        if confidence < 1.0:
-            disagreements.append(f"Models disagree on {field}: {value_counts}")
-
-        return consensus_value, confidence, disagreements
-
-    def _calculate_overall_confidence(
-        self,
-        consensus: Dict[str, Any],
-        model_agreement: Dict[str, Dict[str, float]],
-        num_models: int,
-    ) -> float:
-        """Calculate overall confidence score."""
-        if not consensus:
+            ast.parse(code)
+            return True
+        except SyntaxError:
+            return False
+    
+    def _calculate_code_quality(self, code: str) -> float:
+        """Calculate code quality score based on various metrics"""
+        if not code.strip():
             return 0.0
-
-        # Weight different fields
-        field_weights = {
-            "approach": 0.3,
-            "files_needed": 0.25,
-            "dependencies": 0.2,
-            "complexity": 0.15,
-            "reasoning": 0.1,
-        }
-
-        weighted_confidence = 0.0
-        total_weight = 0.0
-
-        for field, weight in field_weights.items():
-            if field in consensus:
-                # Calculate average confidence for this field across models
-                field_confidences = []
-                for model_agreements in model_agreement.values():
-                    if field in model_agreements:
-                        field_confidences.append(model_agreements[field])
-
-                if field_confidences:
-                    avg_field_confidence = sum(field_confidences) / len(
-                        field_confidences
-                    )
-                    weighted_confidence += avg_field_confidence * weight
-                    total_weight += weight
-
-        # Normalize by total weight
-        if total_weight > 0:
-            overall_confidence = weighted_confidence / total_weight
+        
+        score = 0.0
+        lines = code.split('\n')
+        
+        # 1. Check for proper indentation
+        try:
+            ast.parse(code)
+            score += 0.2
+        except:
+            pass
+        
+        # 2. Check for docstrings
+        if '"""' in code or "'''" in code:
+            score += 0.15
+        
+        # 3. Check for type hints
+        if ':' in code and any(hint in code for hint in ['str', 'int', 'bool', 'List', 'Dict']):
+            score += 0.15
+        
+        # 4. Check for error handling
+        if any(keyword in code for keyword in ['try:', 'except:', 'finally:']):
+            score += 0.15
+        
+        # 5. Check for meaningful variable names
+        meaningful_names = len(re.findall(r'\b[a-z_][a-z0-9_]*\b', code))
+        total_words = len(code.split())
+        if total_words > 0:
+            name_ratio = meaningful_names / total_words
+            score += min(name_ratio * 0.2, 0.2)
+        
+        # 6. Check for reasonable line length
+        long_lines = sum(1 for line in lines if len(line) > 80)
+        if lines:
+            line_quality = 1.0 - (long_lines / len(lines))
+            score += line_quality * 0.15
+        
+        return min(score, 1.0)
+    
+    def _calculate_consistency(self, top_responses: List[Dict]) -> float:
+        """Calculate consistency between top responses"""
+        if len(top_responses) < 2:
+            return 1.0
+        
+        # Extract code from responses
+        codes = []
+        for response in top_responses:
+            code = self._extract_code(response['response'].get('content', ''))
+            codes.append(code)
+        
+        # Simple similarity check (can be enhanced with more sophisticated methods)
+        similarities = []
+        for i in range(len(codes)):
+            for j in range(i + 1, len(codes)):
+                similarity = self._calculate_similarity(codes[i], codes[j])
+                similarities.append(similarity)
+        
+        if similarities:
+            return sum(similarities) / len(similarities)
+        return 1.0
+    
+    def _calculate_similarity(self, code1: str, code2: str) -> float:
+        """Calculate similarity between two code snippets"""
+        # Simple token-based similarity
+        tokens1 = set(re.findall(r'\b\w+\b', code1.lower()))
+        tokens2 = set(re.findall(r'\b\w+\b', code2.lower()))
+        
+        if not tokens1 or not tokens2:
+            return 0.0
+        
+        intersection = tokens1.intersection(tokens2)
+        union = tokens1.union(tokens2)
+        
+        return len(intersection) / len(union)
+    
+    def _generate_reasoning(self, scored_responses: List[Dict], consistency: float, syntax_valid: bool) -> str:
+        """Generate reasoning for consensus decision"""
+        best_model = scored_responses[0]['model']
+        best_score = scored_responses[0]['score']
+        
+        reasoning_parts = []
+        
+        # Model selection reasoning
+        reasoning_parts.append(f"Selected {best_model} as primary model (score: {best_score:.2f})")
+        
+        # Syntax validation
+        if syntax_valid:
+            reasoning_parts.append("Code passes syntax validation")
         else:
-            overall_confidence = 0.0
-
-        # Boost confidence if we have more models agreeing
-        model_boost = min(num_models / 3.0, 1.0)  # Cap at 3 models
-        overall_confidence = min(1.0, overall_confidence + (model_boost * 0.1))
-
-        return overall_confidence
+            reasoning_parts.append("⚠️ Code has syntax issues")
+        
+        # Consistency check
+        if consistency > 0.8:
+            reasoning_parts.append("High consistency between model responses")
+        elif consistency > 0.5:
+            reasoning_parts.append("Moderate consistency between model responses")
+        else:
+            reasoning_parts.append("⚠️ Low consistency between model responses")
+        
+        # Quality assessment
+        if best_score > 0.8:
+            reasoning_parts.append("High quality response selected")
+        elif best_score > 0.6:
+            reasoning_parts.append("Good quality response selected")
+        else:
+            reasoning_parts.append("⚠️ Lower quality response selected")
+        
+        return ". ".join(reasoning_parts)
