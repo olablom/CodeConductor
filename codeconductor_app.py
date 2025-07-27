@@ -880,6 +880,16 @@ class CodeConductorApp:
         # Get statistics
         stats = learning_system.get_statistics()
 
+        # Ensure all required keys exist
+        stats = {
+            "total_patterns": stats.get("total_patterns", 0),
+            "average_score": stats.get("average_score", 0.0),
+            "best_score": stats.get("best_score", 0.0),
+            "recent_patterns": stats.get("recent_patterns", 0),
+            "task_types": stats.get("task_types", []),
+            "models_used": stats.get("models_used", []),
+        }
+
         # Display statistics
         col1, col2, col3, col4 = st.columns(4)
 
@@ -923,6 +933,32 @@ class CodeConductorApp:
 
         # Display patterns
         st.markdown(f"#### 📋 Patterns ({len(patterns)} found)")
+
+        # Show top-rated patterns first
+        top_patterns = [p for p in patterns if p.user_rating == 5]
+        if top_patterns:
+            st.markdown("##### ⭐ Top-Rated Patterns (5/5)")
+            for pattern in top_patterns[:3]:  # Show top 3
+                with st.expander(f"🏆 {pattern.task_description[:50]}...", expanded=True):
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        st.markdown(f"**Task:** {pattern.task_description}")
+                        st.markdown(f"**Score:** {pattern.validation.get('score', 0.0):.1%}")
+                        st.markdown(f"**Model:** {pattern.model_used or 'Unknown'}")
+                        st.markdown(f"**Date:** {pattern.timestamp[:10]}")
+                    with col2:
+                        if st.button(f"🗑️ Delete", key=f"delete_top_{id(pattern)}"):
+                            if learning_system.delete_pattern(learning_system.patterns.index(pattern)):
+                                st.success("Pattern deleted!")
+                                st.rerun()
+                            else:
+                                st.error("Failed to delete pattern")
+                    
+                    tab1, tab2 = st.tabs(["📝 Prompt", "💻 Code"])
+                    with tab1:
+                        st.code(pattern.prompt, language="text")
+                    with tab2:
+                        st.code(pattern.code, language="python")
 
         if patterns:
             for i, pattern in enumerate(reversed(patterns)):  # Show newest first
