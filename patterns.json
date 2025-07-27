@@ -509,5 +509,285 @@
     "cyclomatic_complexity": 1.0,
     "tests_total": 3,
     "tests_passed": 2
+  },
+  {
+    "prompt": "Create basic math functions",
+    "code": "\ndef add(a, b):\n    return a + b\n\ndef multiply(a, b):\n    return a * b\n",
+    "validation": {
+      "test_results": [
+        {
+          "name": "examples/test_cli_tool_test.py::test_cli_basic_functionality",
+          "passed": false,
+          "error": "",
+          "type": "pytest",
+          "duration_s": 0.0
+        }
+      ],
+      "total_tests": 1,
+      "passed_tests": 0,
+      "reward": 0.0,
+      "metadata": {},
+      "test_durations": [
+        0.0
+      ]
+    },
+    "task_description": "Test execution with 0/1 tests passed",
+    "timestamp": "2025-07-27T23:40:49.231900",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.00 (0/1 tests passed)",
+    "reward": 0.0,
+    "exec_time_s": 0.0,
+    "cyclomatic_complexity": 1.0,
+    "tests_total": 1,
+    "tests_passed": 0
+  },
+  {
+    "prompt": "Create basic math functions",
+    "code": "def add(a, b): return a + b\ndef multiply(a, b): return a * b",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_add",
+          "passed": true,
+          "duration_s": 0.001
+        },
+        {
+          "name": "test_multiply",
+          "passed": true,
+          "duration_s": 0.002
+        }
+      ],
+      "total_tests": 2,
+      "passed_tests": 2,
+      "reward": 1.0,
+      "metadata": {},
+      "test_durations": [
+        0.001,
+        0.002
+      ]
+    },
+    "task_description": "Test execution with 2/2 tests passed",
+    "timestamp": "2025-07-27T23:40:49.233905",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 1.00 (2/2 tests passed)",
+    "reward": 1.0,
+    "exec_time_s": 0.0,
+    "cyclomatic_complexity": 1.0,
+    "tests_total": 2,
+    "tests_passed": 2
+  },
+  {
+    "prompt": "Create basic math functions",
+    "code": "\ndef add(a, b):\n    return a + b\n\ndef multiply(a, b):\n    return a * b\n",
+    "validation": {
+      "test_results": [
+        {
+          "name": "examples/test_cli_tool_test.py::test_cli_basic_functionality",
+          "passed": false,
+          "error": "",
+          "type": "pytest",
+          "duration_s": 0.0
+        }
+      ],
+      "total_tests": 1,
+      "passed_tests": 0,
+      "reward": 0.0,
+      "metadata": {},
+      "test_durations": [
+        0.0
+      ]
+    },
+    "task_description": "Test execution with 0/1 tests passed",
+    "timestamp": "2025-07-27T23:42:07.486871",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.00 (0/1 tests passed)",
+    "reward": 0.0,
+    "exec_time_s": 0.0,
+    "cyclomatic_complexity": 1.0,
+    "tests_total": 1,
+    "tests_passed": 0
+  },
+  {
+    "prompt": "Create basic math functions",
+    "code": "def add(a, b): return a + b\ndef multiply(a, b): return a * b",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_add",
+          "passed": true,
+          "duration_s": 0.001
+        },
+        {
+          "name": "test_multiply",
+          "passed": true,
+          "duration_s": 0.002
+        }
+      ],
+      "total_tests": 2,
+      "passed_tests": 2,
+      "reward": 1.0,
+      "metadata": {},
+      "test_durations": [
+        0.001,
+        0.002
+      ]
+    },
+    "task_description": "Test execution with 2/2 tests passed",
+    "timestamp": "2025-07-27T23:42:07.488412",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 1.00 (2/2 tests passed)",
+    "reward": 1.0,
+    "exec_time_s": 0.0,
+    "cyclomatic_complexity": 1.0,
+    "tests_total": 2,
+    "tests_passed": 2
+  },
+  {
+    "prompt": "Create basic math functions",
+    "code": "def add(a, b): return a + b\ndef multiply(a, b): return a * b",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_add",
+          "passed": true,
+          "duration_s": 0.001
+        },
+        {
+          "name": "test_multiply",
+          "passed": true,
+          "duration_s": 0.002
+        }
+      ],
+      "total_tests": 2,
+      "passed_tests": 2,
+      "reward": 1.0,
+      "metadata": {},
+      "test_durations": [
+        0.001,
+        0.002
+      ]
+    },
+    "task_description": "Test execution with 2/2 tests passed",
+    "timestamp": "2025-07-27T23:46:18.798872",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 1.00 (2/2 tests passed)",
+    "reward": 1.0,
+    "exec_time_s": 0.0,
+    "cyclomatic_complexity": 1.0,
+    "tests_total": 2,
+    "tests_passed": 2
+  },
+  {
+    "prompt": "Create basic math functions",
+    "code": "\ndef add(a, b):\n    return a + b\n\ndef multiply(a, b):\n    return a * b\n",
+    "validation": {
+      "test_results": [
+        {
+          "name": "examples/test_cli_tool_test.py::test_cli_basic_functionality",
+          "passed": false,
+          "error": "",
+          "type": "pytest",
+          "duration_s": 0.0
+        }
+      ],
+      "total_tests": 1,
+      "passed_tests": 0,
+      "reward": 0.0,
+      "metadata": {},
+      "test_durations": [
+        0.0
+      ]
+    },
+    "task_description": "Test execution with 0/1 tests passed",
+    "timestamp": "2025-07-27T23:46:29.827314",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.00 (0/1 tests passed)",
+    "reward": 0.0,
+    "exec_time_s": 0.0,
+    "cyclomatic_complexity": 1.0,
+    "tests_total": 1,
+    "tests_passed": 0
+  },
+  {
+    "prompt": "Create basic math functions",
+    "code": "def add(a, b): return a + b\ndef multiply(a, b): return a * b",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_add",
+          "passed": true,
+          "duration_s": 0.001
+        },
+        {
+          "name": "test_multiply",
+          "passed": true,
+          "duration_s": 0.002
+        }
+      ],
+      "total_tests": 2,
+      "passed_tests": 2,
+      "reward": 1.0,
+      "metadata": {},
+      "test_durations": [
+        0.001,
+        0.002
+      ]
+    },
+    "task_description": "Test execution with 2/2 tests passed",
+    "timestamp": "2025-07-27T23:46:56.229429",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 1.00 (2/2 tests passed)",
+    "reward": 1.0,
+    "exec_time_s": 0.0,
+    "cyclomatic_complexity": 1.0,
+    "tests_total": 2,
+    "tests_passed": 2
+  },
+  {
+    "prompt": "Create basic math functions",
+    "code": "\ndef add(a, b):\n    return a + b\n\ndef multiply(a, b):\n    return a * b\n",
+    "validation": {
+      "test_results": [
+        {
+          "name": "examples/test_cli_tool_test.py::test_cli_basic_functionality",
+          "passed": false,
+          "error": "",
+          "type": "pytest",
+          "duration_s": 0.0
+        }
+      ],
+      "total_tests": 1,
+      "passed_tests": 0,
+      "reward": 0.0,
+      "metadata": {},
+      "test_durations": [
+        0.0
+      ]
+    },
+    "task_description": "Test execution with 0/1 tests passed",
+    "timestamp": "2025-07-27T23:47:07.165456",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.00 (0/1 tests passed)",
+    "reward": 0.0,
+    "exec_time_s": 0.0,
+    "cyclomatic_complexity": 1.0,
+    "tests_total": 1,
+    "tests_passed": 0
   }
 ]

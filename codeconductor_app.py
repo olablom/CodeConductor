@@ -681,12 +681,12 @@ class CodeConductorApp:
             pytest_runner = PytestRunner(
                 prompt=task,
                 code=generated_code,
-                tests_dir="tests"  # Use the existing tests directory
+                tests_dir="tests",  # Use the existing tests directory
             )
-            
+
             # Run the tests
             results = pytest_runner.run()
-            
+
             return {
                 "success": results.get("success", False),
                 "test_results": results.get("test_results", []),
@@ -747,51 +747,53 @@ class CodeConductorApp:
         # Enhanced metrics - Row 2
         st.markdown("#### 📊 Code Quality Metrics")
         col1, col2, col3, col4 = st.columns(4)
-        
+
         with col1:
             # Code Complexity
-            complexity = test_results.get('cyclomatic_complexity', 0.0)
+            complexity = test_results.get("cyclomatic_complexity", 0.0)
             complexity_color = "normal" if complexity <= 3.0 else "inverse"
             st.metric(
-                "Code Complexity", 
+                "Code Complexity",
                 f"{complexity:.2f}",
                 delta="Low" if complexity <= 3.0 else "High",
-                delta_color=complexity_color
+                delta_color=complexity_color,
             )
-        
+
         with col2:
             # Execution Time
-            exec_time = test_results.get('exec_time_s', 0.0)
+            exec_time = test_results.get("exec_time_s", 0.0)
             st.metric(
-                "Execution Time", 
+                "Execution Time",
                 f"{exec_time:.3f}s",
                 delta="Fast" if exec_time <= 0.1 else "Slow",
-                delta_color="normal" if exec_time <= 0.1 else "inverse"
+                delta_color="normal" if exec_time <= 0.1 else "inverse",
             )
-        
+
         with col3:
             # Average Test Duration
             test_durations = []
-            for test in test_results.get('test_results', []):
-                if 'duration_s' in test:
-                    test_durations.append(test['duration_s'])
-            
-            avg_duration = sum(test_durations) / len(test_durations) if test_durations else 0.0
+            for test in test_results.get("test_results", []):
+                if "duration_s" in test:
+                    test_durations.append(test["duration_s"])
+
+            avg_duration = (
+                sum(test_durations) / len(test_durations) if test_durations else 0.0
+            )
             st.metric(
-                "Avg Test Duration", 
+                "Avg Test Duration",
                 f"{avg_duration:.3f}s",
                 delta="Fast" if avg_duration <= 0.05 else "Slow",
-                delta_color="normal" if avg_duration <= 0.05 else "inverse"
+                delta_color="normal" if avg_duration <= 0.05 else "inverse",
             )
-        
+
         with col4:
             # Performance Score (combination of complexity and speed)
             performance_score = max(0, 1.0 - (complexity * 0.1 + exec_time * 0.5))
             st.metric(
-                "Performance Score", 
+                "Performance Score",
                 f"{performance_score:.2f}",
                 delta="Good" if performance_score >= 0.7 else "Needs improvement",
-                delta_color="normal" if performance_score >= 0.7 else "inverse"
+                delta_color="normal" if performance_score >= 0.7 else "inverse",
             )
 
         # Test details

@@ -8,6 +8,7 @@ import asyncio
 import aiohttp
 import json
 import logging
+import subprocess
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +16,40 @@ from pathlib import Path
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Recommended Ollama models for CodeConductor
+RECOMMENDED_MODELS = {
+    "phi3:mini": {
+        "description": "Fast, lightweight model for quick prototyping",
+        "size": "3.8B",
+        "specialty": "general",
+        "download_cmd": "ollama pull phi3:mini",
+    },
+    "codellama:7b": {
+        "description": "Specialized for code generation and understanding",
+        "size": "7B",
+        "specialty": "code",
+        "download_cmd": "ollama pull codellama:7b",
+    },
+    "mistral:7b": {
+        "description": "Balanced reasoning and code generation",
+        "size": "7B",
+        "specialty": "reasoning",
+        "download_cmd": "ollama pull mistral:7b",
+    },
+    "deepseek-coder:6.7b": {
+        "description": "Advanced code generation and analysis",
+        "size": "6.7B",
+        "specialty": "code",
+        "download_cmd": "ollama pull deepseek-coder:6.7b",
+    },
+    "qwen2.5:7b": {
+        "description": "Strong reasoning and instruction following",
+        "size": "7B",
+        "specialty": "reasoning",
+        "download_cmd": "ollama pull qwen2.5:7b",
+    },
+}
 
 
 @dataclass
@@ -50,7 +85,9 @@ class ModelManager:
         # Run discovery in parallel with individual timeouts
         try:
             lm_studio_models, ollama_models = await asyncio.gather(
-                asyncio.wait_for(self._discover_lm_studio_models(), timeout=self.timeout),
+                asyncio.wait_for(
+                    self._discover_lm_studio_models(), timeout=self.timeout
+                ),
                 asyncio.wait_for(self._discover_ollama_models(), timeout=self.timeout),
                 return_exceptions=True,
             )
@@ -58,7 +95,9 @@ class ModelManager:
             logger.warning("⚠️ Model discovery timed out, using available models only")
             # Try to get at least Ollama models if LM Studio times out
             try:
-                ollama_models = await asyncio.wait_for(self._discover_ollama_models(), timeout=10.0)
+                ollama_models = await asyncio.wait_for(
+                    self._discover_ollama_models(), timeout=10.0
+                )
                 lm_studio_models = []
             except asyncio.TimeoutError:
                 logger.error("❌ All model discovery timed out")
@@ -122,7 +161,9 @@ class ModelManager:
         health_tasks = []
         for model in models:
             # Add timeout to each health check
-            task = asyncio.wait_for(self.check_health(model), timeout=self.health_timeout)
+            task = asyncio.wait_for(
+                self.check_health(model), timeout=self.health_timeout
+            )
             health_tasks.append(task)
 
         health_results = await asyncio.gather(*health_tasks, return_exceptions=True)
@@ -149,61 +190,106 @@ class ModelManager:
     async def get_best_models(
         self, min_models: int = 2, max_models: int = 5
     ) -> List[ModelInfo]:
-        """Get the best available models based on health and performance."""
-        logger.info(f"🎯 Selecting best {min_models}-{max_models} models...")
+        """
+        Get the best available models for ensemble.
 
-        # Get all models
+        Args:
+            min_models: Minimum number of models required
+            max_models: Maximum number of models to return
+
+        Returns:
+            List of best ModelInfo objects
+        """
         all_models = await self.list_models()
-        if not all_models:
-            logger.warning("⚠️ No models available")
-            return []
 
-        # Check health of all models
-        health_status = await self.check_all_health(all_models)
-
-        # Filter to healthy models
-        healthy_models = [
-            model for model in all_models if health_status.get(model.id, False)
-        ]
-
-        if len(healthy_models) < min_models:
+        if len(all_models) < min_models:
             logger.warning(
-                f"⚠️ Only {len(healthy_models)} healthy models available (need {min_models})"
+                f"⚠️ Only {len(all_models)} models available, need {min_models}"
             )
-            # Return all healthy models even if below minimum
-            return healthy_models
+            return all_models
 
-        # Sort by performance metrics (simple scoring for now)
+        # Score models based on provider, size, and specialty
         def model_score(model: ModelInfo) -> float:
-            # Simple scoring based on provider and model size
-            base_score = 0.5
+            score = 0.0
 
-            # Prefer larger models (they tend to be more capable)
-            if "12b" in model.id.lower() or "13b" in model.id.lower():
-                base_score += 0.3
-            elif "7b" in model.id.lower() or "8b" in model.id.lower():
-                base_score += 0.2
-            elif "mini" in model.id.lower():
-                base_score += 0.1
+            # Prefer Ollama models (faster, more reliable)
+            if model.provider == "ollama":
+                score += 10.0
+            elif model.provider == "lm_studio":
+                score += 5.0
 
-            # Prefer certain providers
-            if model.provider == "lm_studio":
-                base_score += 0.1
-            elif model.provider == "ollama":
-                base_score += 0.05
+            # Prefer smaller models for speed
+            model_name = model.id.lower()
+            if "mini" in model_name or "3b" in model_name:
+                score += 5.0
+            elif "7b" in model_name:
+                score += 3.0
+            elif "13b" in model_name or "14b" in model_name:
+                score += 1.0
 
-            return base_score
+            # Prefer code-specialized models
+            if any(code_word in model_name for code_word in ["code", "coder", "phi"]):
+                score += 3.0
 
-        # Sort by score and take top models
-        sorted_models = sorted(healthy_models, key=model_score, reverse=True)
-        selected_models = sorted_models[:max_models]
+            return score
 
-        logger.info(f"✅ Selected {len(selected_models)} best models:")
-        for i, model in enumerate(selected_models, 1):
-            score = model_score(model)
-            logger.info(f"  {i}. {model.id} (score: {score:.2f})")
+        # Sort by score and return top models
+        scored_models = [(model, model_score(model)) for model in all_models]
+        scored_models.sort(key=lambda x: x[1], reverse=True)
 
-        return selected_models
+        best_models = [model for model, score in scored_models[:max_models]]
+        logger.info(f"🎯 Selected {len(best_models)} best models for ensemble")
+
+        return best_models
+
+    def download_recommended_model(self, model_name: str) -> bool:
+        """
+        Download a recommended model using Ollama.
+
+        Args:
+            model_name: Name of the model to download
+
+        Returns:
+            True if download started successfully, False otherwise
+        """
+        if model_name not in RECOMMENDED_MODELS:
+            logger.error(f"❌ Model {model_name} not in recommended list")
+            return False
+
+        model_info = RECOMMENDED_MODELS[model_name]
+        download_cmd = model_info["download_cmd"]
+
+        try:
+            logger.info(f"📥 Starting download of {model_name}...")
+            logger.info(f"💡 Description: {model_info['description']}")
+            logger.info(f"📏 Size: {model_info['size']}")
+            logger.info(f"🎯 Specialty: {model_info['specialty']}")
+
+            # Start download in background
+            process = subprocess.Popen(
+                download_cmd.split(),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+
+            logger.info(f"✅ Download started for {model_name}")
+            logger.info(f"💡 Run 'ollama list' to check progress")
+            return True
+
+        except Exception as e:
+            logger.error(f"❌ Failed to start download for {model_name}: {e}")
+            return False
+
+    def get_recommended_models(self) -> Dict[str, Dict]:
+        """Get list of recommended models with their info."""
+        return RECOMMENDED_MODELS
+
+    def get_available_models(self) -> List[str]:
+        """Get list of currently available models."""
+        # This would need to be async, but for now return empty
+        # In practice, this would call list_models()
+        return []
 
     async def auto_recovery(self, model_id: str) -> bool:
         """Attempt to recover a failed model."""
@@ -446,7 +532,9 @@ class ModelManager:
             logger.warning(f"⚠️ LM Studio health check timed out for {model_info.id}")
             return False
         except aiohttp.ClientError as e:
-            logger.warning(f"⚠️ LM Studio health check connection error for {model_info.id}: {e}")
+            logger.warning(
+                f"⚠️ LM Studio health check connection error for {model_info.id}: {e}"
+            )
             return False
         except Exception as e:
             logger.error(f"LM Studio health check error for {model_info.id}: {e}")
@@ -471,7 +559,9 @@ class ModelManager:
             logger.warning(f"⚠️ Ollama health check timed out for {model_info.id}")
             return False
         except aiohttp.ClientError as e:
-            logger.warning(f"⚠️ Ollama health check connection error for {model_info.id}: {e}")
+            logger.warning(
+                f"⚠️ Ollama health check connection error for {model_info.id}: {e}"
+            )
             return False
         except Exception as e:
             logger.error(f"Ollama health check error for {model_info.id}: {e}")
