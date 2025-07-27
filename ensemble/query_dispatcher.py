@@ -189,7 +189,7 @@ class QueryDispatcher:
         logger.info(f"✅ Found {len(healthy_models)} healthy models")
 
         # Dispatch to healthy models
-        return await self.dispatch(prompt)
+        return await self.dispatch_to_models(healthy_models, prompt)
 
     async def dispatch_to_best_models(
         self, prompt: str, min_models: int = 2, max_models: int = 5

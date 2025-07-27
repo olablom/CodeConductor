@@ -15,6 +15,7 @@ sys.path.append(str(Path(__file__).parent))
 from ensemble.model_manager import ModelManager
 from ensemble.query_dispatcher import QueryDispatcher
 from ensemble.consensus_calculator import ConsensusCalculator
+from ensemble.hybrid_ensemble import HybridEnsemble
 from generators.prompt_generator import PromptGenerator
 from integrations.notifications import notify_success, notify_error
 
@@ -83,6 +84,7 @@ class CodeConductorApp:
         self.model_manager = ModelManager()
         self.query_dispatcher = QueryDispatcher(self.model_manager)
         self.consensus_calculator = ConsensusCalculator()
+        self.hybrid_ensemble = HybridEnsemble()
         self.prompt_generator = PromptGenerator()
         self.generation_history = []
 
@@ -254,67 +256,37 @@ class CodeConductorApp:
         return False
 
     async def run_generation(self, task):
-        """Run the full generation pipeline"""
+        """Run the full generation pipeline using hybrid ensemble"""
         progress_bar = st.progress(0)
         status_text = st.empty()
 
         try:
-            # Step 1: Model discovery and health check
-            status_text.text("🔍 Discovering models...")
+            # Step 1: Complexity analysis
+            status_text.text("🔍 Analyzing task complexity...")
             progress_bar.progress(10)
 
-            models = await self.model_manager.list_models()
-            if not models:
-                st.error(
-                    "No models found. Please ensure LM Studio or Ollama is running."
-                )
-                return
-
-            # Step 2: Ensemble processing
-            status_text.text("🤖 Running ensemble engine...")
+            # Step 2: Hybrid ensemble processing
+            status_text.text("🤖 Running hybrid ensemble engine...")
             progress_bar.progress(30)
 
-            # Use simple dispatch method (avoiding the problematic dispatch_with_fallback)
-            results = await self.query_dispatcher.dispatch(task, max_models=3)
+            # Use hybrid ensemble for processing
+            hybrid_result = await self.hybrid_ensemble.process_task(task)
 
-            if not results:
-                st.error("No models responded. Please check model availability.")
+            if not hybrid_result:
+                st.error("Hybrid ensemble failed. Please check model availability.")
                 return
 
             # Step 3: Consensus calculation
             status_text.text("🧠 Calculating consensus...")
             progress_bar.progress(60)
 
-            # Format results for consensus
-            formatted_results = []
-            for model_id, result in results.items():
-                # Check if result is successful (no error field)
-                if isinstance(result, dict) and "error" not in result:
-                    # Extract content from different response formats
-                    content = ""
-                    if "choices" in result and result["choices"]:
-                        content = result["choices"][0]["message"]["content"]
-                    elif "response" in result:
-                        content = result["response"]
-                    else:
-                        content = str(result)
-
-                    formatted_results.append(
-                        {
-                            "model_id": model_id,
-                            "success": True,
-                            "response": content,
-                            "response_time": 0,  # Not available in raw response
-                        }
-                    )
-
-            consensus = self.consensus_calculator.calculate_consensus(formatted_results)
-
             # Step 4: Prompt generation
             status_text.text("📝 Generating prompt...")
             progress_bar.progress(80)
 
-            prompt = self.prompt_generator.generate_prompt(consensus, task)
+            prompt = self.prompt_generator.generate_prompt(
+                task, hybrid_result.final_consensus
+            )
 
             # Step 5: Complete
             status_text.text("✅ Generation complete!")
@@ -322,10 +294,20 @@ class CodeConductorApp:
 
             return {
                 "task": task,
-                "models_used": len(results),
-                "consensus": consensus,
+                "models_used": len(hybrid_result.local_responses)
+                + len(hybrid_result.cloud_responses),
+                "consensus": hybrid_result.final_consensus,
                 "prompt": prompt,
                 "status": "success",
+                "complexity_analysis": hybrid_result.complexity_analysis,
+                "total_cost": hybrid_result.total_cost,
+                "total_time": hybrid_result.total_time,
+                "escalation_used": hybrid_result.escalation_used,
+                "escalation_reason": hybrid_result.escalation_reason,
+                "local_confidence": hybrid_result.local_confidence,
+                "cloud_confidence": hybrid_result.cloud_confidence,
+                "local_responses": hybrid_result.local_responses,
+                "cloud_responses": hybrid_result.cloud_responses,
             }
 
         except Exception as e:
@@ -339,16 +321,79 @@ class CodeConductorApp:
 
         st.markdown("### 📊 Generation Results")
 
-        # Metrics
-        col1, col2, col3 = st.columns(3)
+        # Enhanced metrics with hybrid info
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("Models Used", results["models_used"])
         with col2:
             st.metric("Status", results["status"])
         with col3:
-            st.metric(
-                "Confidence", f"{getattr(results['consensus'], 'confidence', 0):.2f}"
-            )
+            st.metric("Total Time", f"{results.get('total_time', 0):.2f}s")
+        with col4:
+            st.metric("Total Cost", f"${results.get('total_cost', 0):.4f}")
+
+        # Complexity analysis
+        if "complexity_analysis" in results:
+            complexity = results["complexity_analysis"]
+            st.markdown("#### 🔍 Complexity Analysis")
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Level", complexity.level.value.title())
+            with col2:
+                st.metric("Confidence", f"{complexity.confidence:.2f}")
+            with col3:
+                escalation_status = (
+                    "☁️ Used" if results.get("escalation_used") else "🏠 Local"
+                )
+                st.metric("Escalation", escalation_status)
+            with col4:
+                if "escalation_reason" in results:
+                    st.metric(
+                        "Reason",
+                        results["escalation_reason"][:20] + "..."
+                        if len(results["escalation_reason"]) > 20
+                        else results["escalation_reason"],
+                    )
+
+        # Confidence breakdown
+        if "local_confidence" in results or "cloud_confidence" in results:
+            st.markdown("#### 🎯 Confidence Breakdown")
+            col1, col2 = st.columns(2)
+            with col1:
+                local_conf = results.get("local_confidence", 0.0)
+                st.metric("Local Confidence", f"{local_conf:.2f}")
+            with col2:
+                cloud_conf = results.get("cloud_confidence", 0.0)
+                st.metric("Cloud Confidence", f"{cloud_conf:.2f}")
+
+        # Model breakdown
+        if "local_responses" in results and "cloud_responses" in results:
+            st.markdown("#### 🤖 Model Breakdown")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Local Models", len(results["local_responses"]))
+            with col2:
+                st.metric("Cloud Models", len(results["cloud_responses"]))
+            with col3:
+                total_models = len(results["local_responses"]) + len(
+                    results["cloud_responses"]
+                )
+                st.metric("Total Models", total_models)
+
+        # Performance metrics
+        if "total_time" in results:
+            st.markdown("#### ⚡ Performance Metrics")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Time", f"{results['total_time']:.2f}s")
+            with col2:
+                if results.get("total_time", 0) > 0:
+                    models_per_second = total_models / results["total_time"]
+                    st.metric("Models/sec", f"{models_per_second:.2f}")
+            with col3:
+                if results.get("total_cost", 0) > 0:
+                    cost_per_second = results["total_cost"] / results["total_time"]
+                    st.metric("Cost/sec", f"${cost_per_second:.4f}")
 
         # Consensus details
         with st.expander("🧠 Consensus Details", expanded=True):
@@ -365,20 +410,61 @@ class CodeConductorApp:
                 st.write("No structured consensus data available")
 
         # Generated prompt
-        with st.expander("📝 Generated Prompt", expanded=True):
-            st.code(results["prompt"], language="text")
+        with st.expander("📝 Generated Prompt", expanded=False):
+            if "prompt" in results:
+                st.code(results["prompt"], language="markdown")
+            else:
+                st.warning("No prompt generated")
 
-            # Copy button
-            if st.button("📋 Copy to Clipboard"):
-                st.write("Prompt copied to clipboard!")
+        # Detailed model responses
+        with st.expander("🔍 Detailed Model Responses", expanded=False):
+            if "local_responses" in results and results["local_responses"]:
+                st.markdown("#### 🏠 Local Model Responses")
+                for model_id, response in results["local_responses"].items():
+                    with st.expander(f"Local: {model_id}", expanded=False):
+                        if isinstance(response, dict) and "error" not in response:
+                            content = ""
+                            if "choices" in response and response["choices"]:
+                                content = response["choices"][0]["message"]["content"]
+                            elif "response" in response:
+                                content = response["response"]
+                            else:
+                                content = str(response)
+                            st.code(
+                                content[:500] + "..."
+                                if len(content) > 500
+                                else content,
+                                language="python",
+                            )
+                        else:
+                            st.error(f"Error: {response.get('error', 'Unknown error')}")
+
+            if "cloud_responses" in results and results["cloud_responses"]:
+                st.markdown("#### ☁️ Cloud Model Responses")
+                for response in results["cloud_responses"]:
+                    with st.expander(f"Cloud: {response.model}", expanded=False):
+                        st.metric("Cost", f"${response.cost_estimate:.4f}")
+                        st.metric("Time", f"{response.response_time:.2f}s")
+                        st.metric("Confidence", f"{response.confidence:.2f}")
+                        st.code(
+                            response.content[:500] + "..."
+                            if len(response.content) > 500
+                            else response.content,
+                            language="python",
+                        )
 
         # Add to history
         self.generation_history.append(
             {
+                "timestamp": datetime.now(),
                 "task": results["task"],
-                "status": results["status"],
                 "models_used": results["models_used"],
-                "timestamp": datetime.now().strftime("%H:%M:%S"),
+                "total_time": results.get("total_time", 0),
+                "total_cost": results.get("total_cost", 0),
+                "escalation_used": results.get("escalation_used", False),
+                "complexity_level": results.get("complexity_analysis", {}).level.value
+                if results.get("complexity_analysis")
+                else "unknown",
             }
         )
 
