@@ -132,3 +132,25 @@ test_results/
 # Demo outputs
 demo_outputs/
 demo_results/
+
+# Additional Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# Additional IDE files
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+.idea/workspace.xml
+.idea/tasks.xml
+
+# Additional OS files
+*.lnk
+desktop.ini
+
+# CodeConductor specific
+prompt.txt
+*.generated.*
+*.output.*
