@@ -6,6 +6,8 @@ Handles pytest execution, result parsing, and feedback generation for the feedba
 """
 
 import subprocess
+import json
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -30,6 +32,145 @@ class TestResult:
     test_results: List[Dict[str, Any]] = field(
         default_factory=list
     )  # Test-as-Reward data
+
+
+class PytestRunner:
+    """
+    Executes pytest with JSON reporting and parses real test results.
+    """
+    
+    def __init__(self, prompt: str = "", code: str = "", tests_dir: str = "tests"):
+        self.prompt = prompt
+        self.code = code
+        self.tests_dir = tests_dir
+        
+    def run(self) -> Dict[str, Any]:
+        """
+        Run pytest with JSON reporting and return structured results.
+        
+        Returns:
+            Dictionary with test results, success status, and reward
+        """
+        try:
+            # 1. Save generated code to temporary file if provided
+            code_path = None
+            if self.code and self.code.strip():
+                with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as tmp:
+                    tmp.write(self.code)
+                    code_path = tmp.name
+            
+            # 2. Run pytest with JSON report
+            report_file = f"pytest_report_{os.getpid()}.json"
+            cmd = [
+                "pytest",
+                self.tests_dir,
+                "--maxfail=1",
+                "--disable-warnings",
+                "--json-report",
+                f"--json-report-file={report_file}",
+                "-q",  # Quiet mode for cleaner output
+                "--tb=short"  # Shorter tracebacks
+            ]
+            
+            # Run pytest
+            process = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            output = process.stdout + process.stderr
+            
+            # 3. Read JSON report
+            test_results = []
+            success = False
+            if os.path.exists(report_file):
+                try:
+                    with open(report_file, "r") as f:
+                        report = json.load(f)
+                    
+                    # 4. Transform to our structure
+                    for test in report.get("tests", []):
+                        name = test.get("nodeid", "unknown_test")
+                        passed = test.get("outcome") == "passed"
+                        error = None if passed else test.get("longrepr", "")
+                        
+                        test_results.append({
+                            "name": name,
+                            "passed": passed,
+                            "error": error,
+                            "type": "pytest"
+                        })
+                    
+                    # Determine overall success
+                    passed_tests = sum(1 for t in test_results if t["passed"])
+                    total_tests = len(test_results)
+                    success = total_tests > 0 and passed_tests == total_tests
+                    
+                    # Clean up report file
+                    os.remove(report_file)
+                    
+                except (json.JSONDecodeError, KeyError) as e:
+                    print(f"⚠️ Error parsing JSON report: {e}")
+                    test_results = []
+                    success = False
+            else:
+                print(f"⚠️ No pytest report file found: {report_file}")
+            
+            # 5. Log reward if we have prompt and code
+            reward = 0.0
+            if self.prompt and self.code and test_results:
+                reward = self._log_test_reward(test_results)
+            
+            return {
+                "success": success,
+                "test_results": test_results,
+                "reward": reward,
+                "passed_tests": sum(1 for t in test_results if t["passed"]),
+                "total_tests": len(test_results),
+                "stdout": output
+            }
+            
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "test_results": [],
+                "reward": 0.0,
+                "passed_tests": 0,
+                "total_tests": 0,
+                "stdout": "Test execution timed out",
+                "error": "Timeout"
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "test_results": [],
+                "reward": 0.0,
+                "passed_tests": 0,
+                "total_tests": 0,
+                "stdout": f"Error running tests: {str(e)}",
+                "error": str(e)
+            }
+        finally:
+            # Clean up temporary code file
+            if code_path and os.path.exists(code_path):
+                os.remove(code_path)
+    
+    def _log_test_reward(self, test_results: List[Dict[str, Any]]) -> float:
+        """
+        Log test results as reward using the learning system.
+        
+        Args:
+            test_results: List of test result dictionaries
+            
+        Returns:
+            Calculated reward value
+        """
+        try:
+            reward = log_test_reward(self.prompt, self.code, test_results)
+            print(
+                f"🎯 Pytest-as-Reward logged: {reward:.2f} "
+                f"({sum(1 for t in test_results if t.get('passed'))}/{len(test_results)} tests passed)"
+            )
+            return reward
+        except Exception as e:
+            print(f"⚠️ Error logging pytest reward: {e}")
+            return 0.0
 
 
 class TestRunner:
@@ -265,7 +406,32 @@ class TestRunner:
 
 # Example usage for testing
 if __name__ == "__main__":
-    # Dummy tests for demonstration
+    # Test the new PytestRunner
+    print("🧪 Testing PytestRunner...")
+    
+    # Create a simple test
+    test_code = """
+def add_numbers(a, b):
+    return a + b
+
+def test_add_numbers():
+    assert add_numbers(2, 3) == 5
+    assert add_numbers(-1, 1) == 0
+    print("All tests passed!")
+"""
+    
+    runner = PytestRunner(
+        prompt="Create a function to add numbers",
+        code=test_code,
+        tests_dir="tests"
+    )
+    
+    results = runner.run()
+    print(f"Results: {results}")
+    
+    # Also test the old TestRunner for compatibility
+    print("\n🧪 Testing legacy TestRunner...")
+    
     def always_pass(code):
         return True
 

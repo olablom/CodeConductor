@@ -23,7 +23,7 @@ from analysis.planner_agent import PlannerAgent
 from feedback.validation_system import validate_cursor_output
 from feedback.learning_system import save_successful_pattern, LearningSystem
 from context.rag_system import rag_system
-from runners.test_runner import TestRunner
+from runners.test_runner import TestRunner, PytestRunner
 
 # Page configuration
 st.set_page_config(
@@ -667,7 +667,7 @@ class CodeConductorApp:
 
     def run_automated_tests(self, task: str, generated_code: str) -> dict:
         """
-        Run automated tests on generated code and return results.
+        Run automated tests on generated code using PytestRunner.
 
         Args:
             task: The original task description
@@ -677,77 +677,24 @@ class CodeConductorApp:
             Dictionary with test results and reward information
         """
         try:
-            # Create a temporary test file with the generated code
-            test_dir = Path("temp_test_dir")
-            test_dir.mkdir(exist_ok=True)
-
-            # Save generated code to a temporary file
-            code_file = test_dir / "generated_code.py"
-            with open(code_file, "w", encoding="utf-8") as f:
-                f.write(generated_code)
-
-            # Create a simple test file
-            test_file = test_dir / "test_generated_code.py"
-            with open(test_file, "w", encoding="utf-8") as f:
-                f.write(f"""
-import sys
-import os
-sys.path.append(os.path.dirname(__file__))
-
-# Import the generated code
-try:
-    import generated_code
-    print("✅ Code imports successfully")
-except Exception as e:
-    print(f"❌ Import failed: {{e}}")
-    raise
-
-# Basic functionality test
-def test_basic_functionality():
-    '''Test that the generated code has basic functionality'''
-    try:
-        # Check if any functions or classes were defined
-        if hasattr(generated_code, '__all__') or dir(generated_code):
-            print("✅ Code has defined elements")
-            return True
-        else:
-            print("⚠️ No functions or classes found")
-            return False
-    except Exception as e:
-        print(f"❌ Functionality test failed: {{e}}")
-        return False
-
-if __name__ == "__main__":
-    test_basic_functionality()
-""")
-
-            # Run the test using TestRunner
-            test_result = self.test_runner.run_pytest(
-                test_dir=test_dir,
+            # Use PytestRunner to run real pytest tests
+            pytest_runner = PytestRunner(
                 prompt=task,
                 code=generated_code,
-                metadata={
-                    "task": task,
-                    "generation_timestamp": datetime.now().isoformat(),
-                    "code_length": len(generated_code),
-                },
+                tests_dir="tests"  # Use the existing tests directory
             )
-
-            # Clean up temporary files
-            import shutil
-
-            shutil.rmtree(test_dir, ignore_errors=True)
-
+            
+            # Run the tests
+            results = pytest_runner.run()
+            
             return {
-                "success": test_result.success,
-                "test_results": test_result.test_results,
-                "errors": test_result.errors,
-                "stdout": test_result.stdout,
-                "reward": self._calculate_test_reward(test_result.test_results),
-                "total_tests": len(test_result.test_results),
-                "passed_tests": len(
-                    [t for t in test_result.test_results if t.get("passed", False)]
-                ),
+                "success": results.get("success", False),
+                "test_results": results.get("test_results", []),
+                "errors": [results.get("error", "")] if results.get("error") else [],
+                "stdout": results.get("stdout", ""),
+                "reward": results.get("reward", 0.0),
+                "total_tests": results.get("total_tests", 0),
+                "passed_tests": results.get("passed_tests", 0),
             }
 
         except Exception as e:
