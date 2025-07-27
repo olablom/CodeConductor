@@ -249,9 +249,16 @@ Make sure all tests pass and the code follows the specified standards.
     def generate_prompt(self, consensus, task):
         """Generate prompt from ensemble consensus and task description"""
         try:
-            # Use existing generate_test_prompt as fallback with task context
-            if hasattr(consensus, "task") and consensus.task:
-                return self.generate_test_prompt(consensus)
+            # Handle ConsensusResult object
+            if hasattr(consensus, "consensus"):
+                consensus_dict = consensus.consensus
+            else:
+                consensus_dict = consensus
+
+            # Check if we have meaningful consensus data
+            if consensus_dict and len(consensus_dict) > 0:
+                # Use consensus data to generate rich prompt
+                return self.generate(consensus_dict)
             else:
                 # Create a minimal prompt with task info
                 prompt_parts = [
@@ -278,7 +285,7 @@ Make sure all tests pass and the code follows the specified standards.
                 return "\n".join(prompt_parts)
 
         except Exception as e:
-            self.logger.warning(f"Error generating prompt: {e}")
+            logger.warning(f"Error generating prompt: {e}")
             # Fallback to simple task-based prompt
             return f"Task: {task}\n\nPlease implement this with comprehensive tests and error handling."
 

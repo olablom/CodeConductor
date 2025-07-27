@@ -166,7 +166,7 @@ class ModelManager:
         def model_score(model: ModelInfo) -> float:
             # Simple scoring based on provider and model size
             base_score = 0.5
-            
+
             # Prefer larger models (they tend to be more capable)
             if "12b" in model.id.lower() or "13b" in model.id.lower():
                 base_score += 0.3
@@ -174,13 +174,13 @@ class ModelManager:
                 base_score += 0.2
             elif "mini" in model.id.lower():
                 base_score += 0.1
-                
+
             # Prefer certain providers
             if model.provider == "lm_studio":
                 base_score += 0.1
             elif model.provider == "ollama":
                 base_score += 0.05
-                
+
             return base_score
 
         # Sort by score and take top models

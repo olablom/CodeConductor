@@ -22,9 +22,11 @@ class QueryDispatcher:
     Dispatches prompts to multiple LLM models in parallel, handles timeouts and errors.
     """
 
-    def __init__(self, timeout: int = REQUEST_TIMEOUT) -> None:
+    def __init__(
+        self, model_manager: ModelManager = None, timeout: int = REQUEST_TIMEOUT
+    ) -> None:
         self.timeout = timeout
-        self.model_manager = ModelManager()
+        self.model_manager = model_manager or ModelManager()
 
     async def _query_lm_studio_model(
         self, session: ClientSession, model_info: ModelInfo, prompt: str

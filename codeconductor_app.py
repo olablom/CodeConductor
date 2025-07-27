@@ -116,8 +116,12 @@ class CodeConductorApp:
             if st.button("🔄 Refresh Models", use_container_width=True):
                 with st.spinner("Discovering models..."):
                     try:
-                        models = self.model_manager.list_models()
+                        # Use asyncio to run the async function
+                        import asyncio
+
+                        models = asyncio.run(self.model_manager.list_models())
                         st.session_state.models_discovered = True
+                        st.session_state.models = models
                         st.success(f"Found {len(models)} models!")
                     except Exception as e:
                         st.error(f"Error discovering models: {e}")
@@ -154,7 +158,15 @@ class CodeConductorApp:
             return
 
         try:
-            models = self.model_manager.list_models()
+            # Use cached models from session state
+            models = st.session_state.get("models", [])
+
+            if not models:
+                # Fallback: try to get models directly
+                import asyncio
+
+                models = asyncio.run(self.model_manager.list_models())
+                st.session_state.models = models
 
             # Create columns for model display
             cols = st.columns(3)
@@ -164,7 +176,9 @@ class CodeConductorApp:
                 with cols[col_idx]:
                     # Health check
                     try:
-                        health = self.model_manager.check_health(model)
+                        import asyncio
+
+                        health = asyncio.run(self.model_manager.check_health(model))
                         status_icon = "✅" if health else "❌"
                         status_class = "healthy" if health else "unhealthy"
                     except:
@@ -249,7 +263,7 @@ class CodeConductorApp:
             status_text.text("🔍 Discovering models...")
             progress_bar.progress(10)
 
-            models = self.model_manager.list_models()
+            models = await self.model_manager.list_models()
             if not models:
                 st.error(
                     "No models found. Please ensure LM Studio or Ollama is running."
@@ -260,9 +274,8 @@ class CodeConductorApp:
             status_text.text("🤖 Running ensemble engine...")
             progress_bar.progress(30)
 
-            results = await self.query_dispatcher.dispatch_with_fallback(
-                task, min_models=2
-            )
+            # Use simple dispatch method (avoiding the problematic dispatch_with_fallback)
+            results = await self.query_dispatcher.dispatch(task, max_models=3)
 
             if not results:
                 st.error("No models responded. Please check model availability.")
@@ -275,13 +288,23 @@ class CodeConductorApp:
             # Format results for consensus
             formatted_results = []
             for model_id, result in results.items():
-                if isinstance(result, dict) and result.get("success"):
+                # Check if result is successful (no error field)
+                if isinstance(result, dict) and "error" not in result:
+                    # Extract content from different response formats
+                    content = ""
+                    if "choices" in result and result["choices"]:
+                        content = result["choices"][0]["message"]["content"]
+                    elif "response" in result:
+                        content = result["response"]
+                    else:
+                        content = str(result)
+
                     formatted_results.append(
                         {
                             "model_id": model_id,
                             "success": True,
-                            "response": result.get("response", ""),
-                            "response_time": result.get("response_time", 0),
+                            "response": content,
+                            "response_time": 0,  # Not available in raw response
                         }
                     )
 
@@ -330,7 +353,14 @@ class CodeConductorApp:
         # Consensus details
         with st.expander("🧠 Consensus Details", expanded=True):
             if hasattr(results["consensus"], "consensus"):
-                st.json(results["consensus"].consensus)
+                consensus_data = results["consensus"].consensus
+                if consensus_data:
+                    st.json(consensus_data)
+                else:
+                    st.info(
+                        "Consensus data is empty - models may not have provided structured responses"
+                    )
+                    st.write("This is normal for free-form text responses from LLMs")
             else:
                 st.write("No structured consensus data available")
 
@@ -375,9 +405,14 @@ class CodeConductorApp:
 
             if generation_action is True:
                 # Run generation
-                results = asyncio.run(self.run_generation(task))
-                self.render_results(results)
-                st.session_state.generation_results = results
+                try:
+                    results = asyncio.run(self.run_generation(task))
+                    if results:
+                        self.render_results(results)
+                        st.session_state.generation_results = results
+                except Exception as e:
+                    st.error(f"Generation failed: {e}")
+                    st.exception(e)
 
             elif generation_action == "test":
                 st.info("Test functionality coming soon...")

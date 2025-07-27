@@ -16,6 +16,7 @@
 ## 📋 **Pre-Demo Setup Checklist**
 
 ### ✅ **Technical Setup**
+
 - [ ] LM Studio running with 5 models loaded
 - [ ] Ollama running with phi3:mini
 - [ ] Streamlit app ready (`streamlit run codeconductor_app.py`)
@@ -24,6 +25,7 @@
 - [ ] Test environment clean
 
 ### ✅ **Demo Environment**
+
 - [ ] All 6 models showing "✅ Healthy" status
 - [ ] Generation history cleared
 - [ ] Quick example tasks prepared
@@ -37,11 +39,11 @@
 
 > **"Hej allihopa! Jag heter [Ditt namn] och idag ska jag visa er CodeConductor – en AI-driven kodgenereringspipeline som automatiskt tar er från task till testad kod på under 30 sekunder."**
 
-*[Pause for audience reaction]*
+_[Pause for audience reaction]_
 
 > **"Med CodeConductor sparar ni över 80% av er utvecklingstid på enkla och medelsvåra uppgifter genom en robust ensemble av lokala LLMs, automatiska tester och en användarvänlig webb-UI."**
 
-*[Show Streamlit interface]*
+_[Show Streamlit interface]_
 
 > **"Bakom kulisserna kör vi en ensemble av sex LLM-modeller, konsensusgenererar en prompt, skickar den till Cursor, testar koden med pytest och itererar vid behov—alltsammans styrt av vårt Feedback Loop Controller."**
 
@@ -53,11 +55,11 @@
 
 > **"Låt oss börja med att se att alla våra modeller är friska och redo."**
 
-*[Click "Refresh Models" in sidebar]*
+_[Click "Refresh Models" in sidebar]_
 
 > **"Perfekt! Här ser ni realtidsstatus för alla sex modeller – alla 'friska' och redo. Vi har 5 modeller från LM Studio och 1 från Ollama, alla lokalt hostade för säkerhet och hastighet."**
 
-*[Point to model status indicators]*
+_[Point to model status indicators]_
 
 > **"Varje modell har sin egen health check, och vi kan se att alla är online och svarar. Detta är grunden för vår ensemble-intelligens."**
 
@@ -65,37 +67,37 @@
 
 > **"Nu ska vi testa systemet med en praktisk uppgift. Jag väljer en av våra fördefinierade exempel."**
 
-*[Click "🧮 Calculator" button]*
+_[Click "🧮 Calculator" button]_
 
 > **"Här ser ni att systemet automatiskt fyller i en uppgift: 'Create a simple calculator class with basic operations'. Detta är en typisk utvecklingsuppgift som skulle ta 10-15 minuter att skriva manuellt."**
 
-*[Show task in text area]*
+_[Show task in text area]_
 
 > **"Vi kan också skriva egna uppgifter här. Låt mig visa er en mer komplex uppgift..."**
 
-*[Type in text area: "Create a function to validate Swedish phone numbers with proper error handling and comprehensive tests"]*
+_[Type in text area: "Create a function to validate Swedish phone numbers with proper error handling and comprehensive tests"]_
 
 #### **Step 3: Ensemble Processing**
 
 > **"Nu kommer det spännande! Låt oss starta ensemble-processen."**
 
-*[Click "🚀 Generate Code" button]*
+_[Click "🚀 Generate Code" button]_
 
 > **"Titta på progress bar och status updates. Systemet kör nu parallellt mot våra sex modeller..."**
 
-*[Watch progress bar move from 10% to 30%]*
+_[Watch progress bar move from 10% to 30%]_
 
 > **"Steg 1: Modellupptäckt – alla modeller identifierade. Steg 2: Ensemble-körning – vi skickar uppgiften till våra bästa modeller parallellt."**
 
-*[Progress bar reaches 60%]*
+_[Progress bar reaches 60%]_
 
 > **"Steg 3: Konsensus-beräkning – modellerna analyserar uppgiften och når överenskommelse. Vi får faktiska LLM-svar från 2-3 modeller som arbetar tillsammans."**
 
-*[Progress bar reaches 80%]*
+_[Progress bar reaches 80%]_
 
 > **"Steg 4: Prompt-generering – systemet skapar en strukturerad prompt baserad på konsensus."**
 
-*[Progress bar reaches 100%]*
+_[Progress bar reaches 100%]_
 
 > **"Perfekt! Generationen är klar på 12 sekunder."**
 
@@ -103,11 +105,11 @@
 
 > **"Låt oss titta på vad ensemble-engine producerade."**
 
-*[Expand "🧠 Consensus Details"]*
+_[Expand "🧠 Consensus Details"]_
 
 > **"Här ser ni konsensus från våra modeller. Vi fick svar från codellama och meta-llama som analyserade uppgiften och kom överens om krav och implementation."**
 
-*[Show consensus data]*
+_[Show consensus data]_
 
 > **"Confidence: 0.82 – det betyder att modellerna var mycket överens om hur uppgiften skulle lösas. Detta är en av fördelarna med ensemble-approach."**
 
@@ -115,11 +117,11 @@
 
 > **"Nu ska vi se den genererade prompten som skickas till Cursor."**
 
-*[Expand "📝 Generated Prompt"]*
+_[Expand "📝 Generated Prompt"]_
 
 > **"Titta på denna strukturerade prompt. Den inkluderar: uppgiftsbeskrivning, krav, felhantering, tester och implementation-detaljer. Allt genererat automatiskt från ensemble-konsensus."**
 
-*[Show prompt content]*
+_[Show prompt content]_
 
 > **"Detta är vad som skickas till Cursor för kodgenerering. Prompten är optimerad för bästa resultat."**
 
@@ -127,7 +129,7 @@
 
 > **"Med ett klick kopierar vi prompten direkt till Cursor."**
 
-*[Click "📋 Copy to Clipboard"]*
+_[Click "📋 Copy to Clipboard"]_
 
 > **"Prompten är nu i clipboard och redo för Cursor. Detta är vår Clipboard++ integration som automatiskt hanterar överföringen."**
 
@@ -135,21 +137,21 @@
 
 > **"Nu kan vi gå till Cursor och klistra in prompten..."**
 
-*[Switch to Cursor IDE]*
+_[Switch to Cursor IDE]_
 
 > **"Cursor tar emot prompten och genererar kod på några sekunder. Titta på denna implementation – den inkluderar allt vi bad om: validering, felhantering och tester."**
 
-*[Show generated code in Cursor]*
+_[Show generated code in Cursor]_
 
 #### **Step 8: Test Execution**
 
 > **"Tillbaka till CodeConductor för automatisk testning."**
 
-*[Return to Streamlit]*
+_[Return to Streamlit]_
 
 > **"Systemet kör nu pytest automatiskt på den genererade koden. Titta på test-resultaten..."**
 
-*[Show test results]*
+_[Show test results]_
 
 > **"Perfekt! Alla tester passerade. 5/5 gröna – det betyder att koden fungerar som förväntat."**
 
@@ -157,11 +159,11 @@
 
 > **"Låt oss titta på prestanda-mätvärden."**
 
-*[Show metrics in sidebar]*
+_[Show metrics in sidebar]_
 
 > **"Total tid: 12 sekunder. Models used: 2. Status: Success. Detta är en 95% tidsbesparing jämfört med manuell utveckling."**
 
-*[Show generation history]*
+_[Show generation history]_
 
 > **"Här ser ni vår generation-historik. Vi kan spåra alla tidigare generationer och deras framgångsgrad."**
 
@@ -173,7 +175,7 @@
 
 > **"Låt mig visa er en av de avancerade funktionerna – realtidsmodellövervakning."**
 
-*[Point to model status dashboard]*
+_[Point to model status dashboard]_
 
 > **"Här ser ni live-status för alla modeller. Om en modell skulle krascha eller bli långsam, skulle vi se det omedelbart och systemet skulle automatiskt växla till andra modeller."**
 
@@ -181,7 +183,7 @@
 
 > **"I sidebar kan ni se generation-historik och analytics. Vi spårar framgångsgrad, modell-användning och prestanda över tid."**
 
-*[Show sidebar analytics]*
+_[Show sidebar analytics]_
 
 > **"Detta är värdefullt för att optimera systemet och förstå vilka modeller som presterar bäst för olika typer av uppgifter."**
 
@@ -210,18 +212,21 @@
 ## 🎯 **Demo Tips & Best Practices**
 
 ### **Before Demo**
+
 - Test all models are healthy
 - Have backup tasks ready
 - Clear generation history
 - Prepare browser tabs
 
 ### **During Demo**
+
 - Speak clearly and confidently
 - Point to specific UI elements
 - Explain technical concepts simply
 - Handle errors gracefully
 
 ### **After Demo**
+
 - Be ready for questions
 - Have technical details ready
 - Collect feedback
@@ -232,12 +237,15 @@
 ## 🔧 **Troubleshooting Guide**
 
 ### **If Models Don't Respond**
+
 > **"Ibland kan modeller vara långsamma. Låt oss vänta några sekunder eller prova en enklare uppgift."**
 
 ### **If Tests Fail**
+
 > **"Detta visar vår feedback-loop i aktion. Systemet skulle automatiskt modifiera prompten och försöka igen."**
 
 ### **If Streamlit Crashes**
+
 > **"Låt mig starta om appen snabbt. Detta är varför vi har robust error handling."**
 
 ---
@@ -252,4 +260,4 @@
 
 ---
 
-**🎬 Ready to demonstrate the future of AI-powered development!** 🚀 
+**🎬 Ready to demonstrate the future of AI-powered development!** 🚀

@@ -148,8 +148,76 @@ class ConsensusCalculator:
         try:
             return json.loads(response.strip())
         except json.JSONDecodeError:
-            logger.warning(f"Could not parse JSON from response: {response[:100]}...")
-            return None
+            # If not JSON, create a structured response from natural language
+            return self._extract_structure_from_text(response)
+
+    def _extract_structure_from_text(self, text: str) -> Dict[str, Any]:
+        """Extract structured information from natural language response."""
+        # Simple extraction of common patterns
+        structure = {
+            "task": "Implement requested functionality",
+            "approach": "Follow Python best practices",
+            "requirements": [],
+            "language": "python",
+        }
+
+        # Extract language hints
+        if "python" in text.lower():
+            structure["language"] = "python"
+        elif "java" in text.lower():
+            structure["language"] = "java"
+        elif "javascript" in text.lower() or "js" in text.lower():
+            structure["language"] = "javascript"
+
+        # Extract requirements from common patterns
+        requirements = []
+        lines = text.split("\n")
+        for line in lines:
+            line = line.strip()
+            if line.startswith("-") or line.startswith("*"):
+                req = line[1:].strip()
+                if (
+                    req and len(req) > 5 and len(req) < 100
+                ):  # Avoid very short or very long requirements
+                    requirements.append(req)
+            elif "class" in line.lower() and "calculator" in line.lower():
+                requirements.append("Create a calculator class")
+            elif "function" in line.lower() and "validate" in line.lower():
+                requirements.append("Create validation function")
+            elif "add" in line.lower() and (
+                "method" in line.lower() or "function" in line.lower()
+            ):
+                requirements.append("Implement add method")
+            elif "subtract" in line.lower() and (
+                "method" in line.lower() or "function" in line.lower()
+            ):
+                requirements.append("Implement subtract method")
+            elif "multiply" in line.lower() and (
+                "method" in line.lower() or "function" in line.lower()
+            ):
+                requirements.append("Implement multiply method")
+            elif "divide" in line.lower() and (
+                "method" in line.lower() or "function" in line.lower()
+            ):
+                requirements.append("Implement divide method")
+
+        # Clean up requirements - remove duplicates and very long ones
+        if requirements:
+            # Remove duplicates while preserving order
+            seen = set()
+            clean_requirements = []
+            for req in requirements:
+                if req not in seen and len(req) < 80:  # Limit length
+                    seen.add(req)
+                    clean_requirements.append(req)
+            structure["requirements"] = clean_requirements[
+                :5
+            ]  # Limit to 5 requirements
+        else:
+            # Default requirement based on task
+            structure["requirements"] = ["Implement the requested functionality"]
+
+        return structure
 
     def _consensus_for_field(
         self,
