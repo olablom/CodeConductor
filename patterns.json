@@ -1,0 +1,272 @@
+[
+  {
+    "prompt": "Create functions for basic math operations",
+    "code": "\ndef add(a, b):\n    return a + b\n\ndef multiply(a, b):\n    return a * b\n\ndef divide(a, b):\n    return a / b if b != 0 else 0\n",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_addition",
+          "passed": false
+        },
+        {
+          "name": "test_multiplication",
+          "passed": false
+        },
+        {
+          "name": "test_division",
+          "passed": false
+        }
+      ],
+      "total_tests": 3,
+      "passed_tests": 0,
+      "reward": 0.0,
+      "metadata": {
+        "scenario": "Good Code - All Tests Pass"
+      }
+    },
+    "task_description": "Test execution with 0/3 tests passed",
+    "timestamp": "2025-07-27T18:58:14.199728",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.00 (0/3 tests passed)",
+    "reward": 0.0
+  },
+  {
+    "prompt": "Create functions for basic math operations",
+    "code": "\ndef add(a, b):\n    return a + b\n\ndef multiply(a, b):\n    return a * b\n",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_addition",
+          "passed": false
+        },
+        {
+          "name": "test_multiplication",
+          "passed": false
+        },
+        {
+          "name": "test_division",
+          "passed": false
+        }
+      ],
+      "total_tests": 3,
+      "passed_tests": 0,
+      "reward": 0.0,
+      "metadata": {
+        "scenario": "Partial Code - Some Tests Pass"
+      }
+    },
+    "task_description": "Test execution with 0/3 tests passed",
+    "timestamp": "2025-07-27T18:58:14.200726",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.00 (0/3 tests passed)",
+    "reward": 0.0
+  },
+  {
+    "prompt": "Create functions for basic math operations",
+    "code": "\nprint(\"Hello World\")\n",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_addition",
+          "passed": false
+        },
+        {
+          "name": "test_multiplication",
+          "passed": false
+        },
+        {
+          "name": "test_division",
+          "passed": false
+        }
+      ],
+      "total_tests": 3,
+      "passed_tests": 0,
+      "reward": 0.0,
+      "metadata": {
+        "scenario": "Bad Code - No Tests Pass"
+      }
+    },
+    "task_description": "Test execution with 0/3 tests passed",
+    "timestamp": "2025-07-27T18:58:14.201775",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.00 (0/3 tests passed)",
+    "reward": 0.0
+  },
+  {
+    "prompt": "Create a simple math function",
+    "code": "\ndef add(a, b):\n    return a + b\n\ndef multiply(a, b):\n    return a * b\n",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_1_passed",
+          "passed": true,
+          "type": "passed"
+        },
+        {
+          "name": "test_2_passed",
+          "passed": true,
+          "type": "passed"
+        },
+        {
+          "name": "test_1_failed",
+          "passed": false,
+          "type": "failed"
+        }
+      ],
+      "total_tests": 3,
+      "passed_tests": 2,
+      "reward": 0.6666666666666666,
+      "metadata": {
+        "test_type": "pytest_demo"
+      }
+    },
+    "task_description": "Test execution with 2/3 tests passed",
+    "timestamp": "2025-07-27T18:58:15.219808",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.67 (2/3 tests passed)",
+    "reward": 0.6666666666666666
+  },
+  {
+    "prompt": "Create functions for basic math operations",
+    "code": "\ndef add(a, b):\n    return a + b\n\ndef multiply(a, b):\n    return a * b\n\ndef divide(a, b):\n    return a / b if b != 0 else 0\n",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_addition",
+          "passed": false
+        },
+        {
+          "name": "test_multiplication",
+          "passed": false
+        },
+        {
+          "name": "test_division",
+          "passed": false
+        }
+      ],
+      "total_tests": 3,
+      "passed_tests": 0,
+      "reward": 0.0,
+      "metadata": {
+        "scenario": "Good Code - All Tests Pass"
+      }
+    },
+    "task_description": "Test execution with 0/3 tests passed",
+    "timestamp": "2025-07-27T18:58:56.799969",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.00 (0/3 tests passed)",
+    "reward": 0.0
+  },
+  {
+    "prompt": "Create functions for basic math operations",
+    "code": "\ndef add(a, b):\n    return a + b\n\ndef multiply(a, b):\n    return a * b\n",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_addition",
+          "passed": false
+        },
+        {
+          "name": "test_multiplication",
+          "passed": false
+        },
+        {
+          "name": "test_division",
+          "passed": false
+        }
+      ],
+      "total_tests": 3,
+      "passed_tests": 0,
+      "reward": 0.0,
+      "metadata": {
+        "scenario": "Partial Code - Some Tests Pass"
+      }
+    },
+    "task_description": "Test execution with 0/3 tests passed",
+    "timestamp": "2025-07-27T18:58:56.800982",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.00 (0/3 tests passed)",
+    "reward": 0.0
+  },
+  {
+    "prompt": "Create functions for basic math operations",
+    "code": "\nprint(\"Hello World\")\n",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_addition",
+          "passed": false
+        },
+        {
+          "name": "test_multiplication",
+          "passed": false
+        },
+        {
+          "name": "test_division",
+          "passed": false
+        }
+      ],
+      "total_tests": 3,
+      "passed_tests": 0,
+      "reward": 0.0,
+      "metadata": {
+        "scenario": "Bad Code - No Tests Pass"
+      }
+    },
+    "task_description": "Test execution with 0/3 tests passed",
+    "timestamp": "2025-07-27T18:58:56.801980",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.00 (0/3 tests passed)",
+    "reward": 0.0
+  },
+  {
+    "prompt": "Create a simple math function",
+    "code": "\ndef add(a, b):\n    return a + b\n\ndef multiply(a, b):\n    return a * b\n",
+    "validation": {
+      "test_results": [
+        {
+          "name": "test_1_passed",
+          "passed": true,
+          "type": "passed"
+        },
+        {
+          "name": "test_2_passed",
+          "passed": true,
+          "type": "passed"
+        },
+        {
+          "name": "test_1_failed",
+          "passed": false,
+          "type": "failed"
+        }
+      ],
+      "total_tests": 3,
+      "passed_tests": 2,
+      "reward": 0.6666666666666666,
+      "metadata": {
+        "test_type": "pytest_demo"
+      }
+    },
+    "task_description": "Test execution with 2/3 tests passed",
+    "timestamp": "2025-07-27T18:58:57.101684",
+    "model_used": null,
+    "execution_time": null,
+    "user_rating": null,
+    "notes": "Test-as-Reward: 0.67 (2/3 tests passed)",
+    "reward": 0.6666666666666666
+  }
+]

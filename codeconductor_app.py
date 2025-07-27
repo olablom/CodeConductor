@@ -21,6 +21,7 @@ from integrations.notifications import notify_success, notify_error
 from analysis.planner_agent import PlannerAgent
 from feedback.validation_system import validate_cursor_output
 from feedback.learning_system import save_successful_pattern, learning_system
+from context.rag_system import rag_system
 
 # Page configuration
 st.set_page_config(
@@ -285,20 +286,35 @@ class CodeConductorApp:
         return task
 
     def _create_development_plan(self, task):
-        """Create development plan using Planner Agent"""
+        """Create development plan using Planner Agent with RAG context"""
         try:
-            with st.spinner("🧠 Creating intelligent development plan..."):
+            with st.spinner("🧠 Creating intelligent development plan with RAG context..."):
                 # Initialize planner with current project
                 project_path = st.session_state.get(
                     "project_path", "test_fastapi_project"
                 )
                 planner = PlannerAgent(project_path)
 
-                # Create plan
-                plan = planner.create_development_plan(task)
+                # Get relevant context using RAG
+                context_docs = rag_system.retrieve_context(task, k=3)
+                rag_context = rag_system.format_context_for_prompt(context_docs)
+                
+                # Create enhanced task with RAG context
+                enhanced_task = f"""
+{task}
+
+{rag_context}
+"""
+                
+                # Create plan with enhanced context
+                plan = planner.create_development_plan(enhanced_task)
 
                 # Store in session state
                 st.session_state.development_plan = plan
+                st.session_state.rag_context = {
+                    "context_docs": context_docs,
+                    "context_summary": rag_system.get_context_summary(task)
+                }
 
                 # Display plan
                 self._display_development_plan(plan)
@@ -307,23 +323,34 @@ class CodeConductorApp:
             st.error(f"Failed to create development plan: {str(e)}")
 
     def _generate_cursor_prompts(self, task):
-        """Generate Cursor prompts using Planner Agent"""
+        """Generate Cursor prompts using Planner Agent with RAG context"""
         try:
-            with st.spinner("🤖 Generating optimized Cursor prompts..."):
+            with st.spinner("🤖 Generating optimized Cursor prompts with RAG context..."):
                 # Initialize planner
                 project_path = st.session_state.get(
                     "project_path", "test_fastapi_project"
                 )
                 planner = PlannerAgent(project_path)
 
-                # Create plan and get prompts
-                plan = planner.create_development_plan(task)
+                # Get relevant context using RAG
+                context_docs = rag_system.retrieve_context(task, k=3)
+                rag_context = rag_system.format_context_for_prompt(context_docs)
+                
+                # Create enhanced task with RAG context
+                enhanced_task = f"""
+{task}
+
+{rag_context}
+"""
+                
+                # Create plan and get prompts with enhanced context
+                plan = planner.create_development_plan(enhanced_task)
 
                 # Store prompts in session state for save pattern functionality
                 st.session_state.last_generated_prompts = plan.cursor_prompts
 
                 # Display prompts
-                st.markdown("### 🤖 Generated Cursor Prompts")
+                st.markdown("### 🤖 Generated Cursor Prompts (with RAG context)")
                 for i, prompt in enumerate(plan.cursor_prompts, 1):
                     with st.expander(f"Prompt {i}: {plan.steps[i - 1]['description']}"):
                         st.text_area(
@@ -341,8 +368,29 @@ class CodeConductorApp:
             st.error(f"Failed to generate prompts: {str(e)}")
 
     def _display_development_plan(self, plan):
-        """Display development plan in GUI"""
+        """Display development plan in GUI with RAG context"""
         st.markdown("### 📋 Development Plan")
+
+        # Display RAG context if available
+        if hasattr(st.session_state, 'rag_context') and st.session_state.rag_context:
+            rag_info = st.session_state.rag_context
+            with st.expander("🔍 RAG Context Used", expanded=False):
+                summary = rag_info["context_summary"]
+                st.markdown(f"""
+                **Context Available:** {'✅' if summary['context_available'] else '❌'}
+                **Documents Found:** {summary['context_count']}
+                **Average Relevance:** {summary['avg_relevance']:.3f}
+                **Context Types:** {', '.join(summary['context_types'])}
+                """)
+                
+                if rag_info["context_docs"]:
+                    st.markdown("**Retrieved Documents:**")
+                    for i, doc in enumerate(rag_info["context_docs"], 1):
+                        st.markdown(f"""
+                        **{i}. {doc['metadata'].get('filename', 'Unknown')}** (Score: {doc['relevance_score']:.3f})
+                        - Type: {doc['metadata'].get('type', 'Unknown')}
+                        - Content: {doc['content'][:200]}...
+                        """)
 
         # Plan overview
         col1, col2, col3 = st.columns(3)
@@ -853,6 +901,32 @@ class CodeConductorApp:
 
                                         if success:
                                             st.success("✅ Pattern saved successfully!")
+                                            
+                                            # Add pattern to RAG context database
+                                            try:
+                                                pattern_data = {
+                                                    "prompt": last_prompt,
+                                                    "code": generated_code,
+                                                    "validation": {
+                                                        "score": result.score,
+                                                        "is_valid": result.is_valid,
+                                                        "issues": result.issues,
+                                                        "suggestions": result.suggestions,
+                                                        "compliance": result.compliance,
+                                                        "metrics": result.metrics,
+                                                    },
+                                                    "task_description": st.session_state.get(
+                                                        "current_task", "Unknown task"
+                                                    ),
+                                                    "model_used": model_used,
+                                                    "user_rating": user_rating,
+                                                    "timestamp": datetime.now().isoformat()
+                                                }
+                                                rag_system.add_pattern_to_context(pattern_data)
+                                                st.info("🔍 Pattern also added to RAG context database for future reference!")
+                                            except Exception as rag_error:
+                                                st.warning(f"⚠️ Pattern saved but RAG update failed: {rag_error}")
+                                            
                                             # Clear the form
                                             st.session_state.last_validation_result = (
                                                 None
@@ -939,21 +1013,27 @@ class CodeConductorApp:
         if top_patterns:
             st.markdown("##### ⭐ Top-Rated Patterns (5/5)")
             for pattern in top_patterns[:3]:  # Show top 3
-                with st.expander(f"🏆 {pattern.task_description[:50]}...", expanded=True):
+                with st.expander(
+                    f"🏆 {pattern.task_description[:50]}...", expanded=True
+                ):
                     col1, col2 = st.columns([3, 1])
                     with col1:
                         st.markdown(f"**Task:** {pattern.task_description}")
-                        st.markdown(f"**Score:** {pattern.validation.get('score', 0.0):.1%}")
+                        st.markdown(
+                            f"**Score:** {pattern.validation.get('score', 0.0):.1%}"
+                        )
                         st.markdown(f"**Model:** {pattern.model_used or 'Unknown'}")
                         st.markdown(f"**Date:** {pattern.timestamp[:10]}")
                     with col2:
                         if st.button(f"🗑️ Delete", key=f"delete_top_{id(pattern)}"):
-                            if learning_system.delete_pattern(learning_system.patterns.index(pattern)):
+                            if learning_system.delete_pattern(
+                                learning_system.patterns.index(pattern)
+                            ):
                                 st.success("Pattern deleted!")
                                 st.rerun()
                             else:
                                 st.error("Failed to delete pattern")
-                    
+
                     tab1, tab2 = st.tabs(["📝 Prompt", "💻 Code"])
                     with tab1:
                         st.code(pattern.prompt, language="text")
@@ -1051,137 +1131,155 @@ class CodeConductorApp:
     def render_cost_analysis(self):
         """Render cost analysis dashboard"""
         st.markdown("### 💰 Cost Analysis Dashboard")
-        
+
         # Cost comparison data
         col1, col2, col3 = st.columns(3)
-        
+
         with col1:
             st.metric(
-                "Local LLM Cost", 
-                "$0.00", 
-                help="Cost for using local models (free)"
+                "Local LLM Cost", "$0.00", help="Cost for using local models (free)"
             )
-        
+
         with col2:
             # Calculate estimated cloud cost based on usage
             total_generations = len(self.generation_history)
             estimated_cloud_cost = total_generations * 0.15  # $0.15 per API call
             st.metric(
-                "Estimated Cloud Cost", 
+                "Estimated Cloud Cost",
                 f"${estimated_cloud_cost:.2f}",
-                help="Estimated cost if using cloud APIs"
+                help="Estimated cost if using cloud APIs",
             )
-        
+
         with col3:
             savings = estimated_cloud_cost
             st.metric(
-                "Total Savings", 
+                "Total Savings",
                 f"${savings:.2f}",
                 delta=f"100% savings",
-                delta_color="normal"
+                delta_color="normal",
             )
-        
+
         # Cost breakdown chart
         if self.generation_history:
             st.markdown("#### 📊 Cost Savings Over Time")
-            
+
             # Create cost data
-            dates = [entry.get('timestamp', datetime.now()) for entry in self.generation_history]
+            dates = [
+                entry.get("timestamp", datetime.now())
+                for entry in self.generation_history
+            ]
             local_costs = [0.0] * len(dates)  # Always free
             cloud_costs = [0.15] * len(dates)  # $0.15 per call
-            
+
             # Create cumulative costs
-            cumulative_local = [sum(local_costs[:i+1]) for i in range(len(local_costs))]
-            cumulative_cloud = [sum(cloud_costs[:i+1]) for i in range(len(cloud_costs))]
-            
+            cumulative_local = [
+                sum(local_costs[: i + 1]) for i in range(len(local_costs))
+            ]
+            cumulative_cloud = [
+                sum(cloud_costs[: i + 1]) for i in range(len(cloud_costs))
+            ]
+
             # Create DataFrame for plotting
-            cost_data = pd.DataFrame({
-                'Date': dates,
-                'Local Cost': cumulative_local,
-                'Cloud Cost': cumulative_cloud,
-                'Savings': [cloud - local for cloud, local in zip(cumulative_cloud, cumulative_local)]
-            })
-            
+            cost_data = pd.DataFrame(
+                {
+                    "Date": dates,
+                    "Local Cost": cumulative_local,
+                    "Cloud Cost": cumulative_cloud,
+                    "Savings": [
+                        cloud - local
+                        for cloud, local in zip(cumulative_cloud, cumulative_local)
+                    ],
+                }
+            )
+
             # Plot cost comparison
             fig = go.Figure()
-            
-            fig.add_trace(go.Scatter(
-                x=cost_data['Date'],
-                y=cost_data['Local Cost'],
-                mode='lines+markers',
-                name='Local LLMs (Free)',
-                line=dict(color='green', width=3),
-                marker=dict(size=8)
-            ))
-            
-            fig.add_trace(go.Scatter(
-                x=cost_data['Date'],
-                y=cost_data['Cloud Cost'],
-                mode='lines+markers',
-                name='Cloud APIs (Paid)',
-                line=dict(color='red', width=3),
-                marker=dict(size=8)
-            ))
-            
+
+            fig.add_trace(
+                go.Scatter(
+                    x=cost_data["Date"],
+                    y=cost_data["Local Cost"],
+                    mode="lines+markers",
+                    name="Local LLMs (Free)",
+                    line=dict(color="green", width=3),
+                    marker=dict(size=8),
+                )
+            )
+
+            fig.add_trace(
+                go.Scatter(
+                    x=cost_data["Date"],
+                    y=cost_data["Cloud Cost"],
+                    mode="lines+markers",
+                    name="Cloud APIs (Paid)",
+                    line=dict(color="red", width=3),
+                    marker=dict(size=8),
+                )
+            )
+
             fig.update_layout(
                 title="Cost Comparison: Local vs Cloud LLMs",
                 xaxis_title="Date",
                 yaxis_title="Cumulative Cost ($)",
-                hovermode='x unified',
-                showlegend=True
+                hovermode="x unified",
+                showlegend=True,
             )
-            
+
             st.plotly_chart(fig, use_container_width=True)
-            
+
             # Savings breakdown
             st.markdown("#### 💡 Cost Breakdown")
-            
+
             breakdown_cols = st.columns(2)
-            
+
             with breakdown_cols[0]:
                 st.markdown("**Local LLM Benefits:**")
                 st.markdown("- ✅ **Free to use** - No API costs")
                 st.markdown("- 🔒 **Privacy first** - All data stays local")
                 st.markdown("- ⚡ **No rate limits** - Unlimited requests")
                 st.markdown("- 🚀 **No latency** - Direct model access")
-            
+
             with breakdown_cols[1]:
                 st.markdown("**Cloud API Costs:**")
                 st.markdown("- 💸 **$0.15 per request** - Adds up quickly")
                 st.markdown("- 📊 **Usage tracking** - Always monitored")
                 st.markdown("- 🌐 **Network latency** - Slower responses")
                 st.markdown("- 📈 **Scaling costs** - More usage = higher bills")
-        
+
         else:
-            st.info("No generation history yet. Start generating code to see cost savings!")
-            
+            st.info(
+                "No generation history yet. Start generating code to see cost savings!"
+            )
+
         # Cost calculator
         st.markdown("---")
         st.markdown("#### 🧮 Cost Calculator")
-        
+
         calc_col1, calc_col2 = st.columns(2)
-        
+
         with calc_col1:
             daily_requests = st.slider(
-                "Daily API requests", 
-                min_value=1, 
-                max_value=100, 
+                "Daily API requests",
+                min_value=1,
+                max_value=100,
                 value=10,
-                help="How many AI requests do you make per day?"
+                help="How many AI requests do you make per day?",
             )
-            
+
             monthly_requests = daily_requests * 30
             monthly_cloud_cost = monthly_requests * 0.15
             yearly_cloud_cost = monthly_cloud_cost * 12
-            
+
         with calc_col2:
             st.markdown(f"**Monthly requests:** {monthly_requests}")
             st.markdown(f"**Monthly cloud cost:** ${monthly_cloud_cost:.2f}")
             st.markdown(f"**Yearly cloud cost:** ${yearly_cloud_cost:.2f}")
             st.markdown(f"**Yearly savings:** ${yearly_cloud_cost:.2f}")
-            
+
             if yearly_cloud_cost > 0:
-                st.success(f"💰 You could save ${yearly_cloud_cost:.2f} per year with CodeConductor!")
+                st.success(
+                    f"💰 You could save ${yearly_cloud_cost:.2f} per year with CodeConductor!"
+                )
 
     def run(self):
         """Main app runner"""
@@ -1192,7 +1290,9 @@ class CodeConductorApp:
         self.render_sidebar()
 
         # Main content with tabs
-        tab1, tab2, tab3 = st.tabs(["🎯 Code Generation", "📚 Learning Patterns", "💰 Cost Analysis"])
+        tab1, tab2, tab3 = st.tabs(
+            ["🎯 Code Generation", "📚 Learning Patterns", "💰 Cost Analysis"]
+        )
 
         with tab1:
             col1, col2 = st.columns([2, 1])
@@ -1263,7 +1363,7 @@ class CodeConductorApp:
         with tab2:
             # Learning Patterns Overview
             self.render_patterns_overview()
-            
+
         with tab3:
             # Cost Analysis Dashboard
             self.render_cost_analysis()
