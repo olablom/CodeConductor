@@ -14,7 +14,9 @@ from .model_manager import ModelManager, ModelInfo
 # Configure logging
 logger = logging.getLogger(__name__)
 
-REQUEST_TIMEOUT = 15  # seconds - balanced for testing
+# Timeout configuration - different timeouts for different providers
+FAST_TIMEOUT = 30  # seconds - for fast models like Ollama
+SLOW_TIMEOUT = 120  # seconds - for slower models like LM Studio
 
 
 class QueryDispatcher:
@@ -22,10 +24,8 @@ class QueryDispatcher:
     Dispatches prompts to multiple LLM models in parallel, handles timeouts and errors.
     """
 
-    def __init__(
-        self, model_manager: ModelManager = None, timeout: int = REQUEST_TIMEOUT
-    ) -> None:
-        self.timeout = timeout
+    def __init__(self, model_manager: ModelManager = None, timeout: int = None) -> None:
+        self.timeout = timeout  # Will be set per-request based on provider
         self.model_manager = model_manager or ModelManager()
         self.session = None
 
@@ -53,9 +53,10 @@ class QueryDispatcher:
             "temperature": 0.1,
         }
 
+        # Use longer timeout for LM Studio models
         try:
             async with session.post(
-                url, json=payload, timeout=ClientTimeout(total=self.timeout)
+                url, json=payload, timeout=ClientTimeout(total=SLOW_TIMEOUT)
             ) as resp:
                 resp.raise_for_status()
                 data = await resp.json()
@@ -84,9 +85,10 @@ class QueryDispatcher:
             "stream": False,
         }
 
+        # Use shorter timeout for fast Ollama models
         try:
             async with session.post(
-                url, json=payload, timeout=ClientTimeout(total=self.timeout)
+                url, json=payload, timeout=ClientTimeout(total=FAST_TIMEOUT)
             ) as resp:
                 resp.raise_for_status()
                 data = await resp.json()

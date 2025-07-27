@@ -16,11 +16,12 @@ from ensemble.model_manager import ModelManager
 from ensemble.query_dispatcher import QueryDispatcher
 from ensemble.consensus_calculator import ConsensusCalculator
 from ensemble.hybrid_ensemble import HybridEnsemble
+from ensemble.ensemble_engine import EnsembleEngine
 from generators.prompt_generator import PromptGenerator
 from integrations.notifications import notify_success, notify_error
 from analysis.planner_agent import PlannerAgent
 from feedback.validation_system import validate_cursor_output
-from feedback.learning_system import save_successful_pattern, learning_system
+from feedback.learning_system import save_successful_pattern, LearningSystem
 from context.rag_system import rag_system
 
 # Page configuration
@@ -89,7 +90,9 @@ class CodeConductorApp:
         self.query_dispatcher = QueryDispatcher(self.model_manager)
         self.consensus_calculator = ConsensusCalculator()
         self.hybrid_ensemble = HybridEnsemble()
+        self.ensemble_engine = None  # Will be initialized on demand
         self.prompt_generator = PromptGenerator()
+        self.learning_system = LearningSystem()
         self.generation_history = []
 
     def initialize_session_state(self):
@@ -288,7 +291,9 @@ class CodeConductorApp:
     def _create_development_plan(self, task):
         """Create development plan using Planner Agent with RAG context"""
         try:
-            with st.spinner("🧠 Creating intelligent development plan with RAG context..."):
+            with st.spinner(
+                "🧠 Creating intelligent development plan with RAG context..."
+            ):
                 # Initialize planner with current project
                 project_path = st.session_state.get(
                     "project_path", "test_fastapi_project"
@@ -298,14 +303,14 @@ class CodeConductorApp:
                 # Get relevant context using RAG
                 context_docs = rag_system.retrieve_context(task, k=3)
                 rag_context = rag_system.format_context_for_prompt(context_docs)
-                
+
                 # Create enhanced task with RAG context
                 enhanced_task = f"""
 {task}
 
 {rag_context}
 """
-                
+
                 # Create plan with enhanced context
                 plan = planner.create_development_plan(enhanced_task)
 
@@ -313,7 +318,7 @@ class CodeConductorApp:
                 st.session_state.development_plan = plan
                 st.session_state.rag_context = {
                     "context_docs": context_docs,
-                    "context_summary": rag_system.get_context_summary(task)
+                    "context_summary": rag_system.get_context_summary(task),
                 }
 
                 # Display plan
@@ -325,7 +330,9 @@ class CodeConductorApp:
     def _generate_cursor_prompts(self, task):
         """Generate Cursor prompts using Planner Agent with RAG context"""
         try:
-            with st.spinner("🤖 Generating optimized Cursor prompts with RAG context..."):
+            with st.spinner(
+                "🤖 Generating optimized Cursor prompts with RAG context..."
+            ):
                 # Initialize planner
                 project_path = st.session_state.get(
                     "project_path", "test_fastapi_project"
@@ -335,14 +342,14 @@ class CodeConductorApp:
                 # Get relevant context using RAG
                 context_docs = rag_system.retrieve_context(task, k=3)
                 rag_context = rag_system.format_context_for_prompt(context_docs)
-                
+
                 # Create enhanced task with RAG context
                 enhanced_task = f"""
 {task}
 
 {rag_context}
 """
-                
+
                 # Create plan and get prompts with enhanced context
                 plan = planner.create_development_plan(enhanced_task)
 
@@ -372,24 +379,24 @@ class CodeConductorApp:
         st.markdown("### 📋 Development Plan")
 
         # Display RAG context if available
-        if hasattr(st.session_state, 'rag_context') and st.session_state.rag_context:
+        if hasattr(st.session_state, "rag_context") and st.session_state.rag_context:
             rag_info = st.session_state.rag_context
             with st.expander("🔍 RAG Context Used", expanded=False):
                 summary = rag_info["context_summary"]
                 st.markdown(f"""
-                **Context Available:** {'✅' if summary['context_available'] else '❌'}
-                **Documents Found:** {summary['context_count']}
-                **Average Relevance:** {summary['avg_relevance']:.3f}
-                **Context Types:** {', '.join(summary['context_types'])}
+                **Context Available:** {"✅" if summary["context_available"] else "❌"}
+                **Documents Found:** {summary["context_count"]}
+                **Average Relevance:** {summary["avg_relevance"]:.3f}
+                **Context Types:** {", ".join(summary["context_types"])}
                 """)
-                
+
                 if rag_info["context_docs"]:
                     st.markdown("**Retrieved Documents:**")
                     for i, doc in enumerate(rag_info["context_docs"], 1):
                         st.markdown(f"""
-                        **{i}. {doc['metadata'].get('filename', 'Unknown')}** (Score: {doc['relevance_score']:.3f})
-                        - Type: {doc['metadata'].get('type', 'Unknown')}
-                        - Content: {doc['content'][:200]}...
+                        **{i}. {doc["metadata"].get("filename", "Unknown")}** (Score: {doc["relevance_score"]:.3f})
+                        - Type: {doc["metadata"].get("type", "Unknown")}
+                        - Content: {doc["content"][:200]}...
                         """)
 
         # Plan overview
@@ -426,17 +433,21 @@ class CodeConductorApp:
             st.warning("Please enter a task to begin generation.")
             return False
 
-        col1, col2, col3 = st.columns([2, 1, 1])
+        col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
 
         with col1:
             if st.button("🚀 Generate Code", type="primary", use_container_width=True):
                 return True
 
         with col2:
+            if st.button("🧪 Test Locally First", use_container_width=True):
+                return "ensemble_test"
+
+        with col3:
             if st.button("🧪 Test Only", use_container_width=True):
                 return "test"
 
-        with col3:
+        with col4:
             if st.button("📋 Copy Prompt Only", use_container_width=True):
                 return "prompt"
 
@@ -501,9 +512,103 @@ class CodeConductorApp:
             st.error(f"Generation failed: {e}")
             return None
 
+    async def run_ensemble_test(self, task):
+        """Run Ensemble Engine test for local code generation"""
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+
+        try:
+            # Step 1: Initialize Ensemble Engine
+            status_text.text("🤖 Initializing Ensemble Engine...")
+            progress_bar.progress(20)
+
+            if self.ensemble_engine is None:
+                self.ensemble_engine = EnsembleEngine()
+
+            # Step 2: Process request with fallback
+            status_text.text("⚡ Testing with fast models...")
+            progress_bar.progress(50)
+
+            # Create ensemble request
+            from ensemble.ensemble_engine import EnsembleRequest
+
+            request = EnsembleRequest(
+                task=task, min_models=1, max_tokens=500, temperature=0.1
+            )
+
+            # Process with fallback strategy
+            result = await self.ensemble_engine.process_request_with_fallback(request)
+
+            if not result:
+                st.error("Ensemble test failed. Please check model availability.")
+                return None
+
+            # Step 3: Complete
+            status_text.text("✅ Ensemble test complete!")
+            progress_bar.progress(100)
+
+            return {
+                "task": task,
+                "type": "ensemble_test",
+                "generated_code": result.get("generated_code", ""),
+                "confidence": result.get("confidence", 0.0),
+                "strategy": result.get("strategy", "unknown"),
+                "models_used": result.get("models_used", []),
+                "status": "success",
+                "total_time": result.get("total_time", 0.0),
+            }
+
+        except Exception as e:
+            st.error(f"Ensemble test failed: {e}")
+            return None
+
+    def _render_ensemble_results(self, results):
+        """Render Ensemble test results"""
+        st.markdown("### 🧪 Ensemble Test Results")
+
+        # Basic metrics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Strategy", results.get("strategy", "unknown"))
+        with col2:
+            st.metric("Confidence", f"{results.get('confidence', 0.0):.2f}")
+        with col3:
+            st.metric("Models Used", len(results.get("models_used", [])))
+        with col4:
+            st.metric("Total Time", f"{results.get('total_time', 0.0):.2f}s")
+
+        # Generated code
+        st.markdown("#### 💻 Generated Code")
+        if results.get("generated_code"):
+            st.code(results["generated_code"], language="python")
+        else:
+            st.warning("No code generated")
+
+        # Model details
+        if results.get("models_used"):
+            st.markdown("#### 🤖 Models Used")
+            for model in results["models_used"]:
+                st.info(f"✅ {model}")
+
+        # Strategy details
+        with st.expander("🔍 Strategy Details", expanded=False):
+            st.json(
+                {
+                    "strategy": results.get("strategy", "unknown"),
+                    "confidence": results.get("confidence", 0.0),
+                    "models_used": results.get("models_used", []),
+                    "total_time": results.get("total_time", 0.0),
+                }
+            )
+
     def render_results(self, results):
         """Render generation results"""
         if not results:
+            return
+
+        # Handle Ensemble test results differently
+        if results.get("type") == "ensemble_test":
+            self._render_ensemble_results(results)
             return
 
         st.markdown("### 📊 Generation Results")
@@ -901,7 +1006,7 @@ class CodeConductorApp:
 
                                         if success:
                                             st.success("✅ Pattern saved successfully!")
-                                            
+
                                             # Add pattern to RAG context database
                                             try:
                                                 pattern_data = {
@@ -920,13 +1025,19 @@ class CodeConductorApp:
                                                     ),
                                                     "model_used": model_used,
                                                     "user_rating": user_rating,
-                                                    "timestamp": datetime.now().isoformat()
+                                                    "timestamp": datetime.now().isoformat(),
                                                 }
-                                                rag_system.add_pattern_to_context(pattern_data)
-                                                st.info("🔍 Pattern also added to RAG context database for future reference!")
+                                                rag_system.add_pattern_to_context(
+                                                    pattern_data
+                                                )
+                                                st.info(
+                                                    "🔍 Pattern also added to RAG context database for future reference!"
+                                                )
                                             except Exception as rag_error:
-                                                st.warning(f"⚠️ Pattern saved but RAG update failed: {rag_error}")
-                                            
+                                                st.warning(
+                                                    f"⚠️ Pattern saved but RAG update failed: {rag_error}"
+                                                )
+
                                             # Clear the form
                                             st.session_state.last_validation_result = (
                                                 None
@@ -952,7 +1063,7 @@ class CodeConductorApp:
         st.markdown("### 📚 Learning Patterns Overview")
 
         # Get statistics
-        stats = learning_system.get_statistics()
+        stats = self.learning_system.get_statistics()
 
         # Ensure all required keys exist
         stats = {
@@ -990,7 +1101,7 @@ class CodeConductorApp:
             model_filter = st.selectbox("Model", ["All"] + stats["models_used"])
 
         # Get filtered patterns
-        patterns = learning_system.get_patterns()
+        patterns = self.learning_system.get_patterns()
 
         if min_score > 0.0:
             patterns = [
@@ -1026,8 +1137,8 @@ class CodeConductorApp:
                         st.markdown(f"**Date:** {pattern.timestamp[:10]}")
                     with col2:
                         if st.button(f"🗑️ Delete", key=f"delete_top_{id(pattern)}"):
-                            if learning_system.delete_pattern(
-                                learning_system.patterns.index(pattern)
+                            if self.learning_system.delete_pattern(
+                                self.learning_system.patterns.index(pattern)
                             ):
                                 st.success("Pattern deleted!")
                                 st.rerun()
@@ -1061,7 +1172,9 @@ class CodeConductorApp:
 
                     with col2:
                         if st.button(f"🗑️ Delete", key=f"delete_{i}"):
-                            if learning_system.delete_pattern(len(patterns) - 1 - i):
+                            if self.learning_system.delete_pattern(
+                                len(patterns) - 1 - i
+                            ):
                                 st.success("Pattern deleted!")
                                 st.rerun()
                             else:
@@ -1112,7 +1225,7 @@ class CodeConductorApp:
                 export_file = (
                     f"patterns_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
                 )
-                if learning_system.export_patterns(export_file):
+                if self.learning_system.export_patterns(export_file):
                     st.success(f"✅ Patterns exported to {export_file}")
                 else:
                     st.error("❌ Failed to export patterns")
@@ -1123,8 +1236,8 @@ class CodeConductorApp:
                     "I understand this will delete ALL patterns permanently"
                 ):
                     # Clear all patterns by recreating the file
-                    learning_system.patterns = []
-                    learning_system._save_patterns()
+                    self.learning_system.patterns = []
+                    self.learning_system._save_patterns()
                     st.success("✅ All patterns cleared!")
                     st.rerun()
 
@@ -1324,6 +1437,17 @@ class CodeConductorApp:
                         st.session_state.generation_results = results
                 except Exception as e:
                     st.error(f"Generation failed: {e}")
+                    st.exception(e)
+
+            elif generation_action == "ensemble_test":
+                # Run ensemble test
+                try:
+                    results = asyncio.run(self.run_ensemble_test(task))
+                    if results:
+                        self.render_results(results)
+                        st.session_state.ensemble_results = results
+                except Exception as e:
+                    st.error(f"Ensemble test failed: {e}")
                     st.exception(e)
 
             elif generation_action == "test":

@@ -310,7 +310,38 @@ class EnsembleEngine:
             logger.error(f"Failed to initialize Ensemble Engine: {e}")
             return False
 
-    async def process_request(self, request: EnsembleRequest) -> EnsembleResponse:
+    async def process_request(
+        self,
+        task_description: str,
+        timeout: float = 30.0,
+        prefer_fast_models: bool = False,
+        enable_fallback: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Process a task request with optional fast model priority and fallback.
+
+        Args:
+            task_description: The task to process
+            timeout: Request timeout in seconds
+            prefer_fast_models: If True, prioritize fast models (Ollama)
+            enable_fallback: If True, enable fallback strategies
+
+        Returns:
+            Dict with results including generated_code, confidence, etc.
+        """
+        # Create EnsembleRequest from parameters
+        request = EnsembleRequest(task_description=task_description, timeout=timeout)
+
+        # Process with fast model priority if requested
+        if prefer_fast_models:
+            return await self._process_request_fast_priority(request)
+        else:
+            response = await self._process_request_internal(request)
+            return self._convert_response_to_dict(response)
+
+    async def _process_request_internal(
+        self, request: EnsembleRequest
+    ) -> EnsembleResponse:
         """Process a task request through the ensemble."""
         start_time = asyncio.get_event_loop().time()
 
@@ -537,3 +568,147 @@ class EnsembleEngine:
                 health_status[model_id] = False
 
         return health_status
+
+    async def _process_request_fast_priority(
+        self, request: EnsembleRequest
+    ) -> Dict[str, Any]:
+        """Process request prioritizing fast models (Ollama)."""
+        logger.info("⚡ Using fast model priority strategy")
+
+        try:
+            # Get available models
+            all_models = await self.model_manager.list_models()
+
+            # Only use Ollama models for fast priority
+            ollama_models = [m for m in all_models if m.provider == "ollama"]
+
+            # Use available Ollama models (up to min_models)
+            selected_models = ollama_models[: request.min_models]
+
+            # Fail fast if we don't have enough Ollama models
+            if len(selected_models) < request.min_models:
+                raise Exception(
+                    f"Insufficient fast models: {len(selected_models)} Ollama models < {request.min_models} required"
+                )
+
+            logger.info(
+                f"🎯 Fast priority selected (Ollama only): {[m.id for m in selected_models]}"
+            )
+
+            # Process with selected models
+            async with QueryDispatcher() as dispatcher:
+                raw_results = await dispatcher.dispatch_parallel(
+                    selected_models, request.task_description, request.context
+                )
+
+            # Format and return results
+            formatted_results = self._format_results_for_consensus(raw_results)
+            consensus_result = self.consensus_calculator.calculate_consensus(
+                formatted_results
+            )
+
+            return {
+                "generated_code": consensus_result.consensus,
+                "confidence": consensus_result.confidence,
+                "selected_model": selected_models[0].id
+                if selected_models
+                else "unknown",
+                "strategy": "fast_priority",
+                "models_used": [m.id for m in selected_models],
+                "success": True,
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Fast priority failed: {e}")
+            return {
+                "generated_code": f"Error: {str(e)}",
+                "confidence": 0.0,
+                "selected_model": "unknown",
+                "strategy": "fast_priority_failed",
+                "success": False,
+            }
+
+    async def process_request_with_fallback(
+        self, task_description: str
+    ) -> Dict[str, Any]:
+        """Process request with intelligent fallback strategies - OLLAMA ONLY."""
+        logger.info("🔄 Using Ollama-only fallback strategy")
+
+        # Try fast models first (Ollama only)
+        try:
+            result = await self.process_request(
+                task_description, timeout=30, prefer_fast_models=True
+            )
+            if result.get("success"):
+                result["strategy"] = "fast_models"
+                return result
+        except Exception as e:
+            logger.warning(f"Fast models failed: {e}")
+
+        # Fallback: try with just Ollama models, even if we need to reduce min_models
+        try:
+            logger.info("🔄 Trying Ollama-only fallback with reduced requirements")
+
+            # Get available models
+            all_models = await self.model_manager.list_models()
+            ollama_models = [m for m in all_models if m.provider == "ollama"]
+
+            if not ollama_models:
+                raise Exception("No Ollama models available")
+
+            # Create a custom request with just Ollama models
+            request = EnsembleRequest(
+                task_description=task_description,
+                timeout=60,
+                min_models=1,  # Reduce to 1 model if needed
+            )
+
+            # Process with only Ollama models
+            async with QueryDispatcher() as dispatcher:
+                raw_results = await dispatcher.dispatch_parallel(
+                    ollama_models, request.task_description, request.context
+                )
+
+            # Format and return results
+            formatted_results = self._format_results_for_consensus(raw_results)
+            consensus_result = self.consensus_calculator.calculate_consensus(
+                formatted_results
+            )
+
+            return {
+                "generated_code": consensus_result.consensus,
+                "confidence": consensus_result.confidence,
+                "selected_model": ollama_models[0].id if ollama_models else "unknown",
+                "strategy": "ollama_only_fallback",
+                "models_used": [m.id for m in ollama_models],
+                "success": True,
+            }
+
+        except Exception as e:
+            logger.warning(f"Ollama-only fallback failed: {e}")
+
+        # Final fallback: return error - NEVER use LM Studio
+        return {
+            "generated_code": "All Ollama strategies failed - no LM Studio fallback to prevent hanging",
+            "confidence": 0.0,
+            "selected_model": "none",
+            "strategy": "ollama_only_failed",
+            "success": False,
+        }
+
+    def _convert_response_to_dict(self, response: EnsembleResponse) -> Dict[str, Any]:
+        """Convert EnsembleResponse to dictionary format."""
+        # Extract the actual content from consensus
+        if isinstance(response.consensus, dict) and "content" in response.consensus:
+            generated_code = response.consensus["content"]
+        else:
+            generated_code = str(response.consensus)
+
+        return {
+            "generated_code": generated_code,
+            "confidence": response.confidence,
+            "selected_model": response.selected_model,
+            "execution_time": response.execution_time,
+            "strategy": "standard",
+            "success": True,
+        }
