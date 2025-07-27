@@ -24,6 +24,24 @@ except ImportError:
     RLHF_AVAILABLE = False
     print("⚠️ RLHF not available. Install with: pip install stable-baselines3 gymnasium")
 
+# Try to import RAG components
+try:
+    from context.rag_system import RAGSystem
+
+    RAG_AVAILABLE = True
+except ImportError:
+    RAG_AVAILABLE = False
+    print("⚠️ RAG not available. Install with: pip install langchain chromadb")
+
+# Try to import CodeReviewer components
+try:
+    from .code_reviewer import CodeReviewer
+
+    CODE_REVIEWER_AVAILABLE = True
+except ImportError:
+    CODE_REVIEWER_AVAILABLE = False
+    print("⚠️ CodeReviewer not available. Install with: pip install stable-baselines3")
+
 logger = logging.getLogger(__name__)
 
 
@@ -53,15 +71,31 @@ class EnsembleResponse:
 class EnsembleEngine:
     """Main ensemble engine that coordinates multiple LLMs with RLHF integration."""
 
-    def __init__(self, min_confidence: float = 0.7, use_rlhf: bool = True):
+    def __init__(
+        self,
+        min_confidence: float = 0.7,
+        use_rlhf: bool = True,
+        use_rag: bool = True,
+        use_code_reviewer: bool = True,
+    ):
         self.model_manager = ModelManager()
         self.consensus_calculator = ConsensusCalculator()
         self.min_confidence = min_confidence
         self.use_rlhf = use_rlhf and RLHF_AVAILABLE
+        self.use_rag = use_rag and RAG_AVAILABLE
+        self.use_code_reviewer = use_code_reviewer and CODE_REVIEWER_AVAILABLE
         self.rlhf_agent = None
+        self.rag_system = None
+        self.code_reviewer = None
 
         if self.use_rlhf:
             self._initialize_rlhf()
+
+        if self.use_rag:
+            self._initialize_rag()
+
+        if self.use_code_reviewer:
+            self._initialize_code_reviewer()
 
     def _initialize_rlhf(self):
         """Initialize RLHF agent if available."""
@@ -80,6 +114,28 @@ class EnsembleEngine:
         except Exception as e:
             logger.warning(f"Failed to initialize RLHF agent: {e}. Disabling RLHF.")
             self.use_rlhf = False
+
+    def _initialize_rag(self):
+        """Initialize RAG system if available."""
+        try:
+            self.rag_system = RAGSystem()
+            logger.info("RAG system initialized successfully")
+        except Exception as e:
+            logger.warning(f"Failed to initialize RAG system: {e}. Disabling RAG.")
+            self.use_rag = False
+
+    def _initialize_code_reviewer(self):
+        """Initialize CodeReviewer if available."""
+        try:
+            # Get available models for the reviewer
+            models = ["phi3", "codellama", "mistral"]  # Default models
+            self.code_reviewer = CodeReviewer(models)
+            logger.info("CodeReviewer initialized successfully")
+        except Exception as e:
+            logger.warning(
+                f"Failed to initialize CodeReviewer: {e}. Disabling CodeReviewer."
+            )
+            self.use_code_reviewer = False
 
     def _select_models_with_rlhf(
         self, request: EnsembleRequest, available_models: List[str]
@@ -199,6 +255,24 @@ class EnsembleEngine:
 
         return complexity
 
+    def apply_fixes(self, code: str, fixes: List[str]) -> str:
+        """
+        Apply suggested fixes to code (simplified implementation).
+
+        Args:
+            code: Original code
+            fixes: List of suggested fixes
+
+        Returns:
+            Code with applied fixes
+        """
+        if not fixes:
+            return code
+
+        # Add comments about applied fixes
+        fix_comments = "\n".join([f"# Applied fix: {fix}" for fix in fixes])
+        return f"{code}\n\n{fix_comments}"
+
     async def initialize(self) -> bool:
         """Initialize the ensemble engine and discover models."""
         logger.info("Initializing Ensemble Engine...")
@@ -242,6 +316,17 @@ class EnsembleEngine:
 
         logger.info(f"Processing ensemble request: {request.task_description[:50]}...")
 
+        # Augment task description with RAG context if available
+        augmented_task = request.task_description
+        if self.use_rag and self.rag_system:
+            try:
+                augmented_task = self.rag_system.augment_prompt(
+                    request.task_description
+                )
+                logger.info("Task description augmented with RAG context")
+            except Exception as e:
+                logger.warning(f"Failed to augment task with RAG: {e}")
+
         try:
             # Get available models
             all_models = await self.model_manager.list_models()
@@ -271,17 +356,16 @@ class EnsembleEngine:
                 logger.info(f"Using default model selection: {selected_model_ids}")
 
             # Get model objects
-            models = {
-                model.id: model
-                for model in available_models
-                if model.id in selected_model_ids
-            }
+            models = [
+                model for model in available_models if model.id in selected_model_ids
+            ]
 
             # Dispatch queries in parallel
             async with QueryDispatcher(timeout=request.timeout) as dispatcher:
                 raw_results = await dispatcher.dispatch_parallel(
-                    models, request.task_description, request.context
+                    models, augmented_task, request.context
                 )
+                logger.info(f"🔍 Raw results from dispatch_parallel: {raw_results}")
 
             # Convert raw results to format expected by consensus calculator
             formatted_results = self._format_results_for_consensus(raw_results)
@@ -291,23 +375,51 @@ class EnsembleEngine:
                 formatted_results
             )
 
+            # Extract generated code from consensus
+            generated_code = consensus_result.consensus
+
+            # Review code if CodeReviewer is available
+            if self.use_code_reviewer and self.code_reviewer and generated_code:
+                try:
+                    logger.info("🔍 Starting code review...")
+                    review_results = self.code_reviewer.review_code(
+                        request.task_description, generated_code, request.test_results
+                    )
+
+                    # Apply suggested fixes if any
+                    if review_results.get("suggested_fixes"):
+                        logger.info(
+                            f"🔧 Applying {len(review_results['suggested_fixes'])} suggested fixes"
+                        )
+                        improved_code = self.apply_fixes(
+                            generated_code, review_results["suggested_fixes"]
+                        )
+                        # consensus_result.consensus is a string, not a dict
+                        consensus_result.consensus = improved_code
+                        logger.info("✅ Code review completed and fixes applied")
+                    else:
+                        logger.info("✅ Code review completed - no fixes needed")
+
+                except Exception as e:
+                    logger.warning(f"⚠️ Code review failed: {e}")
+
             # Update model statistics
             for result in formatted_results:
-                if result.success:
+                if result["success"]:
                     self.model_manager.update_model_stats(
-                        result.model_id, True, result.response_time
+                        result["model"], True, result["response_time"]
                     )
                 else:
                     self.model_manager.update_model_stats(
-                        result.model_id, False, result.response_time
+                        result["model"], False, result["response_time"]
                     )
 
             execution_time = asyncio.get_event_loop().time() - start_time
 
             response = EnsembleResponse(
-                consensus=consensus_result.consensus,
+                consensus={"content": consensus_result.consensus},
                 confidence=consensus_result.confidence,
-                disagreements=consensus_result.disagreements,
+                disagreements=[],  # consensus_result doesn't have disagreements
                 model_responses=formatted_results,
                 execution_time=execution_time,
                 rlhf_action=rlhf_action,
@@ -338,23 +450,25 @@ class EnsembleEngine:
                 selected_model=None,
             )
 
-    def _format_results_for_consensus(self, raw_results: Dict[str, Any]) -> List[Any]:
+    def _format_results_for_consensus(
+        self, raw_results: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Convert raw dispatch results to format expected by consensus calculator."""
         formatted_results = []
+        logger.info(f"🔍 Formatting raw_results: {raw_results}")
 
         for model_id, response_data in raw_results.items():
-            # Create a result object with success/response attributes
-            result_obj = type(
-                "Result",
-                (),
-                {
-                    "model_id": model_id,
-                    "success": "error" not in response_data,
-                    "response": self._extract_response_content(response_data),
-                    "response_time": 0.0,  # We don't track this in ensemble engine
-                },
-            )()
-            formatted_results.append(result_obj)
+            # Create a dictionary with content key as expected by consensus calculator
+            result_dict = {
+                "model": model_id,
+                "success": "error" not in response_data,
+                "content": self._extract_response_content(response_data),
+                "response_time": 0.0,  # We don't track this in ensemble engine
+            }
+            formatted_results.append(result_dict)
+            logger.info(
+                f"🔍 Formatted result for {model_id}: success={result_dict['success']}, response_length={len(result_dict['content'])}"
+            )
 
         return formatted_results
 

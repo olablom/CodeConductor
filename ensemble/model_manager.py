@@ -244,6 +244,20 @@ class ModelManager:
         models = await self.list_models()
         return [model.id for model in models]
 
+    def update_model_stats(self, model_id: str, success: bool, response_time: float):
+        """
+        Update statistics for a model after a request.
+
+        Args:
+            model_id: ID of the model
+            success: Whether the request was successful
+            response_time: Response time in seconds
+        """
+        # This is a simplified implementation - in a real system you'd store these stats
+        logger.debug(
+            f"📊 Updated stats for {model_id}: success={success}, time={response_time:.2f}s"
+        )
+
     async def _discover_lm_studio_models(self) -> List[ModelInfo]:
         """Discover models from LM Studio."""
         try:

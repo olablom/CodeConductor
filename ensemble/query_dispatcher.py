@@ -14,7 +14,7 @@ from .model_manager import ModelManager, ModelInfo
 # Configure logging
 logger = logging.getLogger(__name__)
 
-REQUEST_TIMEOUT = 30  # seconds
+REQUEST_TIMEOUT = 15  # seconds - balanced for testing
 
 
 class QueryDispatcher:
@@ -27,6 +27,17 @@ class QueryDispatcher:
     ) -> None:
         self.timeout = timeout
         self.model_manager = model_manager or ModelManager()
+        self.session = None
+
+    async def __aenter__(self):
+        """Initialize async context manager."""
+        self.session = ClientSession()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        """Clean up async context manager."""
+        if self.session:
+            await self.session.close()
 
     async def _query_lm_studio_model(
         self, session: ClientSession, model_info: ModelInfo, prompt: str
@@ -137,9 +148,9 @@ class QueryDispatcher:
 
         logger.info(f"🎯 Querying {len(models)} models: {[m.id for m in models]}")
 
-        # Query all models in parallel
-        async with ClientSession() as session:
-            tasks = [self._query_model(session, model, prompt) for model in models]
+        # Query all models in parallel using async context manager
+        async with self:
+            tasks = [self._query_model(self.session, model, prompt) for model in models]
             responses = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Process results
@@ -227,9 +238,9 @@ class QueryDispatcher:
         """
         logger.info(f"🚀 Dispatching to {len(models)} specific models...")
 
-        # Query all models in parallel
-        async with ClientSession() as session:
-            tasks = [self._query_model(session, model, prompt) for model in models]
+        # Query all models in parallel using async context manager
+        async with self:
+            tasks = [self._query_model(self.session, model, prompt) for model in models]
             responses = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Process results
@@ -309,6 +320,65 @@ class QueryDispatcher:
             f"⚠️ All fallbacks exhausted, returning best available: {success_count} responses"
         )
         return results
+
+    async def dispatch_parallel(
+        self,
+        models: List[ModelInfo],
+        prompt: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Dispatch prompts to multiple models in parallel - interface expected by ensemble engine.
+
+        Args:
+            models: List ofModelInfo objects to query
+            prompt: The prompt to send to all models
+            context: Optional context information (not used in current implementation)
+
+        Returns:
+            Dict mapping model IDs to their responses
+        """
+        logger.info(f"🚀 Dispatching parallel to {len(models)} models...")
+        logger.info(f"🔍 Models: {[m.id for m in models]}")
+        logger.info(f"🔍 Session available: {self.session is not None}")
+
+        # Query all models in parallel (session is already managed by caller)
+        if not self.session:
+            logger.error("❌ No session available for dispatch_parallel")
+            return {}
+
+        try:
+            tasks = [self._query_model(self.session, model, prompt) for model in models]
+            logger.info(f"🔍 Created {len(tasks)} tasks")
+
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+            logger.info(f"🔍 Got {len(responses)} responses")
+
+            # Process results
+            results = {}
+            for i, response in enumerate(responses):
+                if isinstance(response, Exception):
+                    model_id = models[i].id if i < len(models) else f"unknown_{i}"
+                    logger.error(f"❌ Exception for {model_id}: {response}")
+                    results[model_id] = {"error": str(response), "model": model_id}
+                else:
+                    model_id, data = response
+                    results[model_id] = data
+                    logger.info(f"🔍 Processed response for {model_id}")
+
+            # Log summary
+            success_count = sum(1 for r in results.values() if "error" not in r)
+            error_count = len(results) - success_count
+            logger.info(
+                f"📊 Parallel dispatch complete: {success_count} success, {error_count} errors"
+            )
+            logger.info(f"🔍 Returning results: {results}")
+
+            return results
+
+        except Exception as e:
+            logger.error(f"❌ Exception in dispatch_parallel: {e}")
+            return {}
 
 
 # Convenience functions
