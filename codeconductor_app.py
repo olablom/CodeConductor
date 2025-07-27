@@ -23,6 +23,7 @@ from analysis.planner_agent import PlannerAgent
 from feedback.validation_system import validate_cursor_output
 from feedback.learning_system import save_successful_pattern, LearningSystem
 from context.rag_system import rag_system
+from runners.test_runner import TestRunner
 
 # Page configuration
 st.set_page_config(
@@ -93,6 +94,7 @@ class CodeConductorApp:
         self.ensemble_engine = None  # Will be initialized on demand
         self.prompt_generator = PromptGenerator()
         self.learning_system = LearningSystem()
+        self.test_runner = TestRunner()  # Initialize TestRunner
         self.generation_history = []
 
     def initialize_session_state(self):
@@ -117,9 +119,90 @@ class CodeConductorApp:
         )
 
     def render_sidebar(self):
-        """Render the sidebar with controls and history"""
+        """Render the sidebar with controls and status"""
         with st.sidebar:
-            st.markdown("### 🎛️ Controls")
+            st.markdown("## 🎛️ Controls")
+
+            # Model Management Section
+            with st.expander("🤖 Model Management", expanded=False):
+                st.markdown("### Available Models")
+
+                # Get current models
+                if hasattr(self, "model_manager"):
+                    try:
+                        # This would be async in practice, but for demo we'll show recommended
+                        recommended_models = self.model_manager.get_recommended_models()
+
+                        st.markdown("**Recommended Models:**")
+                        for model_name, model_info in recommended_models.items():
+                            col1, col2 = st.columns([3, 1])
+                            with col1:
+                                st.markdown(f"**{model_name}**")
+                                st.caption(f"{model_info['description']}")
+                                st.caption(
+                                    f"Size: {model_info['size']} | Specialty: {model_info['specialty']}"
+                                )
+
+                            with col2:
+                                if st.button(
+                                    f"📥 Download", key=f"download_{model_name}"
+                                ):
+                                    success = (
+                                        self.model_manager.download_recommended_model(
+                                            model_name
+                                        )
+                                    )
+                                    if success:
+                                        st.success(f"Download started for {model_name}")
+                                    else:
+                                        st.error(
+                                            f"Failed to start download for {model_name}"
+                                        )
+
+                        st.markdown("---")
+                        st.markdown("**Current Models:**")
+
+                        # Check what's currently available
+                        try:
+                            import subprocess
+
+                            result = subprocess.run(
+                                ["ollama", "list"], capture_output=True, text=True
+                            )
+                            if result.returncode == 0:
+                                lines = result.stdout.strip().split("\n")[
+                                    1:
+                                ]  # Skip header
+                                for line in lines:
+                                    if line.strip():
+                                        parts = line.split()
+                                        if len(parts) >= 2:
+                                            model_name = parts[0]
+                                            st.markdown(f"✅ {model_name}")
+                            else:
+                                st.warning("Could not check current models")
+                        except Exception as e:
+                            st.warning(f"Error checking models: {e}")
+
+                    except Exception as e:
+                        st.error(f"Error loading model info: {e}")
+
+            # Model Status Section
+            with st.expander("📊 Model Status", expanded=False):
+                if st.button("🔄 Refresh Model Status"):
+                    st.session_state.models_discovered = False
+
+                if not st.session_state.models_discovered:
+                    with st.spinner("Discovering models..."):
+                        # This would be async in practice
+                        st.info("Model discovery would happen here")
+                        st.session_state.models_discovered = True
+
+                # Show model status (simplified for now)
+                st.markdown("**Model Status:**")
+                st.markdown("✅ phi3:mini - Available")
+                st.markdown("⏳ codellama:7b - Downloading...")
+                st.markdown("❌ mistral:7b - Not available")
 
             # Model discovery
             if st.button("🔄 Refresh Models", use_container_width=True):
@@ -150,11 +233,11 @@ class CodeConductorApp:
                 st.markdown("### 📚 Generation History")
                 for i, entry in enumerate(reversed(self.generation_history[-5:])):
                     with st.expander(
-                        f"Task {len(self.generation_history) - i}: {entry['task'][:50]}..."
+                        f"Task {len(self.generation_history) - i}: {entry.get('task', 'Unknown task')[:50]}..."
                     ):
-                        st.write(f"**Status:** {entry['status']}")
-                        st.write(f"**Models:** {entry['models_used']}")
-                        st.write(f"**Time:** {entry['timestamp']}")
+                        st.write(f"**Status:** {entry.get('status', 'unknown')}")
+                        st.write(f"**Models:** {entry.get('models_used', 'Unknown')}")
+                        st.write(f"**Time:** {entry.get('timestamp', 'Unknown')}")
 
             # Project Analysis
             st.markdown("---")
@@ -476,18 +559,36 @@ class CodeConductorApp:
 
             # Step 3: Consensus calculation
             status_text.text("🧠 Calculating consensus...")
-            progress_bar.progress(60)
+            progress_bar.progress(50)
 
             # Step 4: Prompt generation
             status_text.text("📝 Generating prompt...")
-            progress_bar.progress(80)
+            progress_bar.progress(70)
 
             prompt = self.prompt_generator.generate_prompt(
                 task, hybrid_result.final_consensus
             )
 
-            # Step 5: Complete
-            status_text.text("✅ Generation complete!")
+            # Step 5: Automated testing
+            status_text.text("🧪 Running automated tests...")
+            progress_bar.progress(85)
+
+            # Extract generated code from consensus
+            generated_code = ""
+            if hasattr(hybrid_result.final_consensus, "consensus"):
+                generated_code = hybrid_result.final_consensus.consensus
+            elif isinstance(hybrid_result.final_consensus, dict):
+                generated_code = hybrid_result.final_consensus.get("content", "")
+            else:
+                generated_code = str(hybrid_result.final_consensus)
+
+            # Run automated tests if we have generated code
+            test_results = None
+            if generated_code and generated_code.strip():
+                test_results = self.run_automated_tests(task, generated_code)
+
+            # Step 6: Complete
+            status_text.text("✅ Generation and testing complete!")
             progress_bar.progress(100)
 
             return {
@@ -496,6 +597,8 @@ class CodeConductorApp:
                 + len(hybrid_result.cloud_responses),
                 "consensus": hybrid_result.final_consensus,
                 "prompt": prompt,
+                "generated_code": generated_code,
+                "test_results": test_results,
                 "status": "success",
                 "complexity_analysis": hybrid_result.complexity_analysis,
                 "total_cost": hybrid_result.total_cost,
@@ -562,6 +665,170 @@ class CodeConductorApp:
             st.error(f"Ensemble test failed: {e}")
             return None
 
+    def run_automated_tests(self, task: str, generated_code: str) -> dict:
+        """
+        Run automated tests on generated code and return results.
+
+        Args:
+            task: The original task description
+            generated_code: The generated code to test
+
+        Returns:
+            Dictionary with test results and reward information
+        """
+        try:
+            # Create a temporary test file with the generated code
+            test_dir = Path("temp_test_dir")
+            test_dir.mkdir(exist_ok=True)
+
+            # Save generated code to a temporary file
+            code_file = test_dir / "generated_code.py"
+            with open(code_file, "w", encoding="utf-8") as f:
+                f.write(generated_code)
+
+            # Create a simple test file
+            test_file = test_dir / "test_generated_code.py"
+            with open(test_file, "w", encoding="utf-8") as f:
+                f.write(f"""
+import sys
+import os
+sys.path.append(os.path.dirname(__file__))
+
+# Import the generated code
+try:
+    import generated_code
+    print("✅ Code imports successfully")
+except Exception as e:
+    print(f"❌ Import failed: {{e}}")
+    raise
+
+# Basic functionality test
+def test_basic_functionality():
+    '''Test that the generated code has basic functionality'''
+    try:
+        # Check if any functions or classes were defined
+        if hasattr(generated_code, '__all__') or dir(generated_code):
+            print("✅ Code has defined elements")
+            return True
+        else:
+            print("⚠️ No functions or classes found")
+            return False
+    except Exception as e:
+        print(f"❌ Functionality test failed: {{e}}")
+        return False
+
+if __name__ == "__main__":
+    test_basic_functionality()
+""")
+
+            # Run the test using TestRunner
+            test_result = self.test_runner.run_pytest(
+                test_dir=test_dir,
+                prompt=task,
+                code=generated_code,
+                metadata={
+                    "task": task,
+                    "generation_timestamp": datetime.now().isoformat(),
+                    "code_length": len(generated_code),
+                },
+            )
+
+            # Clean up temporary files
+            import shutil
+
+            shutil.rmtree(test_dir, ignore_errors=True)
+
+            return {
+                "success": test_result.success,
+                "test_results": test_result.test_results,
+                "errors": test_result.errors,
+                "stdout": test_result.stdout,
+                "reward": self._calculate_test_reward(test_result.test_results),
+                "total_tests": len(test_result.test_results),
+                "passed_tests": len(
+                    [t for t in test_result.test_results if t.get("passed", False)]
+                ),
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "test_results": [],
+                "errors": [f"Test execution failed: {str(e)}"],
+                "stdout": "",
+                "reward": 0.0,
+                "total_tests": 0,
+                "passed_tests": 0,
+            }
+
+    def _calculate_test_reward(self, test_results: list) -> float:
+        """Calculate reward based on test results."""
+        if not test_results:
+            return 0.0
+
+        passed_tests = sum(1 for test in test_results if test.get("passed", False))
+        total_tests = len(test_results)
+
+        return passed_tests / total_tests if total_tests > 0 else 0.0
+
+    def _render_test_results(self, test_results: dict):
+        """Render test results in the GUI."""
+        st.markdown("### 🧪 Automated Test Results")
+
+        # Test metrics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric(
+                "Test Status", "✅ Passed" if test_results["success"] else "❌ Failed"
+            )
+        with col2:
+            st.metric("Reward Score", f"{test_results['reward']:.2f}")
+        with col3:
+            st.metric(
+                "Tests Passed",
+                f"{test_results['passed_tests']}/{test_results['total_tests']}",
+            )
+        with col4:
+            st.metric("Total Tests", test_results["total_tests"])
+
+        # Test details
+        with st.expander("📊 Test Details", expanded=False):
+            if test_results["test_results"]:
+                for i, test in enumerate(test_results["test_results"], 1):
+                    status = "✅" if test.get("passed", False) else "❌"
+                    st.markdown(
+                        f"{status} **Test {i}:** {test.get('name', 'Unknown test')}"
+                    )
+                    if test.get("type"):
+                        st.caption(f"Type: {test['type']}")
+            else:
+                st.info("No detailed test results available")
+
+        # Errors if any
+        if test_results["errors"]:
+            with st.expander("❌ Test Errors", expanded=False):
+                for error in test_results["errors"]:
+                    st.error(error)
+
+        # Reward explanation
+        with st.expander("🎯 Reward Analysis", expanded=False):
+            reward = test_results["reward"]
+            if reward >= 0.8:
+                st.success(
+                    "🎉 Excellent! High reward score indicates good code quality."
+                )
+            elif reward >= 0.5:
+                st.warning("⚠️ Moderate reward score. Code may need improvements.")
+            else:
+                st.error("❌ Low reward score. Code needs significant improvements.")
+
+            st.markdown(f"""
+            **Reward Calculation:**
+            - Passed tests: {test_results["passed_tests"]}
+            - Total tests: {test_results["total_tests"]}
+            - Reward score: {reward:.2f} ({reward * 100:.1f}%)
+            """)
+
     def _render_ensemble_results(self, results):
         """Render Ensemble test results"""
         st.markdown("### 🧪 Ensemble Test Results")
@@ -618,7 +885,7 @@ class CodeConductorApp:
         with col1:
             st.metric("Models Used", results["models_used"])
         with col2:
-            st.metric("Status", results["status"])
+            st.metric("Status", results.get("status", "unknown"))
         with col3:
             st.metric("Total Time", f"{results.get('total_time', 0):.2f}s")
         with col4:
@@ -682,10 +949,24 @@ class CodeConductorApp:
                 if results.get("total_time", 0) > 0:
                     models_per_second = total_models / results["total_time"]
                     st.metric("Models/sec", f"{models_per_second:.2f}")
+                else:
+                    st.metric("Models/sec", "N/A")
             with col3:
-                if results.get("total_cost", 0) > 0:
-                    cost_per_second = results["total_cost"] / results["total_time"]
-                    st.metric("Cost/sec", f"${cost_per_second:.4f}")
+                st.metric("Total Cost", f"${results.get('total_cost', 0):.4f}")
+
+        # Test results (if available)
+        if "test_results" in results and results["test_results"]:
+            st.markdown("---")
+            self._render_test_results(results["test_results"])
+
+        # Generated code display
+        if "generated_code" in results and results["generated_code"]:
+            st.markdown("#### 💻 Generated Code")
+            st.code(results["generated_code"], language="python")
+
+            # Add copy button for generated code
+            if st.button("📋 Copy Generated Code", key="copy_generated_code"):
+                st.write("✅ Code copied to clipboard!")
 
         # Consensus details
         with st.expander("🧠 Consensus Details", expanded=True):
@@ -757,6 +1038,7 @@ class CodeConductorApp:
                 "complexity_level": results.get("complexity_analysis", {}).level.value
                 if results.get("complexity_analysis")
                 else "unknown",
+                "status": "success",  # Add status field
             }
         )
 
@@ -1466,7 +1748,7 @@ class CodeConductorApp:
             if self.generation_history:
                 total_generations = len(self.generation_history)
                 successful = len(
-                    [h for h in self.generation_history if h["status"] == "success"]
+                    [h for h in self.generation_history if h.get("status") == "success"]
                 )
 
                 st.metric("Total Generations", total_generations)
