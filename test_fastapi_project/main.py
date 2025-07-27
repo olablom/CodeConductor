@@ -1,29 +1,35 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
+from typing import Optional
+from datetime import datetime
 
-app = FastAPI()
+# Import routers
+from routers import auth, users, posts
+
+app = FastAPI(title="CodeConductor API", version="1.0.0")
+
+# Include routers
+app.include_router(auth.router)
+app.include_router(users.router)
+app.include_router(posts.router)
 
 
-class User(BaseModel):
-    name: str
-    email: str
-
-
+# Original endpoints (kan flyttas senare)
 @app.get("/")
-async def root():
-    return {"message": "Hello World"}
+def read_root():
+    return {"message": "Welcome to CodeConductor API"}
 
 
-@app.get("/api/users")
-async def get_users():
-    return {"users": []}
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "timestamp": datetime.now()}
 
 
-@app.post("/api/users")
-async def create_user(user: User):
-    return {"id": 1, "name": user.name}
+@app.post("/analyze")
+def analyze_code(code: str):
+    return {"analysis": "Code analysis result", "code_length": len(code)}
 
 
-@app.get("/api/users/{user_id}")
-async def get_user(user_id: int):
-    return {"id": user_id}
+@app.get("/metrics")
+def get_metrics():
+    return {"total_requests": 1234, "active_users": 56}
