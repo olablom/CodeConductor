@@ -71,9 +71,18 @@ class ProjectAnalyzer:
             
         logger.info(f"🔍 Scanning FastAPI routes in: {project_path}")
         
-        # Find all Python files
-        self.python_files = list(self.project_path.rglob("*.py"))
-        logger.info(f"📁 Found {len(self.python_files)} Python files")
+        # Find all Python files (exclude venv, site-packages, etc.)
+        self.python_files = []
+        for file_path in self.project_path.rglob("*.py"):
+            # Skip virtual environments and external packages
+            if any(exclude in str(file_path) for exclude in [
+                "venv", "site-packages", "node_modules", "__pycache__", 
+                ".git", ".pytest_cache", ".mypy_cache"
+            ]):
+                continue
+            self.python_files.append(file_path)
+        
+        logger.info(f"📁 Found {len(self.python_files)} Python files (filtered)")
         
         # Scan each file for FastAPI routes
         for file_path in self.python_files:
@@ -125,9 +134,14 @@ class ProjectAnalyzer:
             if isinstance(decorator.func, ast.Attribute):
                 # Check for @app.get, @app.post, etc.
                 if decorator.func.attr in ['get', 'post', 'put', 'delete', 'patch']:
-                    return True
+                    # Additional check: make sure it's likely a FastAPI app
+                    if hasattr(decorator.func, 'value'):
+                        if isinstance(decorator.func.value, ast.Name):
+                            # Common FastAPI app variable names
+                            if decorator.func.value.id in ['app', 'api', 'router', 'fastapi_app']:
+                                return True
             elif isinstance(decorator.func, ast.Name):
-                # Check for @get, @post, etc.
+                # Check for @get, @post, etc. (direct imports)
                 if decorator.func.id in ['get', 'post', 'put', 'delete', 'patch']:
                     return True
         return False
