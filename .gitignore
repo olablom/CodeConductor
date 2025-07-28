@@ -140,12 +140,14 @@ simple_test_results.json
 automated_test_results.json
 live_gui_test_results_*.json
 field_test_results_*.json
+test_results_*.json
 
 # Temporary test files
 test_*.py
 test_functions.py
 test_math.py
 test_gui_live_automated.py
+test_automated_suite.py
 
 # Vector database
 vector_db/
@@ -154,6 +156,8 @@ vector_db/
 # Model files
 *.zip
 ppo_codeconductor.zip
+*.pkl
+*.pickle
 
 # IDE files
 .vscode/
@@ -178,3 +182,31 @@ cache/
 *.temp
 temp/
 tmp/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# Jupyter notebooks
+.ipynb_checkpoints/
+
+# Coverage reports
+.coverage
+htmlcov/
+
+# Pytest cache
+.pytest_cache/
+
+# Local configuration
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

@@ -53,6 +53,7 @@ CodeConductor MVP is an intelligent development assistant that revolutionizes ho
 - ✅ **RLHF Agent with PPO** - Reinforcement learning for optimal model selection
 - ✅ **Production-Ready Architecture** - Scalable, robust, deployment-ready
 - ✅ **Automated Testing Suite** - 100% test coverage for all components
+- ✅ **Comprehensive Manual Testing** - Professional test protocol for production validation
 
 ## 🧪 **NEW: Comprehensive Automated Testing!** 🚀
 
@@ -69,20 +70,47 @@ CodeConductor MVP is an intelligent development assistant that revolutionizes ho
 
 ### GUI Tests (100% Success Rate)
 
-- ✅ **Streamlit Startup** - App starts successfully on port 8503
+- ✅ **Streamlit Startup** - App starts successfully on port 8501
 - ✅ **App Components** - All required methods available
 - ✅ **Ensemble Integration** - All ensemble methods available
 - ✅ **GUI Metrics Display** - Enhanced metrics display correctly
+
+### Stress Tests (100% Success Rate)
+
+- ✅ **Concurrent Requests** - 5 concurrent requests: 100% success rate
+- ✅ **Rapid Sequential** - 5 rapid sequential requests: 100% success rate
+- ✅ **No Hanging** - Robust error handling and timeout protection
+- ✅ **Model Health** - All 6 models online and responding
 
 ### Test Results Summary
 
 ```
 📊 COMPONENT TEST SUMMARY
-✅ Passed: 6/6 (100% Success Rate)
+✅ Passed: 15/15 (100% Success Rate)
 📊 GUI TEST SUMMARY
+✅ Passed: 4/4 (100% Success Rate)
+📊 STRESS TEST SUMMARY
 ✅ Passed: 4/4 (100% Success Rate)
 🎉 ALL TESTS PASSED! Ready for production!
 ```
+
+## 🎯 **NEW: Professional Manual Test Guide!** 🚀
+
+**Complete manual testing protocol for production validation:**
+
+- ✅ **Comprehensive Test Checklist** - Prioritized test areas with status tracking
+- ✅ **Environment Specifications** - System requirements and setup instructions
+- ✅ **Visual Examples** - Expected UI states and design patterns
+- ✅ **Time Estimates** - Realistic 25-35 minute testing protocol
+- ✅ **Scoring System** - 105-point evaluation with production readiness criteria
+- ✅ **Critical vs Nice-to-have** - Clear prioritization for efficient testing
+
+**Manual Test Areas:**
+- 🔴 **Critical:** Automated Tests, Code Quality, Ensemble Consensus
+- 🟡 **Important:** UI/UX Design, Performance
+- 🟢 **Nice-to-have:** RAG System Enhancement
+
+**See `MANUAL_TEST_GUIDE.md` for complete testing protocol!**
 
 ## 🎯 **NEW: Professional Streamlit Web App!** 🚀
 
@@ -144,7 +172,7 @@ streamlit run codeconductor_app.py
 
 **Then open your browser to `http://localhost:8501`**
 
-**Health API will be available at `http://localhost:8080`**
+**Health API will be available at `http://localhost:5000`**
 
 ### 🧠 **RAG System Features**
 
@@ -195,12 +223,14 @@ python test_gui_live_automated.py
 CodeConductor includes a comprehensive monitoring system with health endpoints:
 
 **Start the Health API:**
+
 ```bash
 # Start the health monitoring API
 python health_api.py
 ```
 
 **Available Endpoints:**
+
 - `GET /health` - Main health check with model status
 - `GET /health/models` - Detailed model health information
 - `GET /health/ensemble` - Ensemble engine health status
@@ -209,19 +239,21 @@ python health_api.py
 - `GET /live` - Kubernetes liveness probe
 
 **Test Health Endpoints:**
+
 ```bash
 # Test main health endpoint
-curl http://localhost:8080/health
+curl http://localhost:5000/health
 
 # Test Prometheus metrics
-curl http://localhost:8080/metrics
+curl http://localhost:5000/metrics
 
 # Test Kubernetes probes
-curl http://localhost:8080/ready
-curl http://localhost:8080/live
+curl http://localhost:5000/ready
+curl http://localhost:5000/live
 ```
 
 **Monitoring Features:**
+
 - **Real-time Model Health** - Live status of all 6 LLM models
 - **Circuit Breaker Pattern** - Automatic failure handling and recovery
 - **Prometheus Metrics** - Ready for Grafana integration

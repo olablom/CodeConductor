@@ -18,6 +18,44 @@ logger = logging.getLogger(__name__)
 FAST_TIMEOUT = 30  # seconds - for fast models like Ollama
 SLOW_TIMEOUT = 120  # seconds - for slower models like LM Studio
 
+# Model-specific configurations for optimal performance
+MODEL_CONFIGS = {
+    "phi3:mini": {
+        "temperature": 0.3,  # Slightly higher for more creative code
+        "max_tokens": 2048,  # Double the tokens for better code generation
+        "top_p": 0.9,  # Nucleus sampling for better quality
+        "frequency_penalty": 0.1,  # Reduce repetition
+        "presence_penalty": 0.1,  # Encourage diverse outputs
+        "timeout": 45,  # Slightly longer timeout for phi3
+    },
+    "codellama:7b": {
+        "temperature": 0.2,  # Lower for more deterministic code
+        "max_tokens": 3072,  # More tokens for complex code
+        "top_p": 0.95,
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "timeout": 60,
+    },
+    "mistral:7b": {
+        "temperature": 0.25,
+        "max_tokens": 2048,
+        "top_p": 0.9,
+        "frequency_penalty": 0.05,
+        "presence_penalty": 0.05,
+        "timeout": 60,
+    },
+}
+
+# Default configuration for unknown models
+DEFAULT_CONFIG = {
+    "temperature": 0.1,
+    "max_tokens": 1024,
+    "top_p": 0.9,
+    "frequency_penalty": 0.0,
+    "presence_penalty": 0.0,
+    "timeout": FAST_TIMEOUT,
+}
+
 
 class QueryDispatcher:
     """
@@ -46,25 +84,35 @@ class QueryDispatcher:
         Send prompt to a single LM Studio model and return (model_id, response_json).
         """
         url = f"{model_info.endpoint}/chat/completions"
+
+        # Get model-specific configuration
+        config = MODEL_CONFIGS.get(model_info.id, DEFAULT_CONFIG)
+
         payload = {
             "model": model_info.id,
             "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 1024,
-            "temperature": 0.1,
+            "max_tokens": config["max_tokens"],
+            "temperature": config["temperature"],
+            "top_p": config["top_p"],
+            "frequency_penalty": config["frequency_penalty"],
+            "presence_penalty": config["presence_penalty"],
         }
 
-        # Use longer timeout for LM Studio models with additional protection
+        # Use model-specific timeout
+        timeout = config["timeout"]
         try:
-            async with asyncio.timeout(SLOW_TIMEOUT):
+            async with asyncio.timeout(timeout):
                 async with session.post(
-                    url, json=payload, timeout=ClientTimeout(total=SLOW_TIMEOUT)
+                    url, json=payload, timeout=ClientTimeout(total=timeout)
                 ) as resp:
                     resp.raise_for_status()
                     data = await resp.json()
-                    logger.info(f"✅ Successfully queried {model_info.id}")
+                    logger.info(
+                        f"✅ Successfully queried {model_info.id} with optimized config"
+                    )
                     return model_info.id, data
         except asyncio.TimeoutError:
-            logger.warning(f"⏰ Timeout for {model_info.id}")
+            logger.warning(f"⏰ Timeout for {model_info.id} after {timeout}s")
             return model_info.id, {"error": "timeout", "model": model_info.id}
         except ClientError as e:
             logger.error(f"❌ HTTP error for {model_info.id}: {e}")
@@ -80,24 +128,40 @@ class QueryDispatcher:
         Send prompt to a single Ollama model and return (model_id, response_json).
         """
         url = f"{model_info.endpoint}/api/generate"
+
+        # Get model-specific configuration
+        config = MODEL_CONFIGS.get(model_info.id, DEFAULT_CONFIG)
+
         payload = {
             "model": model_info.id,
             "prompt": prompt,
             "stream": False,
+            "options": {
+                "temperature": config["temperature"],
+                "top_p": config["top_p"],
+                "frequency_penalty": config["frequency_penalty"],
+                "presence_penalty": config["presence_penalty"],
+                "num_predict": config[
+                    "max_tokens"
+                ],  # Ollama uses num_predict instead of max_tokens
+            },
         }
 
-        # Use shorter timeout for fast Ollama models with additional protection
+        # Use model-specific timeout
+        timeout = config["timeout"]
         try:
-            async with asyncio.timeout(FAST_TIMEOUT):
+            async with asyncio.timeout(timeout):
                 async with session.post(
-                    url, json=payload, timeout=ClientTimeout(total=FAST_TIMEOUT)
+                    url, json=payload, timeout=ClientTimeout(total=timeout)
                 ) as resp:
                     resp.raise_for_status()
                     data = await resp.json()
-                    logger.info(f"✅ Successfully queried {model_info.id}")
+                    logger.info(
+                        f"✅ Successfully queried {model_info.id} with optimized config"
+                    )
                     return model_info.id, data
         except asyncio.TimeoutError:
-            logger.warning(f"⏰ Timeout for {model_info.id}")
+            logger.warning(f"⏰ Timeout for {model_info.id} after {timeout}s")
             return model_info.id, {"error": "timeout", "model": model_info.id}
         except ClientError as e:
             logger.error(f"❌ HTTP error for {model_info.id}: {e}")

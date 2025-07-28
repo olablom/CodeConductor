@@ -13,10 +13,52 @@ from pathlib import Path
 import logging
 from urllib.parse import quote_plus
 
-from langchain_chroma import Chroma
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.schema import Document
+# Graceful fallback for optional dependencies
+try:
+    from langchain_chroma import Chroma
+    from langchain_huggingface import HuggingFaceEmbeddings
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+    from langchain.schema import Document
+
+    RAG_AVAILABLE = True
+except ImportError as e:
+    logger = logging.getLogger(__name__)
+    logger.warning(f"RAG dependencies not available: {e}")
+    logger.warning(
+        "RAG functionality will be disabled. Install with: pip install sentence-transformers"
+    )
+    RAG_AVAILABLE = False
+
+    # Create dummy classes for graceful fallback
+    class Chroma:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def add_documents(self, *args, **kwargs):
+            pass
+
+        def persist(self):
+            pass
+
+        def similarity_search_with_relevance_scores(self, *args, **kwargs):
+            return []
+
+    class HuggingFaceEmbeddings:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    class RecursiveCharacterTextSplitter:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def split_documents(self, docs):
+            return []
+
+    class Document:
+        def __init__(self, page_content="", metadata=None):
+            self.page_content = page_content
+            self.metadata = metadata or {}
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,16 +83,34 @@ class RAGSystem:
         self.vector_db_path = Path(vector_db_path)
         self.vector_db_path.mkdir(exist_ok=True)
 
+        # Check if RAG dependencies are available
+        if not RAG_AVAILABLE:
+            logger.warning(
+                "RAG system initialized in disabled mode - dependencies not available"
+            )
+            self.embedding_model = None
+            self.text_splitter = None
+            self.vector_store = None
+            return
+
         # Initialize embedding model (using local model for privacy/cost)
-        self.embedding_model = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2",
-            model_kwargs={"device": "cpu"},  # Use CPU for compatibility
-        )
+        try:
+            self.embedding_model = HuggingFaceEmbeddings(
+                model_name="sentence-transformers/all-MiniLM-L6-v2",
+                model_kwargs={"device": "cpu"},  # Use CPU for compatibility
+            )
+        except Exception as e:
+            logger.error(f"Failed to initialize embedding model: {e}")
+            self.embedding_model = None
 
         # Initialize text splitter
-        self.text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000, chunk_overlap=200, separators=["\n\n", "\n", " ", ""]
-        )
+        try:
+            self.text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000, chunk_overlap=200, separators=["\n\n", "\n", " ", ""]
+            )
+        except Exception as e:
+            logger.error(f"Failed to initialize text splitter: {e}")
+            self.text_splitter = None
 
         # Initialize vector store
         self.vector_store = None
@@ -58,6 +118,11 @@ class RAGSystem:
 
     def _initialize_vector_store(self):
         """Initialize or load existing vector store."""
+        if not RAG_AVAILABLE or not self.embedding_model:
+            logger.warning("Vector store initialization skipped - RAG not available")
+            self.vector_store = None
+            return
+
         try:
             if (self.vector_db_path / "chroma.sqlite3").exists():
                 logger.info("Loading existing vector database...")
@@ -79,7 +144,8 @@ class RAGSystem:
 
     def _index_project_files(self):
         """Index project files for context retrieval."""
-        if not self.vector_store:
+        if not self.vector_store or not self.text_splitter:
+            logger.warning("Project indexing skipped - RAG not available")
             return
 
         documents = []
@@ -143,14 +209,17 @@ class RAGSystem:
                 logger.warning(f"Could not read {json_file}: {e}")
 
         if documents:
-            # Split documents into chunks
-            split_docs = self.text_splitter.split_documents(documents)
+            try:
+                # Split documents into chunks
+                split_docs = self.text_splitter.split_documents(documents)
 
-            # Add to vector store
-            self.vector_store.add_documents(split_docs)
-            self.vector_store.persist()
+                # Add to vector store
+                self.vector_store.add_documents(split_docs)
+                self.vector_store.persist()
 
-            logger.info(f"Indexed {len(split_docs)} document chunks")
+                logger.info(f"Indexed {len(split_docs)} document chunks")
+            except Exception as e:
+                logger.error(f"Error indexing documents: {e}")
 
     def retrieve_context(
         self, task_description: str, k: int = 5
@@ -168,7 +237,7 @@ class RAGSystem:
         context_docs = []
 
         # Retrieve from local vectorstore
-        if self.vector_store:
+        if self.vector_store and RAG_AVAILABLE:
             try:
                 results = self.vector_store.similarity_search_with_relevance_scores(
                     task_description, k=k
@@ -187,6 +256,8 @@ class RAGSystem:
                 logger.info(f"Retrieved {len(context_docs)} local documents")
             except Exception as e:
                 logger.error(f"Error retrieving local context: {e}")
+        else:
+            logger.info("Local context retrieval skipped - RAG not available")
 
         # Fetch external context
         external_context = self.fetch_external_context(task_description)
@@ -294,7 +365,8 @@ class RAGSystem:
         Args:
             pattern: Pattern data from learning system
         """
-        if not self.vector_store:
+        if not self.vector_store or not RAG_AVAILABLE:
+            logger.info("Pattern addition skipped - RAG not available")
             return
 
         try:

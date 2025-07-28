@@ -27,6 +27,10 @@ langchain-community>=0.0.10
 langchain-huggingface>=0.0.5
 langchain-chroma>=0.0.5
 
+# Optional RAG dependencies (for enhanced context retrieval)
+sentence-transformers>=2.2.0
+chromadb>=0.4.0
+
 # RLHF dependencies
 gymnasium>=0.29.0
 stable-baselines3>=2.0.0

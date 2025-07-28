@@ -1,0 +1,145 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "CodeConductor Monitoring",
+    "tags": ["codeconductor", "ai", "monitoring"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Model Health Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(codeconductor_model_healthy)",
+            "legendFormat": "Healthy Models"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 3},
+                {"color": "green", "value": 6}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Total Requests",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "codeconductor_total_requests",
+            "legendFormat": "Total Requests"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Success Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "codeconductor_success_rate",
+            "legendFormat": "Success Rate %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 70},
+                {"color": "green", "value": 90}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 4,
+        "title": "Uptime",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "codeconductor_uptime_seconds / 3600",
+            "legendFormat": "Uptime (hours)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "h"
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+      },
+      {
+        "id": 5,
+        "title": "Pipeline Response Time (s)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "codeconductor_response_time_seconds_sum / codeconductor_response_time_seconds_count",
+            "legendFormat": "Avg Response Time"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 5},
+                {"color": "red", "value": 10}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 6,
+        "title": "Pipeline Response Time by Task",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "codeconductor_response_time_seconds_sum / codeconductor_response_time_seconds_count",
+            "legendFormat": "{{task}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      }
+    ],
+    "refresh": "10s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  }
+} 

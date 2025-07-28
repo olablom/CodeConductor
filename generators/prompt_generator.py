@@ -60,6 +60,11 @@ class PromptGenerator:
         if not default_template.exists():
             self._create_default_template(default_template)
 
+        # Create phi3:mini specialized template
+        phi3_template = self.template_dir / "phi3_prompt.md.j2"
+        if not phi3_template.exists():
+            self._create_phi3_template(default_template)
+
     def _create_default_template(self, template_path: Path):
         """Create the default Jinja2 template."""
         template_content = """## Task: {{ consensus.task | default("Implement requested functionality") }}
@@ -126,8 +131,120 @@ Make sure all tests pass and the code follows the specified standards.
         template_path.write_text(template_content)
         logger.info(f"✅ Created default template: {template_path}")
 
+    def _create_phi3_template(self, template_path: Path):
+        """Create a specialized template for phi3:mini."""
+        template_content = """# Code Generation Task: {{ consensus.task | default("Implement requested functionality") }}
+
+## Task Overview
+{{ consensus.approach | default("Create a well-structured, production-ready implementation") }}
+
+## Requirements
+{% if consensus.requirements %}
+{% for req in consensus.requirements %}
+- {{ req }}
+{% endfor %}
+{% else %}
+- Implement the requested functionality with clean, readable code
+- Include comprehensive error handling and validation
+- Write thorough unit tests with good coverage
+- Follow Python best practices and PEP 8
+- Add proper type hints and docstrings
+{% endif %}
+
+{% if consensus.files_needed %}
+## Files to Create
+{% for file in consensus.files_needed %}
+- `{{ file }}`: {{ file.split('.')[-1] | upper }} implementation
+{% endfor %}
+{% endif %}
+
+{% if consensus.dependencies %}
+## Dependencies
+{% for dep in consensus.dependencies %}
+- {{ dep }}
+{% endfor %}
+{% endif %}
+
+## Code Standards
+{% for standard in context.coding_standards %}
+- {{ standard }}
+{% endfor %}
+
+{% if context.existing_patterns %}
+## Existing Patterns to Follow
+{% for pattern in context.existing_patterns %}
+- {{ pattern }}
+{% endfor %}
+{% endif %}
+
+{% if context.project_structure %}
+## Project Structure
+{{ context.project_structure }}
+{% endif %}
+
+## Implementation Instructions
+
+1. **Start with imports and setup**
+2. **Implement the core functionality**
+3. **Add proper error handling**
+4. **Include comprehensive docstrings**
+5. **Write unit tests**
+6. **Ensure code follows PEP 8**
+
+## Output Format
+
+Please provide your implementation in this exact format:
+
+### Main Implementation
+```{{ consensus.language | default("python") }}
+# Imports
+import sys
+from typing import Optional, List, Dict, Any
+
+# Your implementation here
+# Make sure to include:
+# - Type hints
+# - Docstrings
+# - Error handling
+# - Clean, readable code
+```
+
+### Test Implementation
+```python
+# Test file: test_{{ consensus.test_file | default("test_implementation") }}.py
+import pytest
+from your_module import your_function
+
+# Your test cases here
+# Include:
+# - Happy path tests
+# - Edge case tests
+# - Error condition tests
+# - Good test coverage
+```
+
+## Quality Checklist
+- [ ] Code is clean and readable
+- [ ] Type hints are included
+- [ ] Docstrings are comprehensive
+- [ ] Error handling is robust
+- [ ] Tests are thorough
+- [ ] PEP 8 compliance
+- [ ] No hardcoded values
+- [ ] Proper logging (if applicable)
+
+Please provide a complete, working implementation that meets all requirements.
+"""
+
+        phi3_template_path = template_path.parent / "phi3_prompt.md.j2"
+        phi3_template_path.write_text(template_content)
+        logger.info(f"✅ Created phi3:mini template: {phi3_template_path}")
+
     def generate(
-        self, consensus: Dict[str, Any], context: Optional[PromptContext] = None
+        self,
+        consensus: Dict[str, Any],
+        context: Optional[PromptContext] = None,
+        model: str = None,
     ) -> str:
         """
         Generate a structured prompt from ensemble consensus.
@@ -135,11 +252,12 @@ Make sure all tests pass and the code follows the specified standards.
         Args:
             consensus: Consensus result from ensemble engine
             context: Optional context information
+            model: Model name to use specialized template (e.g., "phi3:mini")
 
         Returns:
             Generated prompt string
         """
-        logger.info("🎯 Generating prompt from consensus...")
+        logger.info(f"🎯 Generating prompt from consensus for model: {model}")
 
         # Validate consensus
         self._validate_consensus(consensus)
@@ -152,22 +270,45 @@ Make sure all tests pass and the code follows the specified standards.
         template_data = {"consensus": consensus, "context": context}
 
         try:
-            # Load and render template
-            template = self.env.get_template("prompt.md.j2")
+            # Choose template based on model
+            template_name = self._get_template_for_model(model)
+            template = self.env.get_template(template_name)
             prompt = template.render(**template_data)
 
             # Validate prompt length
             self._validate_prompt_length(prompt, context.max_tokens)
 
-            logger.info(f"✅ Generated prompt ({len(prompt)} chars)")
+            logger.info(
+                f"✅ Generated prompt ({len(prompt)} chars) using template: {template_name}"
+            )
             return prompt
 
         except Exception as e:
             logger.error(f"❌ Failed to generate prompt: {e}")
             return self._generate_fallback_prompt(consensus, context)
 
+    def _get_template_for_model(self, model: str = None) -> str:
+        """
+        Get the appropriate template for the given model.
+
+        Args:
+            model: Model name (e.g., "phi3:mini")
+
+        Returns:
+            Template filename to use
+        """
+        if model and "phi3" in model.lower():
+            return "phi3_prompt.md.j2"
+        else:
+            return "prompt.md.j2"
+
     def _validate_consensus(self, consensus: Dict[str, Any]):
         """Validate that consensus contains required fields."""
+        # Early return if consensus is not a dict
+        if not isinstance(consensus, dict):
+            logger.warning(f"⚠️ Consensus is not a dict: {type(consensus)}")
+            return
+
         required_fields = ["task", "approach"]
 
         for field in required_fields:
@@ -249,14 +390,34 @@ Make sure all tests pass and the code follows the specified standards.
     def generate_prompt(self, consensus, task):
         """Generate prompt from ensemble consensus and task description"""
         try:
+            # Early type guard - if consensus is a string, use simple fallback
+            if isinstance(consensus, str):
+                logger.warning("Consensus is a string, using simple fallback")
+                return f"Task: {task}\n\nPlease implement this with comprehensive tests and error handling."
+
             # Handle ConsensusResult object
             if hasattr(consensus, "consensus"):
                 consensus_dict = consensus.consensus
             else:
                 consensus_dict = consensus
 
+            # Ensure consensus_dict is a dict and validate it
+            if isinstance(consensus_dict, dict):
+                # Create a copy to avoid modifying the original
+                consensus_dict = dict(consensus_dict)
+                # Always ensure task is included
+                consensus_dict["task"] = task
+                self._validate_consensus(consensus_dict)
+            else:
+                # If it's not a dict, create empty dict with task
+                consensus_dict = {"task": task}
+
             # Check if we have meaningful consensus data
-            if consensus_dict and len(consensus_dict) > 0:
+            if (
+                consensus_dict
+                and isinstance(consensus_dict, dict)
+                and len(consensus_dict) > 0
+            ):
                 # Use consensus data to generate rich prompt
                 return self.generate(consensus_dict)
             else:
@@ -267,12 +428,8 @@ Make sure all tests pass and the code follows the specified standards.
                     "Please implement the following requirements:",
                 ]
 
-                # Add consensus information if available
-                if hasattr(consensus, "requirements") and consensus.requirements:
-                    for req in consensus.requirements:
-                        prompt_parts.append(f"- {req}")
-                else:
-                    prompt_parts.append(f"- {task}")
+                # Add task as requirement
+                prompt_parts.append(f"- {task}")
 
                 prompt_parts.extend(
                     [
@@ -317,11 +474,11 @@ Make sure all tests pass and the code follows the specified standards.
 
 # Convenience functions
 def generate_prompt(
-    consensus: Dict[str, Any], context: Optional[PromptContext] = None
+    consensus: Dict[str, Any], task: str, context: Optional[PromptContext] = None
 ) -> str:
-    """Generate a prompt from consensus."""
+    """Generate a prompt from consensus and task."""
     generator = PromptGenerator()
-    return generator.generate(consensus, context)
+    return generator.generate_prompt(consensus, task)
 
 
 def generate_code_prompt(task: str, files_needed: List[str] = None) -> str:
