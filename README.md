@@ -106,6 +106,7 @@ CodeConductor MVP is an intelligent development assistant that revolutionizes ho
 - ✅ **Critical vs Nice-to-have** - Clear prioritization for efficient testing
 
 **Manual Test Areas:**
+
 - 🔴 **Critical:** Automated Tests, Code Quality, Ensemble Consensus
 - 🟡 **Important:** UI/UX Design, Performance
 - 🟢 **Nice-to-have:** RAG System Enhancement
