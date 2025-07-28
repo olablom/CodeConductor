@@ -786,5 +786,7 @@ class EnsembleEngine:
             "selected_model": response.selected_model,
             "execution_time": response.execution_time,
             "strategy": "standard",
+            "models_used": len(response.model_responses),  # Count of models used
+            "disagreements": response.disagreements,  # Include disagreements list
             "success": True,
         }
