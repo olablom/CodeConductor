@@ -359,9 +359,13 @@ class EnsembleEngine:
                 logger.warning(f"Failed to augment task with RAG: {e}")
 
         try:
-            # Get available models
-            all_models = await self.model_manager.list_models()
-            healthy_models = await self.model_manager.list_healthy_models()
+            # Get available models with timeout
+            all_models = await asyncio.wait_for(
+                self.model_manager.list_models(), timeout=15.0
+            )
+            healthy_models = await asyncio.wait_for(
+                self.model_manager.list_healthy_models(), timeout=15.0
+            )
 
             # Filter to healthy models
             available_models = [
@@ -391,10 +395,13 @@ class EnsembleEngine:
                 model for model in available_models if model.id in selected_model_ids
             ]
 
-            # Dispatch queries in parallel
+            # Dispatch queries in parallel with timeout
             async with QueryDispatcher(timeout=request.timeout) as dispatcher:
-                raw_results = await dispatcher.dispatch_parallel(
-                    models, augmented_task, request.context
+                raw_results = await asyncio.wait_for(
+                    dispatcher.dispatch_parallel(
+                        models, augmented_task, request.context
+                    ),
+                    timeout=request.timeout + 10.0,  # Add extra buffer
                 )
                 logger.info(f"🔍 Raw results from dispatch_parallel: {raw_results}")
 
@@ -525,26 +532,29 @@ class EnsembleEngine:
         except Exception as e:
             return f"Failed to extract response: {e}"
 
-    def get_model_status(self) -> Dict[str, Any]:
+    async def get_model_status(self) -> Dict[str, Any]:
         """Get status of all models."""
+        # Get all discovered models
+        models = await self.model_manager.list_models()
+
         status = {
-            "total_models": len(self.model_manager.models),
+            "total_models": len(models),
             "online_models": 0,
             "models": {},
         }
 
-        for model_id, model in self.model_manager.models.items():
+        # Check health for each model
+        for model_info in models:
             model_status = {
-                "name": model.name,
-                "status": model.status.value,
-                "response_time": model.response_time,
-                "success_rate": model.success_rate,
-                "capabilities": model.capabilities,
+                "name": model_info.name,
+                "provider": model_info.provider,
+                "endpoint": model_info.endpoint,
+                "is_available": model_info.is_available,
             }
 
-            status["models"][model_id] = model_status
+            status["models"][model_info.id] = model_status
 
-            if model.status.value == "online":
+            if model_info.is_available:
                 status["online_models"] += 1
 
         return status
@@ -631,42 +641,55 @@ class EnsembleEngine:
     async def process_request_with_fallback(
         self, task_description: str
     ) -> Dict[str, Any]:
-        """Process request with intelligent fallback strategies - OLLAMA ONLY."""
-        logger.info("🔄 Using Ollama-only fallback strategy")
+        """Process request with intelligent fallback strategies - ALL MODELS."""
+        logger.info("🔄 Using intelligent fallback strategy with all available models")
 
-        # Try fast models first (Ollama only)
+        # Try standard processing first (all models) with timeout
         try:
-            result = await self.process_request(
-                task_description, timeout=30, prefer_fast_models=True
+            result = await asyncio.wait_for(
+                self.process_request(
+                    task_description, timeout=30, prefer_fast_models=False
+                ),
+                timeout=45.0,  # Add extra timeout wrapper
             )
             if result.get("success"):
-                result["strategy"] = "fast_models"
+                result["strategy"] = "standard_ensemble"
                 return result
+        except asyncio.TimeoutError:
+            logger.warning("⏰ Standard processing timed out, trying fallback")
         except Exception as e:
-            logger.warning(f"Fast models failed: {e}")
+            logger.warning(f"Standard processing failed: {e}")
 
-        # Fallback: try with just Ollama models, even if we need to reduce min_models
+        # Fallback: try with reduced model requirements
         try:
-            logger.info("🔄 Trying Ollama-only fallback with reduced requirements")
+            logger.info("🔄 Trying fallback with reduced requirements")
 
-            # Get available models
-            all_models = await self.model_manager.list_models()
-            ollama_models = [m for m in all_models if m.provider == "ollama"]
+            # Get available models with timeout
+            all_models = await asyncio.wait_for(
+                self.model_manager.list_models(), timeout=10.0
+            )
+            healthy_models = await asyncio.wait_for(
+                self.model_manager.list_healthy_models(), timeout=10.0
+            )
+            available_models = [m for m in all_models if m.id in healthy_models]
 
-            if not ollama_models:
-                raise Exception("No Ollama models available")
+            if not available_models:
+                raise Exception("No healthy models available")
 
-            # Create a custom request with just Ollama models
+            # Create a custom request with reduced requirements
             request = EnsembleRequest(
                 task_description=task_description,
                 timeout=60,
                 min_models=1,  # Reduce to 1 model if needed
             )
 
-            # Process with only Ollama models
+            # Process with available models with timeout
             async with QueryDispatcher() as dispatcher:
-                raw_results = await dispatcher.dispatch_parallel(
-                    ollama_models, request.task_description, request.context
+                raw_results = await asyncio.wait_for(
+                    dispatcher.dispatch_parallel(
+                        available_models, request.task_description, request.context
+                    ),
+                    timeout=60.0,
                 )
 
             # Format and return results
@@ -678,21 +701,74 @@ class EnsembleEngine:
             return {
                 "generated_code": consensus_result.consensus,
                 "confidence": consensus_result.confidence,
-                "selected_model": ollama_models[0].id if ollama_models else "unknown",
-                "strategy": "ollama_only_fallback",
-                "models_used": [m.id for m in ollama_models],
+                "selected_model": available_models[0].id
+                if available_models
+                else "unknown",
+                "strategy": "fallback_reduced_requirements",
+                "models_used": [m.id for m in available_models],
                 "success": True,
             }
 
+        except asyncio.TimeoutError:
+            logger.warning("⏰ Fallback with reduced requirements timed out")
         except Exception as e:
-            logger.warning(f"Ollama-only fallback failed: {e}")
+            logger.warning(f"Fallback with reduced requirements failed: {e}")
 
-        # Final fallback: return error - NEVER use LM Studio
+        # Final fallback: try with just one model
+        try:
+            logger.info("🔄 Trying single model fallback")
+
+            # Get any available model with timeout
+            all_models = await asyncio.wait_for(
+                self.model_manager.list_models(), timeout=10.0
+            )
+            if not all_models:
+                raise Exception("No models available")
+
+            # Use the first available model
+            single_model = all_models[0]
+
+            request = EnsembleRequest(
+                task_description=task_description,
+                timeout=60,
+                min_models=1,
+            )
+
+            async with QueryDispatcher() as dispatcher:
+                raw_results = await asyncio.wait_for(
+                    dispatcher.dispatch_parallel(
+                        [single_model], request.task_description, request.context
+                    ),
+                    timeout=60.0,
+                )
+
+            # Extract response from single model
+            if raw_results and single_model.id in raw_results:
+                response_data = raw_results[single_model.id]
+                generated_code = self._extract_response_content(response_data)
+
+                return {
+                    "generated_code": generated_code,
+                    "confidence": 0.5,  # Medium confidence for single model
+                    "selected_model": single_model.id,
+                    "strategy": "single_model_fallback",
+                    "models_used": [single_model.id],
+                    "success": True,
+                }
+            else:
+                raise Exception("No response from single model")
+
+        except asyncio.TimeoutError:
+            logger.warning("⏰ Single model fallback timed out")
+        except Exception as e:
+            logger.warning(f"Single model fallback failed: {e}")
+
+        # Final fallback: return error
         return {
-            "generated_code": "All Ollama strategies failed - no LM Studio fallback to prevent hanging",
+            "generated_code": "All fallback strategies failed",
             "confidence": 0.0,
             "selected_model": "none",
-            "strategy": "ollama_only_failed",
+            "strategy": "all_failed",
             "success": False,
         }
 

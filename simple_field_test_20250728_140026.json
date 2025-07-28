@@ -1,0 +1,17 @@
+{
+  "test_info": {
+    "timestamp": "2025-07-28T14:00:26.855138",
+    "version": "CodeConductor MVP v1.0",
+    "test_type": "simple_field_test"
+  },
+  "task": "Create a function to add two numbers",
+  "result": {
+    "generated_code": "js\nfunction add(a, b) {\n  return a + b;\n}\n",
+    "confidence": 0.0,
+    "selected_model": "codellama-7b-instruct",
+    "execution_time": 16.375,
+    "strategy": "standard",
+    "success": true
+  },
+  "execution_time_s": 16.365614414215088
+}

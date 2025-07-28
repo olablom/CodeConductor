@@ -214,6 +214,51 @@ To test the full pipeline with RAG integration:
    - Cyclomatic complexity and performance scores
    - RLHF model selection based on task complexity
 
+### 🚀 **Field Testing with Real Projects**
+
+To validate the pipeline with realistic tasks and measure RAG impact:
+
+#### Automated Field Testing
+
+Run the comprehensive field test script:
+
+```bash
+python test_field_real_projects.py
+```
+
+This script will:
+
+- Test 5 realistic tasks (Flask API, pandas analysis, SQLAlchemy, email validation, web scraping)
+- Compare performance with and without RAG
+- Measure code quality, execution time, and feature coverage
+- Generate detailed JSON report with metrics
+
+#### Manual Field Testing
+
+1. Start the Streamlit app:
+   ```bash
+   streamlit run codeconductor_app.py
+   ```
+2. Test realistic tasks:
+   - "Create a Flask API with user authentication and JWT tokens"
+   - "Write a Python script to analyze CSV data with pandas and matplotlib"
+   - "Implement a REST API with SQLAlchemy and PostgreSQL"
+3. Monitor RAG results:
+   - Check RAG context panel for local and Stack Overflow results
+   - Verify enhanced prompts with relevant context
+   - Confirm code quality improvements from RAG integration
+4. Validate metrics:
+   - Test pass rate and execution time
+   - Cyclomatic complexity and performance scores
+   - RLHF model selection based on task complexity
+
+#### Expected Field Test Results
+
+- **Success Rate**: >80% with RAG, >60% without
+- **Code Quality**: Pylint score >0.8 with RAG
+- **Execution Time**: <30 seconds per task
+- **RAG Impact**: 15-25% improvement in code quality and feature coverage
+
 ## 🎯 What This Does
 
 **FULLY AUTOMATED PIPELINE:**

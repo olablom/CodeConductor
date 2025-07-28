@@ -334,17 +334,27 @@ class CodeConductorApp:
         # Quick example buttons
         col1, col2, col3 = st.columns(3)
         with col1:
-            if st.button("📱 Phone Validator", use_container_width=True):
+            if st.button(
+                "📱 Phone Validator",
+                use_container_width=True,
+                key="phone_validator_btn",
+            ):
                 st.session_state.current_task = (
                     "Create a function to validate Swedish phone numbers"
                 )
         with col2:
-            if st.button("🧮 Calculator", use_container_width=True):
+            if st.button(
+                "🧮 Calculator", use_container_width=True, key="calculator_btn"
+            ):
                 st.session_state.current_task = (
                     "Create a simple calculator class with basic operations"
                 )
         with col3:
-            if st.button("🔐 Password Generator", use_container_width=True):
+            if st.button(
+                "🔐 Password Generator",
+                use_container_width=True,
+                key="password_generator_btn",
+            ):
                 st.session_state.current_task = "Create a secure password generator with configurable length and complexity"
 
         # Task input
@@ -360,14 +370,39 @@ class CodeConductorApp:
             st.markdown("---")
             st.markdown("### 🧠 Intelligent Planning")
 
-            col1, col2 = st.columns([1, 1])
+            col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
-                if st.button("📋 Create Development Plan", use_container_width=True):
+                if st.button(
+                    "📋 Create Development Plan",
+                    use_container_width=True,
+                    key="create_plan_btn",
+                ):
                     self._create_development_plan(task)
 
             with col2:
-                if st.button("🤖 Generate Cursor Prompts", use_container_width=True):
+                if st.button(
+                    "🤖 Generate Cursor Prompts",
+                    use_container_width=True,
+                    key="generate_prompts_btn",
+                ):
                     self._generate_cursor_prompts(task)
+
+            with col3:
+                if st.button(
+                    "🧪 Test Locally First",
+                    use_container_width=True,
+                    key="test_locally_btn",
+                ):
+                    st.session_state.run_ensemble_test = True
+
+            # Add Generate Code button below
+            if st.button(
+                "🚀 Generate Code",
+                type="primary",
+                use_container_width=True,
+                key="generate_code_btn",
+            ):
+                st.session_state.run_generation = True
 
         return task
 
@@ -449,7 +484,7 @@ class CodeConductorApp:
                             height=200,
                             key=f"prompt_{i}",
                         )
-                        if st.button(f"📋 Copy Prompt {i}", key=f"copy_{i}"):
+                        if st.button(f"📋 Copy Prompt {i}", key=f"copy_prompt_{i}"):
                             st.write("✅ Prompt copied to clipboard!")
                             # Store the selected prompt for save pattern
                             st.session_state.last_generated_prompt = prompt
@@ -510,32 +545,6 @@ class CodeConductorApp:
         for criteria in plan.validation_criteria:
             st.write(f"- {criteria}")
 
-    def render_generation_controls(self, task):
-        """Render generation controls"""
-        if not task.strip():
-            st.warning("Please enter a task to begin generation.")
-            return False
-
-        col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
-
-        with col1:
-            if st.button("🚀 Generate Code", type="primary", use_container_width=True):
-                return True
-
-        with col2:
-            if st.button("🧪 Test Locally First", use_container_width=True):
-                return "ensemble_test"
-
-        with col3:
-            if st.button("🧪 Test Only", use_container_width=True):
-                return "test"
-
-        with col4:
-            if st.button("📋 Copy Prompt Only", use_container_width=True):
-                return "prompt"
-
-        return False
-
     async def run_generation(self, task):
         """Run the full generation pipeline using hybrid ensemble"""
         progress_bar = st.progress(0)
@@ -566,7 +575,7 @@ class CodeConductorApp:
             progress_bar.progress(70)
 
             prompt = self.prompt_generator.generate_prompt(
-                task, hybrid_result.final_consensus
+                hybrid_result.final_consensus, task
             )
 
             # Step 5: Automated testing
@@ -632,15 +641,8 @@ class CodeConductorApp:
             status_text.text("⚡ Testing with fast models...")
             progress_bar.progress(50)
 
-            # Create ensemble request
-            from ensemble.ensemble_engine import EnsembleRequest
-
-            request = EnsembleRequest(
-                task=task, min_models=1, max_tokens=500, temperature=0.1
-            )
-
             # Process with fallback strategy
-            result = await self.ensemble_engine.process_request_with_fallback(request)
+            result = await self.ensemble_engine.process_request_with_fallback(task)
 
             if not result:
                 st.error("Ensemble test failed. Please check model availability.")
@@ -1712,22 +1714,9 @@ class CodeConductorApp:
             # Task input
             task = self.render_task_input()
 
-            # Generation controls
-            generation_action = self.render_generation_controls(task)
-
-            if generation_action is True:
-                # Run generation
-                try:
-                    results = asyncio.run(self.run_generation(task))
-                    if results:
-                        self.render_results(results)
-                        st.session_state.generation_results = results
-                except Exception as e:
-                    st.error(f"Generation failed: {e}")
-                    st.exception(e)
-
-            elif generation_action == "ensemble_test":
-                # Run ensemble test
+            # Check for ensemble test from task input
+            if st.session_state.get("run_ensemble_test", False):
+                st.session_state.run_ensemble_test = False  # Reset
                 try:
                     results = asyncio.run(self.run_ensemble_test(task))
                     if results:
@@ -1737,11 +1726,17 @@ class CodeConductorApp:
                     st.error(f"Ensemble test failed: {e}")
                     st.exception(e)
 
-            elif generation_action == "test":
-                st.info("Test functionality coming soon...")
-
-            elif generation_action == "prompt":
-                st.info("Prompt-only functionality coming soon...")
+            # Check for generation from task input
+            elif st.session_state.get("run_generation", False):
+                st.session_state.run_generation = False  # Reset
+                try:
+                    results = asyncio.run(self.run_generation(task))
+                    if results:
+                        self.render_results(results)
+                        st.session_state.generation_results = results
+                except Exception as e:
+                    st.error(f"Generation failed: {e}")
+                    st.exception(e)
 
             # Validation section
             self.render_validation_section()

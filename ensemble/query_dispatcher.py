@@ -53,15 +53,16 @@ class QueryDispatcher:
             "temperature": 0.1,
         }
 
-        # Use longer timeout for LM Studio models
+        # Use longer timeout for LM Studio models with additional protection
         try:
-            async with session.post(
-                url, json=payload, timeout=ClientTimeout(total=SLOW_TIMEOUT)
-            ) as resp:
-                resp.raise_for_status()
-                data = await resp.json()
-                logger.info(f"✅ Successfully queried {model_info.id}")
-                return model_info.id, data
+            async with asyncio.timeout(SLOW_TIMEOUT):
+                async with session.post(
+                    url, json=payload, timeout=ClientTimeout(total=SLOW_TIMEOUT)
+                ) as resp:
+                    resp.raise_for_status()
+                    data = await resp.json()
+                    logger.info(f"✅ Successfully queried {model_info.id}")
+                    return model_info.id, data
         except asyncio.TimeoutError:
             logger.warning(f"⏰ Timeout for {model_info.id}")
             return model_info.id, {"error": "timeout", "model": model_info.id}
@@ -85,15 +86,16 @@ class QueryDispatcher:
             "stream": False,
         }
 
-        # Use shorter timeout for fast Ollama models
+        # Use shorter timeout for fast Ollama models with additional protection
         try:
-            async with session.post(
-                url, json=payload, timeout=ClientTimeout(total=FAST_TIMEOUT)
-            ) as resp:
-                resp.raise_for_status()
-                data = await resp.json()
-                logger.info(f"✅ Successfully queried {model_info.id}")
-                return model_info.id, data
+            async with asyncio.timeout(FAST_TIMEOUT):
+                async with session.post(
+                    url, json=payload, timeout=ClientTimeout(total=FAST_TIMEOUT)
+                ) as resp:
+                    resp.raise_for_status()
+                    data = await resp.json()
+                    logger.info(f"✅ Successfully queried {model_info.id}")
+                    return model_info.id, data
         except asyncio.TimeoutError:
             logger.warning(f"⏰ Timeout for {model_info.id}")
             return model_info.id, {"error": "timeout", "model": model_info.id}
@@ -353,7 +355,17 @@ class QueryDispatcher:
             tasks = [self._query_model(self.session, model, prompt) for model in models]
             logger.info(f"🔍 Created {len(tasks)} tasks")
 
-            responses = await asyncio.gather(*tasks, return_exceptions=True)
+            # Add timeout protection to prevent hanging
+            # Use the maximum timeout from the models (SLOW_TIMEOUT = 120s)
+            timeout_seconds = (
+                SLOW_TIMEOUT
+                if self.timeout is None
+                else max(self.timeout, SLOW_TIMEOUT)
+            )
+
+            responses = await asyncio.wait_for(
+                asyncio.gather(*tasks, return_exceptions=True), timeout=timeout_seconds
+            )
             logger.info(f"🔍 Got {len(responses)} responses")
 
             # Process results
@@ -378,6 +390,13 @@ class QueryDispatcher:
 
             return results
 
+        except asyncio.TimeoutError:
+            logger.error(f"⏰ dispatch_parallel timed out after {timeout_seconds}s")
+            # Return timeout errors for all models
+            results = {}
+            for model in models:
+                results[model.id] = {"error": "timeout", "model": model.id}
+            return results
         except Exception as e:
             logger.error(f"❌ Exception in dispatch_parallel: {e}")
             return {}

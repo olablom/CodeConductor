@@ -139,6 +139,7 @@ gui_test_results.json
 simple_test_results.json
 automated_test_results.json
 live_gui_test_results_*.json
+field_test_results_*.json
 
 # Temporary test files
 test_*.py
