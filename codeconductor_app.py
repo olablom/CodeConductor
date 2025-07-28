@@ -8,6 +8,9 @@ import plotly.express as px
 import pandas as pd
 from pathlib import Path
 import sys
+import threading
+from collections import defaultdict, deque
+import uuid
 
 # Add the project root to the path
 sys.path.append(str(Path(__file__).parent))
@@ -79,10 +82,137 @@ st.markdown(
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         margin: 0.5rem 0;
     }
+    
+    .health-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+    }
+    
+    .health-green { background-color: #4CAF50; }
+    .health-yellow { background-color: #FF9800; }
+    .health-red { background-color: #F44336; }
 </style>
 """,
     unsafe_allow_html=True,
 )
+
+
+class MonitoringSystem:
+    """Real-time monitoring system for CodeConductor"""
+    
+    def __init__(self):
+        self.model_metrics = defaultdict(lambda: {
+            'response_times': deque(maxlen=100),
+            'success_count': 0,
+            'error_count': 0,
+            'last_response_time': 0,
+            'last_check': 0,
+            'circuit_breaker_state': 'CLOSED',  # CLOSED, OPEN, HALF_OPEN
+            'circuit_breaker_failures': 0,
+            'circuit_breaker_last_failure': 0
+        })
+        self.system_metrics = {
+            'total_requests': 0,
+            'successful_requests': 0,
+            'failed_requests': 0,
+            'average_response_time': 0,
+            'uptime': time.time()
+        }
+        self._lock = threading.Lock()
+    
+    def record_model_request(self, model_id: str, response_time: float, success: bool):
+        """Record metrics for a model request"""
+        with self._lock:
+            metrics = self.model_metrics[model_id]
+            metrics['response_times'].append(response_time)
+            metrics['last_response_time'] = response_time
+            metrics['last_check'] = time.time()
+            
+            if success:
+                metrics['success_count'] += 1
+                metrics['circuit_breaker_failures'] = 0
+            else:
+                metrics['error_count'] += 1
+                metrics['circuit_breaker_failures'] += 1
+                metrics['circuit_breaker_last_failure'] = time.time()
+            
+            # Update circuit breaker state
+            self._update_circuit_breaker(model_id)
+            
+            # Update system metrics
+            self.system_metrics['total_requests'] += 1
+            if success:
+                self.system_metrics['successful_requests'] += 1
+            else:
+                self.system_metrics['failed_requests'] += 1
+    
+    def _update_circuit_breaker(self, model_id: str):
+        """Update circuit breaker state based on failure patterns"""
+        metrics = self.model_metrics[model_id]
+        
+        if metrics['circuit_breaker_state'] == 'CLOSED':
+            # Open circuit if too many failures
+            if metrics['circuit_breaker_failures'] >= 5:
+                metrics['circuit_breaker_state'] = 'OPEN'
+        elif metrics['circuit_breaker_state'] == 'OPEN':
+            # Try to close circuit after timeout
+            if time.time() - metrics['circuit_breaker_last_failure'] > 60:  # 1 minute timeout
+                metrics['circuit_breaker_state'] = 'HALF_OPEN'
+        elif metrics['circuit_breaker_state'] == 'HALF_OPEN':
+            # Close circuit if recent success
+            if metrics['success_count'] > metrics['error_count']:
+                metrics['circuit_breaker_state'] = 'CLOSED'
+    
+    def get_model_health(self, model_id: str) -> dict:
+        """Get health status for a specific model"""
+        with self._lock:
+            metrics = self.model_metrics[model_id]
+            
+            if not metrics['response_times']:
+                return {
+                    'status': 'unknown',
+                    'last_response_time': 0,
+                    'success_rate': 0,
+                    'circuit_breaker': metrics['circuit_breaker_state']
+                }
+            
+            success_rate = metrics['success_count'] / (metrics['success_count'] + metrics['error_count']) if (metrics['success_count'] + metrics['error_count']) > 0 else 0
+            avg_response_time = sum(metrics['response_times']) / len(metrics['response_times'])
+            
+            # Determine health status
+            if success_rate >= 0.9 and avg_response_time < 5.0:
+                status = 'healthy'
+            elif success_rate >= 0.7 and avg_response_time < 10.0:
+                status = 'degraded'
+            else:
+                status = 'unhealthy'
+            
+            return {
+                'status': status,
+                'last_response_time': metrics['last_response_time'],
+                'avg_response_time': avg_response_time,
+                'success_rate': success_rate,
+                'circuit_breaker': metrics['circuit_breaker_state'],
+                'total_requests': metrics['success_count'] + metrics['error_count']
+            }
+    
+    def get_system_health(self) -> dict:
+        """Get overall system health"""
+        with self._lock:
+            total_requests = self.system_metrics['total_requests']
+            success_rate = self.system_metrics['successful_requests'] / total_requests if total_requests > 0 else 0
+            uptime = time.time() - self.system_metrics['uptime']
+            
+            return {
+                'status': 'healthy' if success_rate >= 0.8 else 'degraded',
+                'success_rate': success_rate,
+                'total_requests': total_requests,
+                'uptime_seconds': uptime,
+                'models': {model_id: self.get_model_health(model_id) for model_id in self.model_metrics.keys()}
+            }
 
 
 class CodeConductorApp:
@@ -96,6 +226,7 @@ class CodeConductorApp:
         self.learning_system = LearningSystem()
         self.test_runner = TestRunner()  # Initialize TestRunner
         self.generation_history = []
+        self.monitoring = MonitoringSystem()  # Add monitoring system
 
     def initialize_session_state(self):
         """Initialize session state variables"""
@@ -187,22 +318,87 @@ class CodeConductorApp:
                     except Exception as e:
                         st.error(f"Error loading model info: {e}")
 
-            # Model Status Section
-            with st.expander("📊 Model Status", expanded=False):
-                if st.button("🔄 Refresh Model Status"):
-                    st.session_state.models_discovered = False
-
-                if not st.session_state.models_discovered:
-                    with st.spinner("Discovering models..."):
-                        # This would be async in practice
-                        st.info("Model discovery would happen here")
-                        st.session_state.models_discovered = True
-
-                # Show model status (simplified for now)
-                st.markdown("**Model Status:**")
-                st.markdown("✅ phi3:mini - Available")
-                st.markdown("⏳ codellama:7b - Downloading...")
-                st.markdown("❌ mistral:7b - Not available")
+            # Enhanced Model Status Section with Real-time Monitoring
+            with st.expander("📊 Model Status & Health", expanded=False):
+                # System Health Overview
+                system_health = self.monitoring.get_system_health()
+                
+                # System status indicator
+                status_color = "🟢" if system_health['status'] == 'healthy' else "🟡" if system_health['status'] == 'degraded' else "🔴"
+                st.markdown(f"**System Status:** {status_color} {system_health['status'].title()}")
+                
+                # System metrics
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Total Requests", system_health['total_requests'])
+                with col2:
+                    st.metric("Success Rate", f"{system_health['success_rate']:.1%}")
+                with col3:
+                    uptime_hours = system_health['uptime_seconds'] / 3600
+                    st.metric("Uptime", f"{uptime_hours:.1f}h")
+                
+                st.markdown("---")
+                
+                # Model Health Details
+                st.markdown("**Model Health:**")
+                
+                # Get current models
+                try:
+                    models = asyncio.run(self.model_manager.list_models())
+                    
+                    for model in models:
+                        model_health = self.monitoring.get_model_health(model.id)
+                        
+                        # Health indicator
+                        if model_health['status'] == 'healthy':
+                            health_icon = "🟢"
+                        elif model_health['status'] == 'degraded':
+                            health_icon = "🟡"
+                        elif model_health['status'] == 'unhealthy':
+                            health_icon = "🔴"
+                        else:
+                            health_icon = "⚪"
+                        
+                        # Circuit breaker indicator
+                        cb_state = model_health['circuit_breaker']
+                        cb_icon = "🔒" if cb_state == 'CLOSED' else "🔓" if cb_state == 'OPEN' else "🔐"
+                        
+                        with st.expander(f"{health_icon} {model.id} {cb_icon}", expanded=False):
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                st.markdown(f"**Status:** {model_health['status'].title()}")
+                                st.markdown(f"**Circuit Breaker:** {cb_state}")
+                                st.markdown(f"**Success Rate:** {model_health['success_rate']:.1%}")
+                            
+                            with col2:
+                                st.markdown(f"**Avg Response:** {model_health.get('avg_response_time', 0):.2f}s")
+                                st.markdown(f"**Last Response:** {model_health['last_response_time']:.2f}s")
+                                st.markdown(f"**Total Requests:** {model_health['total_requests']}")
+                            
+                            # Response time chart (if we have data)
+                            if model_health.get('avg_response_time', 0) > 0:
+                                # Create a simple bar chart for response time
+                                fig = go.Figure(data=[
+                                    go.Bar(
+                                        x=['Response Time'],
+                                        y=[model_health['avg_response_time']],
+                                        marker_color='green' if model_health['status'] == 'healthy' else 'orange' if model_health['status'] == 'degraded' else 'red'
+                                    )
+                                ])
+                                fig.update_layout(
+                                    title=f"Response Time: {model.id}",
+                                    height=200,
+                                    showlegend=False
+                                )
+                                st.plotly_chart(fig, use_container_width=True)
+                
+                except Exception as e:
+                    st.error(f"Error loading model health: {e}")
+                
+                # Refresh button
+                if st.button("🔄 Refresh Health Data", key="refresh_health"):
+                    st.rerun()
 
             # Model discovery
             if st.button("🔄 Refresh Models", use_container_width=True):
@@ -546,9 +742,10 @@ class CodeConductorApp:
             st.write(f"- {criteria}")
 
     async def run_generation(self, task):
-        """Run the full generation pipeline using hybrid ensemble"""
+        """Run the full generation pipeline using hybrid ensemble with monitoring"""
         progress_bar = st.progress(0)
         status_text = st.empty()
+        start_time = time.time()
 
         try:
             # Step 1: Complexity analysis
@@ -559,8 +756,12 @@ class CodeConductorApp:
             status_text.text("🤖 Running hybrid ensemble engine...")
             progress_bar.progress(30)
 
-            # Use hybrid ensemble for processing
+            # Use hybrid ensemble for processing with monitoring
             hybrid_result = await self.hybrid_ensemble.process_task(task)
+            
+            # Record metrics for ensemble processing
+            processing_time = time.time() - start_time
+            self.monitoring.record_model_request("ensemble_engine", processing_time, hybrid_result is not None)
 
             if not hybrid_result:
                 st.error("Hybrid ensemble failed. Please check model availability.")
@@ -625,9 +826,10 @@ class CodeConductorApp:
             return None
 
     async def run_ensemble_test(self, task):
-        """Run Ensemble Engine test for local code generation"""
+        """Run Ensemble Engine test for local code generation with monitoring"""
         progress_bar = st.progress(0)
         status_text = st.empty()
+        start_time = time.time()
 
         try:
             # Step 1: Initialize Ensemble Engine
@@ -643,6 +845,10 @@ class CodeConductorApp:
 
             # Process with fallback strategy
             result = await self.ensemble_engine.process_request_with_fallback(task)
+            
+            # Record metrics for ensemble test
+            processing_time = time.time() - start_time
+            self.monitoring.record_model_request("ensemble_test", processing_time, result is not None and result.get('success', False))
 
             if not result:
                 st.error("Ensemble test failed. Please check model availability.")
