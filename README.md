@@ -135,11 +135,16 @@ _Note_: For systems with limited VRAM, some models can run on CPU with reduced p
 # Install dependencies
 pip install -r requirements.txt
 
+# Start the health monitoring API (optional)
+python health_api.py &
+
 # Launch the professional web interface
 streamlit run codeconductor_app.py
 ```
 
 **Then open your browser to `http://localhost:8501`**
+
+**Health API will be available at `http://localhost:8080`**
 
 ### 🧠 **RAG System Features**
 
@@ -184,6 +189,44 @@ python test_rag_system.py
 # Test live GUI with automated testing
 python test_gui_live_automated.py
 ```
+
+### 🏥 **Health API & Monitoring System**
+
+CodeConductor includes a comprehensive monitoring system with health endpoints:
+
+**Start the Health API:**
+```bash
+# Start the health monitoring API
+python health_api.py
+```
+
+**Available Endpoints:**
+- `GET /health` - Main health check with model status
+- `GET /health/models` - Detailed model health information
+- `GET /health/ensemble` - Ensemble engine health status
+- `GET /metrics` - Prometheus-format metrics
+- `GET /ready` - Kubernetes readiness probe
+- `GET /live` - Kubernetes liveness probe
+
+**Test Health Endpoints:**
+```bash
+# Test main health endpoint
+curl http://localhost:8080/health
+
+# Test Prometheus metrics
+curl http://localhost:8080/metrics
+
+# Test Kubernetes probes
+curl http://localhost:8080/ready
+curl http://localhost:8080/live
+```
+
+**Monitoring Features:**
+- **Real-time Model Health** - Live status of all 6 LLM models
+- **Circuit Breaker Pattern** - Automatic failure handling and recovery
+- **Prometheus Metrics** - Ready for Grafana integration
+- **Kubernetes Ready** - Production deployment compatible
+- **Performance Tracking** - Response times and success rates
 
 ### 🎯 **Live GUI Testing**
 
