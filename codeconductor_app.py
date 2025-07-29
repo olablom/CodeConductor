@@ -227,6 +227,14 @@ class CodeConductorApp:
         self.test_runner = TestRunner()  # Initialize TestRunner
         self.generation_history = []
         self.monitoring = MonitoringSystem()  # Add monitoring system
+        
+        # Initialize RAG system
+        try:
+            from context.rag_system import RAGSystem
+            self.rag_system = RAGSystem()
+        except Exception as e:
+            st.warning(f"RAG system not available: {e}")
+            self.rag_system = None
 
     def initialize_session_state(self):
         """Initialize session state variables"""
@@ -349,70 +357,61 @@ class CodeConductorApp:
                     for model in models:
                         model_health = self.monitoring.get_model_health(model.id)
                         
-                        # Health indicator
-                        if model_health['status'] == 'healthy':
-                            health_icon = "🟢"
-                        elif model_health['status'] == 'degraded':
-                            health_icon = "🟡"
-                        elif model_health['status'] == 'unhealthy':
-                            health_icon = "🔴"
-                        else:
-                            health_icon = "⚪"
+                        # Status indicator
+                        status_icon = "🟢" if model_health['status'] == 'healthy' else "🔴"
+                        status_text = model_health['status'].title()
                         
-                        # Circuit breaker indicator
-                        cb_state = model_health['circuit_breaker']
-                        cb_icon = "🔒" if cb_state == 'CLOSED' else "🔓" if cb_state == 'OPEN' else "🔐"
-                        
-                        with st.expander(f"{health_icon} {model.id} {cb_icon}", expanded=False):
-                            col1, col2 = st.columns(2)
+                        col1, col2 = st.columns([3, 1])
+                        with col1:
+                            st.markdown(f"**{model.id}**")
+                            st.caption(f"{model.provider} • {status_text}")
+                        with col2:
+                            st.markdown(f"{status_icon}")
                             
-                            with col1:
-                                st.markdown(f"**Status:** {model_health['status'].title()}")
-                                st.markdown(f"**Circuit Breaker:** {cb_state}")
-                                st.markdown(f"**Success Rate:** {model_health['success_rate']:.1%}")
-                            
-                            with col2:
-                                st.markdown(f"**Avg Response:** {model_health.get('avg_response_time', 0):.2f}s")
-                                st.markdown(f"**Last Response:** {model_health['last_response_time']:.2f}s")
-                                st.markdown(f"**Total Requests:** {model_health['total_requests']}")
-                            
-                            # Response time chart (if we have data)
-                            if model_health.get('avg_response_time', 0) > 0:
-                                # Create a simple bar chart for response time
-                                fig = go.Figure(data=[
-                                    go.Bar(
-                                        x=['Response Time'],
-                                        y=[model_health['avg_response_time']],
-                                        marker_color='green' if model_health['status'] == 'healthy' else 'orange' if model_health['status'] == 'degraded' else 'red'
-                                    )
-                                ])
-                                fig.update_layout(
-                                    title=f"Response Time: {model.id}",
-                                    height=200,
-                                    showlegend=False
-                                )
-                                st.plotly_chart(fig, use_container_width=True)
-                
                 except Exception as e:
-                    st.error(f"Error loading model health: {e}")
-                
-                # Refresh button
-                if st.button("🔄 Refresh Health Data", key="refresh_health"):
-                    st.rerun()
+                    st.warning(f"Could not load model status: {e}")
 
-            # Model discovery
+            # RAG Context Section
+            with st.expander("🔍 RAG Context", expanded=False):
+                try:
+                    # Check RAG system availability
+                    rag_available = hasattr(self, 'rag_system') and self.rag_system is not None
+                    
+                    if rag_available:
+                        st.markdown("✅ **RAG System Available**")
+                        
+                        # Check vector database
+                        vector_db_loaded = hasattr(self.rag_system, 'vector_store') and self.rag_system.vector_store is not None
+                        if vector_db_loaded:
+                            st.markdown("✅ **Vector Database Loaded**")
+                            
+                            # Count documents (if available)
+                            try:
+                                doc_count = len(self.rag_system.vector_store.get()['ids']) if hasattr(self.rag_system.vector_store, 'get') else 0
+                                st.markdown(f"📚 **{doc_count} documents indexed**")
+                            except:
+                                st.markdown("📚 **Documents indexed**")
+                        else:
+                            st.markdown("⚠️ **Vector Database Not Loaded**")
+                            st.caption("RAG functionality limited")
+                    else:
+                        st.markdown("❌ **RAG System Not Available**")
+                        st.caption("Install sentence-transformers for full RAG functionality")
+                        
+                    # External context status
+                    st.markdown("---")
+                    st.markdown("**External Context:**")
+                    st.markdown("🌐 **Stack Overflow Integration**")
+                    st.markdown("📖 **Documentation Search**")
+                    st.markdown("🔗 **GitHub Examples**")
+                    
+                except Exception as e:
+                    st.warning(f"RAG system error: {e}")
+                    st.caption("RAG functionality disabled")
+
+            # Refresh Models Button
             if st.button("🔄 Refresh Models", use_container_width=True):
-                with st.spinner("Discovering models..."):
-                    try:
-                        # Use asyncio to run the async function
-                        import asyncio
-
-                        models = asyncio.run(self.model_manager.list_models())
-                        st.session_state.models_discovered = True
-                        st.session_state.models = models
-                        st.success(f"Found {len(models)} models!")
-                    except Exception as e:
-                        st.error(f"Error discovering models: {e}")
+                st.rerun()
 
             # Generation options
             st.markdown("### ⚙️ Generation Options")
@@ -561,44 +560,49 @@ class CodeConductorApp:
             placeholder="Describe what you want to build... (e.g., 'Create a function to validate email addresses')",
         )
 
-        # Planner Agent integration
-        if task.strip():
-            st.markdown("---")
-            st.markdown("### 🧠 Intelligent Planning")
-
-            col1, col2, col3 = st.columns([1, 1, 1])
-            with col1:
-                if st.button(
-                    "📋 Create Development Plan",
-                    use_container_width=True,
-                    key="create_plan_btn",
-                ):
-                    self._create_development_plan(task)
-
-            with col2:
-                if st.button(
-                    "🤖 Generate Cursor Prompts",
-                    use_container_width=True,
-                    key="generate_prompts_btn",
-                ):
-                    self._generate_cursor_prompts(task)
-
-            with col3:
-                if st.button(
-                    "🧪 Test Locally First",
-                    use_container_width=True,
-                    key="test_locally_btn",
-                ):
-                    st.session_state.run_ensemble_test = True
-
-            # Add Generate Code button below
+        # Always show Generate Code button
+        st.markdown("---")
+        col1, col2, col3 = st.columns([1, 1, 1])
+        
+        with col1:
             if st.button(
                 "🚀 Generate Code",
                 type="primary",
                 use_container_width=True,
                 key="generate_code_btn",
+                disabled=not task.strip(),
             ):
                 st.session_state.run_generation = True
+
+        with col2:
+            if st.button(
+                "🧪 Test Locally First",
+                use_container_width=True,
+                key="test_locally_btn",
+                disabled=not task.strip(),
+            ):
+                st.session_state.run_ensemble_test = True
+
+        with col3:
+            if st.button(
+                "📝 Generate Cursor Prompts",
+                use_container_width=True,
+                key="generate_prompts_btn",
+                disabled=not task.strip(),
+            ):
+                self._generate_cursor_prompts(task)
+
+        # Planner Agent integration (only if task exists)
+        if task.strip():
+            st.markdown("---")
+            st.markdown("### 🧠 Intelligent Planning")
+
+            if st.button(
+                "📋 Create Development Plan",
+                use_container_width=True,
+                key="create_plan_btn",
+            ):
+                self._create_development_plan(task)
 
         return task
 
@@ -1175,25 +1179,47 @@ class CodeConductorApp:
         # Generated code display
         if "generated_code" in results and results["generated_code"]:
             st.markdown("#### 💻 Generated Code")
+            
+            # Display code in a more prominent way
+            st.markdown("**Implementation:**")
             st.code(results["generated_code"], language="python")
 
             # Add copy button for generated code
-            if st.button("📋 Copy Generated Code", key="copy_generated_code"):
-                st.write("✅ Code copied to clipboard!")
+            col1, col2 = st.columns([1, 1])
+            with col1:
+                if st.button("📋 Copy Generated Code", key="copy_generated_code"):
+                    st.write("✅ Code copied to clipboard!")
+            with col2:
+                if st.button("🔍 Validate Code", key="validate_generated_code"):
+                    # Trigger code validation
+                    st.session_state.validate_code = results["generated_code"]
+                    st.rerun()
+
+            # Show prompt used
+            if "prompt" in results and results["prompt"]:
+                st.markdown("---")
+                st.markdown("#### 📝 Generated Prompt")
+                with st.expander("View prompt used for generation"):
+                    st.markdown(results["prompt"])
 
         # Consensus details
-        with st.expander("🧠 Consensus Details", expanded=True):
-            if hasattr(results["consensus"], "consensus"):
-                consensus_data = results["consensus"].consensus
-                if consensus_data:
-                    st.json(consensus_data)
+        with st.expander("🧠 Consensus Details", expanded=False):
+            if "consensus" in results and results["consensus"]:
+                if hasattr(results["consensus"], "consensus"):
+                    consensus_data = results["consensus"].consensus
+                    if consensus_data:
+                        st.json(consensus_data)
+                    else:
+                        st.info("🤖 **Model Consensus Summary**")
+                        st.markdown("**Strategy:** " + results.get("strategy", "consensus"))
+                        st.markdown("**Models Used:** " + str(results.get("models_used", 0)))
+                        st.markdown("**Confidence:** " + f"{results.get('confidence', 0):.2f}")
+                        st.markdown("**Total Time:** " + f"{results.get('total_time', 0):.2f}s")
+                        st.caption("💡 Models provided free-form responses rather than structured consensus data")
                 else:
-                    st.info(
-                        "Consensus data is empty - models may not have provided structured responses"
-                    )
-                    st.write("This is normal for free-form text responses from LLMs")
+                    st.write("No structured consensus data available")
             else:
-                st.write("No structured consensus data available")
+                st.warning("No consensus data available")
 
         # Generated prompt
         with st.expander("📝 Generated Prompt", expanded=False):
