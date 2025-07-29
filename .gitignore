@@ -173,6 +173,10 @@ Thumbs.db
 *.log
 logs/
 
+# GPU monitoring logs
+gpu_memory_*.log
+nvidia_smi_*.log
+
 # Cache
 .cache/
 cache/

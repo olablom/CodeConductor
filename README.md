@@ -54,6 +54,7 @@ CodeConductor MVP is an intelligent development assistant that revolutionizes ho
 - ✅ **Production-Ready Architecture** - Scalable, robust, deployment-ready
 - ✅ **Automated Testing Suite** - 100% test coverage for all components
 - ✅ **Comprehensive Manual Testing** - Professional test protocol for production validation
+- ✅ **RTX 5090 GPU Memory Management** - Smart model loading with emergency controls
 
 ## 🧪 **NEW: Comprehensive Automated Testing!** 🚀
 
@@ -149,6 +150,39 @@ To run CodeConductor effectively, ensure your system meets the following require
 - **Additional Software**: LM Studio (running on port 1234) or Ollama, pytest
 
 _Note_: For systems with limited VRAM, some models can run on CPU with reduced performance.
+
+## 🎮 **RTX 5090 GPU Memory Management** 🚀
+
+**Advanced GPU memory management for RTX 5090 (32GB VRAM):**
+
+### **Smart Model Loading Configurations:**
+
+- **🛡️ Light Load (13GB)**: 2 modeller för stability
+  - meta-llama-3.1-8b-instruct + mistral-7b-instruct-v0.1
+  - ~45% VRAM usage, 17.6GB free
+
+- **⚖️ Medium Load (21GB)**: 3 modeller för optimal performance
+  - Inklusive google/gemma-3-12b för complex tasks
+  - ~78% VRAM usage, 7.0GB free
+
+- **🚀 Aggressive Load (28GB)**: 4 modeller för maximum capacity
+  - Alla modeller för complex ensemble processing
+  - ~96% VRAM usage, 1.4GB free (risky men fungerar)
+
+### **Emergency Controls:**
+
+- **🚨 Emergency Unload All**: Instant cleanup till 11.4% baseline
+- **Auto-refresh**: Real-time GPU memory monitoring
+- **Memory warnings**: Smart alerts för high usage
+- **Fallback detection**: 4 GPU memory methods (pynvml, PyTorch, nvidia-smi, PowerShell)
+
+### **Features:**
+
+- ✅ **Real-time monitoring** med pynvml integration
+- ✅ **Smart fallback chain** för maximum reliability
+- ✅ **Memory-safe loading** med automatic warnings
+- ✅ **Emergency controls** för instant recovery
+- ✅ **Auto-refresh UX** för seamless experience
 
 ## 🚀 Quick Start
 

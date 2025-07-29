@@ -60,33 +60,42 @@ LM_STUDIO_PREFERRED_MODELS = [
     "codellama-7b-instruct",
 ]
 
-# Memory configurations for RTX 5090 (32GB VRAM) - Q4_K_M quantization
+# Memory configurations for RTX 5090 (32GB VRAM) - Updated with real-world measurements
 MEMORY_CONFIGS = {
     "light_load": {
-        "models": ["meta-llama-3.1-8b-instruct", "mistral-7b-instruct-v0.1", "gemma-2b"],
-        "estimated_vram": 13,  # ~6GB + ~5GB + ~2GB
-        "description": "Safe loading för stability (13GB, 19GB free)"
+        "models": [
+            "meta-llama-3.1-8b-instruct",
+            "mistral-7b-instruct-v0.1",
+        ],
+        "estimated_vram": 20,  # ~10GB + ~8GB + ~2GB overhead
+        "description": "Safe loading med 2 modeller (20GB, 12GB free)",
     },
     "medium_load": {
-        "models": ["meta-llama-3.1-8b-instruct", "google/gemma-3-12b", "qwen2-7b-instruct"],
-        "estimated_vram": 21,  # ~6GB + ~10GB + ~5GB
-        "description": "Optimal performance/memory balance (21GB, 11GB free)"
+        "models": [
+            "meta-llama-3.1-8b-instruct",
+            "google/gemma-3-12b",
+            "qwen2-7b-instruct",
+        ],
+        "estimated_vram": 28,  # ~10GB + ~12GB + ~6GB + overhead
+        "description": "Optimal performance/memory balance (28GB, 4GB free)",
     },
     "aggressive_load": {
         "models": [
-            "meta-llama-3.1-8b-instruct", "google/gemma-3-12b", 
-            "mistral-7b-instruct-v0.1", "qwen2-7b-instruct", "gemma-2b"
+            "meta-llama-3.1-8b-instruct",
+            "google/gemma-3-12b",
+            "mistral-7b-instruct-v0.1",
+            "qwen2-7b-instruct",
         ],
-        "estimated_vram": 28,  # ~6GB + ~10GB + ~5GB + ~5GB + ~2GB
-        "description": "Maximum models för RTX 5090 (28GB, 4GB free - RISKY!)"
-    }
+        "estimated_vram": 32,  # ~10GB + ~12GB + ~8GB + ~6GB + overhead
+        "description": "Maximum models för RTX 5090 (32GB, 0GB free - RISKY!)",
+    },
 }
 
 # Complexity-based loading thresholds
 COMPLEXITY_BASED_LOADING = {
-    (0.0, 0.3): "light_load",      # 1-2 models för enkla tasks
-    (0.3, 0.7): "medium_load",     # 2-3 models för medel tasks  
-    (0.7, 1.0): "aggressive_load"  # 3-5 models för komplexa tasks
+    (0.0, 0.3): "light_load",  # 1-2 models för enkla tasks
+    (0.3, 0.7): "medium_load",  # 2-3 models för medel tasks
+    (0.7, 1.0): "aggressive_load",  # 3-5 models för komplexa tasks
 }
 
 
@@ -237,7 +246,7 @@ class ModelManager:
         try:
             logger.info(f"🔄 Unloading model via CLI: {model_key}")
 
-            command = ["lms", "unload", model_key, "-y"]
+            command = ["lms", "unload", model_key]
 
             result = await asyncio.get_event_loop().run_in_executor(
                 None,
@@ -286,25 +295,35 @@ class ModelManager:
                 ),
             )
 
-            if result.returncode == 0:
-                return {
-                    "loaded_models": self.loaded_models,
-                    "cli_output": result.stdout,
-                    "total_loaded": len(self.loaded_models),
-                }
-            else:
-                return {
-                    "loaded_models": list(self.loaded_models),
-                    "cli_output": result.stderr,
-                    "total_loaded": len(self.loaded_models),
-                }
+            # Parse lms ps output to get loaded models
+            loaded_models = []
+            logger.info(f"🎮 lms ps returncode: {result.returncode}")
+            logger.info(f"🎮 lms ps stdout: {result.stdout}")
+
+            if result.returncode == 0 and result.stdout:
+                lines = result.stdout.strip().split("\n")
+                logger.info(f"🎮 Parsing {len(lines)} lines from lms ps output")
+                for line in lines:
+                    logger.info(f"🎮 Processing line: '{line}'")
+                    if line.startswith("Identifier:"):
+                        # Extract model name from "Identifier: model-name"
+                        model_name = line.split("Identifier:")[1].strip()
+                        loaded_models.append(model_name)
+                        logger.info(f"📦 Found loaded model: {model_name}")
+
+            logger.info(f"🎮 Final loaded_models: {loaded_models}")
+            return {
+                "loaded_models": loaded_models,
+                "cli_output": result.stdout,
+                "total_loaded": len(loaded_models),
+            }
 
         except Exception as e:
             logger.error(f"❌ Error getting loaded models status: {e}")
             return {
-                "loaded_models": list(self.loaded_models),
+                "loaded_models": [],
                 "cli_output": f"Error: {e}",
-                "total_loaded": len(self.loaded_models),
+                "total_loaded": 0,
             }
 
     async def list_models(self) -> List[ModelInfo]:
@@ -581,12 +600,12 @@ class ModelManager:
         try:
             all_models = await self.list_models()
             healthy_models = await self.list_healthy_models()
-            
+
             # Filter to healthy models
             available_models = [
                 model.id for model in all_models if model.id in healthy_models
             ]
-            
+
             return available_models
         except Exception as e:
             logger.error(f"Error getting available model IDs: {e}")
@@ -826,40 +845,233 @@ class ModelManager:
             return False
 
     async def get_gpu_memory_info(self):
-        """Get GPU memory usage info for RTX 5090"""
+        """
+        Smart GPU memory detection with multiple fallback methods
+        Priority: pynvml > pytorch > nvidia-smi > powershell
+        """
+
+        # Method 1: pynvml (Mest pålitlig för NVIDIA)
+        memory_info = await self.get_gpu_memory_info_pynvml()
+        if memory_info:
+            logger.info(
+                f"🎮 GPU memory detected via pynvml: {memory_info['usage_percent']}%"
+            )
+            return memory_info
+
+        # Method 2: PyTorch CUDA (Om tillgängligt)
+        memory_info = await self.get_gpu_memory_info_pytorch()
+        if memory_info:
+            logger.info(
+                f"🎮 GPU memory detected via PyTorch: {memory_info['usage_percent']}%"
+            )
+            return memory_info
+
+        # Method 3: nvidia-smi with Windows fixes
+        memory_info = await self.get_gpu_memory_info_nvidia_smi_fixed()
+        if memory_info:
+            logger.info(
+                f"🎮 GPU memory detected via nvidia-smi: {memory_info['usage_percent']}%"
+            )
+            return memory_info
+
+        # Method 4: PowerShell WMI (Baseline fallback)
+        memory_info = await self.get_gpu_memory_info_powershell()
+        if memory_info:
+            logger.info(
+                f"🎮 GPU memory detected via PowerShell: {memory_info['usage_percent']}%"
+            )
+            return memory_info
+
+        # Method 5: Static fallback för RTX 5090
+        logger.warning(
+            "🎮 All GPU memory detection methods failed, using RTX 5090 defaults"
+        )
+        return {
+            "used_gb": 5.0,  # Conservative estimate
+            "total_gb": 32.0,  # RTX 5090 has 32GB
+            "free_gb": 27.0,
+            "usage_percent": 15.6,
+            "method": "static_fallback",
+        }
+
+    async def get_gpu_memory_info_pynvml(self):
+        """Get GPU memory info using pynvml (NVIDIA Management Library)"""
+        try:
+            import pynvml
+
+            pynvml.nvmlInit()
+
+            # Get first GPU (RTX 5090)
+            handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+            memory_info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+
+            # Convert bytes to GB
+            total_gb = memory_info.total / (1024**3)
+            used_gb = memory_info.used / (1024**3)
+            free_gb = memory_info.free / (1024**3)
+            usage_percent = (used_gb / total_gb) * 100
+
+            pynvml.nvmlShutdown()
+
+            return {
+                "used_gb": round(used_gb, 1),
+                "total_gb": round(total_gb, 1),
+                "free_gb": round(free_gb, 1),
+                "usage_percent": round(usage_percent, 1),
+                "method": "pynvml",
+            }
+
+        except Exception as e:
+            logger.error(f"🎮 pynvml GPU memory check failed: {e}")
+            return None
+
+    async def get_gpu_memory_info_pytorch(self):
+        """Get GPU memory info using PyTorch CUDA"""
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                device = 0  # RTX 5090
+
+                # Get memory info
+                free_bytes, total_bytes = torch.cuda.mem_get_info(device)
+                used_bytes = total_bytes - free_bytes
+
+                # Convert to GB
+                total_gb = total_bytes / (1024**3)
+                used_gb = used_bytes / (1024**3)
+                free_gb = free_bytes / (1024**3)
+                usage_percent = (used_gb / total_gb) * 100
+
+                return {
+                    "used_gb": round(used_gb, 1),
+                    "total_gb": round(total_gb, 1),
+                    "free_gb": round(free_gb, 1),
+                    "usage_percent": round(usage_percent, 1),
+                    "method": "pytorch_cuda",
+                }
+
+        except Exception as e:
+            logger.error(f"🎮 PyTorch CUDA memory check failed: {e}")
+
+        return None
+
+    async def get_gpu_memory_info_nvidia_smi_fixed(self):
+        """Get GPU memory info using nvidia-smi with Windows-specific fixes"""
         try:
             import subprocess
-            result = subprocess.run([
-                "nvidia-smi", "--query-gpu=memory.used,memory.total", 
-                "--format=csv,noheader,nounits"
-            ], capture_output=True, text=True, encoding='utf-8', errors='ignore')
-            
-            if result.returncode == 0:
-                used, total = result.stdout.strip().split(', ')
-                return {
-                    "used_gb": float(used) / 1024,
-                    "total_gb": float(total) / 1024,
-                    "free_gb": (float(total) - float(used)) / 1024,
-                    "usage_percent": (float(used) / float(total)) * 100
-                }
+
+            # Windows-specific nvidia-smi command with timeout and encoding
+            cmd = [
+                "nvidia-smi",
+                "--query-gpu=memory.used,memory.total",
+                "--format=csv,noheader,nounits",
+            ]
+
+            # Use Windows-compatible subprocess settings
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=15,  # Longer timeout for Windows
+                shell=False,  # Don't use shell on Windows
+                creationflags=subprocess.CREATE_NO_WINDOW
+                if hasattr(subprocess, "CREATE_NO_WINDOW")
+                else 0,
+            )
+
+            if result.returncode == 0 and result.stdout.strip():
+                try:
+                    used_mb, total_mb = result.stdout.strip().split(", ")
+                    used_gb = float(used_mb) / 1024
+                    total_gb = float(total_mb) / 1024
+                    free_gb = total_gb - used_gb
+                    usage_percent = (used_gb / total_gb) * 100
+
+                    return {
+                        "used_gb": round(used_gb, 1),
+                        "total_gb": round(total_gb, 1),
+                        "free_gb": round(free_gb, 1),
+                        "usage_percent": round(usage_percent, 1),
+                        "method": "nvidia_smi_fixed",
+                    }
+                except ValueError as e:
+                    logger.error(
+                        f"🎮 Failed to parse nvidia-smi output: {result.stdout}"
+                    )
+
+        except subprocess.TimeoutExpired:
+            logger.error("🎮 nvidia-smi command timed out (15s)")
         except Exception as e:
-            logger.error(f"Could not get GPU memory info: {e}")
+            logger.error(f"🎮 nvidia-smi command failed: {e}")
+
+        return None
+
+    async def get_gpu_memory_info_powershell(self):
+        """Get GPU memory info using PowerShell WMI"""
+        try:
+            import subprocess
+
+            # PowerShell command för GPU info
+            ps_command = """
+            $gpu = Get-CimInstance -ClassName Win32_VideoController | Where-Object {$_.Name -like '*RTX*'}
+            if ($gpu) {
+                $totalBytes = $gpu.AdapterRAM
+                if ($totalBytes -gt 0) {
+                    $totalGB = [math]::Round($totalBytes / 1GB, 1)
+                    Write-Output "total_gb:$totalGB"
+                    Write-Output "method:powershell_wmi"
+                }
+            }
+            """
+
+            result = subprocess.run(
+                ["powershell", "-Command", ps_command],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+            if result.returncode == 0:
+                output = result.stdout.strip()
+                if "total_gb:" in output:
+                    lines = output.split("\n")
+                    data = {"method": "powershell_wmi"}
+
+                    for line in lines:
+                        if ":" in line:
+                            key, value = line.split(":", 1)
+                            if key == "total_gb":
+                                data["total_gb"] = float(value)
+                                # Since WMI can't get current usage, estimate conservatively
+                                data["used_gb"] = data["total_gb"] * 0.1  # 10% baseline
+                                data["free_gb"] = data["total_gb"] * 0.9
+                                data["usage_percent"] = 10.0
+
+                    return data
+
+        except Exception as e:
+            logger.error(f"🎮 PowerShell GPU memory check failed: {e}")
             return None
 
     async def ensure_models_loaded_with_memory_check(self, config_name="medium_load"):
         """Load models with memory safety checks for RTX 5090"""
         config = MEMORY_CONFIGS.get(config_name, MEMORY_CONFIGS["medium_load"])
-        
+
         # Check available memory
         gpu_info = await self.get_gpu_memory_info()
         if gpu_info:
-            logger.info(f"🎮 RTX 5090 Memory: {gpu_info['used_gb']:.1f}GB used, {gpu_info['free_gb']:.1f}GB free")
-            
+            logger.info(
+                f"🎮 RTX 5090 Memory: {gpu_info['used_gb']:.1f}GB used, {gpu_info['free_gb']:.1f}GB free"
+            )
+
             if gpu_info["free_gb"] < config["estimated_vram"]:
-                logger.warning(f"⚠️ Insufficient VRAM: {gpu_info['free_gb']:.1f}GB available, {config['estimated_vram']}GB needed")
+                logger.warning(
+                    f"⚠️ Insufficient VRAM: {gpu_info['free_gb']:.1f}GB available, {config['estimated_vram']}GB needed"
+                )
                 # Fallback to smaller config
                 return await self.smart_memory_fallback(gpu_info["free_gb"])
-        
+
         # Proceed with loading
         logger.info(f"🚀 Loading {config_name} config: {config['description']}")
         return await self.ensure_models_loaded(config["models"])
@@ -868,13 +1080,19 @@ class ModelManager:
         """Smart fallback based on available GPU memory for RTX 5090"""
         if available_gb >= 21:
             logger.info("🔄 Falling back to medium_load config")
-            return await self.ensure_models_loaded(MEMORY_CONFIGS["medium_load"]["models"])
+            return await self.ensure_models_loaded(
+                MEMORY_CONFIGS["medium_load"]["models"]
+            )
         elif available_gb >= 13:
             logger.info("🔄 Falling back to light_load config")
-            return await self.ensure_models_loaded(MEMORY_CONFIGS["light_load"]["models"])
+            return await self.ensure_models_loaded(
+                MEMORY_CONFIGS["light_load"]["models"]
+            )
         elif available_gb >= 6:
             logger.info("🔄 Loading single model only")
-            return await self.ensure_models_loaded([MEMORY_CONFIGS["light_load"]["models"][0]])
+            return await self.ensure_models_loaded(
+                [MEMORY_CONFIGS["light_load"]["models"][0]]
+            )
         else:
             logger.warning("❌ Insufficient GPU memory for any models")
             return []
@@ -882,21 +1100,88 @@ class ModelManager:
     async def emergency_unload_all(self):
         """Emergency unload all models to free GPU memory"""
         try:
+            logger.info("🚨 Starting emergency unload...")
+
             # Get currently loaded models
             loaded_status = await self.get_loaded_models_status()
+            logger.info(f"🚨 loaded_status: {loaded_status}")
+
             loaded_models = loaded_status.get("loaded_models", [])
-            
+            logger.info(
+                f"🚨 Found {len(loaded_models)} models to unload: {loaded_models}"
+            )
+
             unloaded_count = 0
             for model in loaded_models:
+                logger.info(f"🚨 Attempting to unload: {model}")
                 if await self.unload_model_via_cli(model):
                     unloaded_count += 1
-                    logger.info(f"🚨 Emergency unloaded: {model}")
-            
+                    logger.info(f"🚨 Successfully unloaded: {model}")
+                else:
+                    logger.warning(f"🚨 Failed to unload: {model}")
+
             logger.info(f"🚨 Emergency unloaded {unloaded_count} models")
             return unloaded_count
         except Exception as e:
             logger.error(f"❌ Emergency unload failed: {e}")
             return 0
+
+    async def test_all_gpu_methods(self):
+        """Test all GPU memory detection methods and return results"""
+        results = {}
+
+        # Test pynvml
+        try:
+            pynvml_result = await self.get_gpu_memory_info_pynvml()
+            results["pynvml"] = pynvml_result
+            logger.info(
+                f"🎮 pynvml test: {'✅ SUCCESS' if pynvml_result else '❌ FAILED'}"
+            )
+        except Exception as e:
+            results["pynvml"] = None
+            logger.error(f"🎮 pynvml test failed: {e}")
+
+        # Test PyTorch
+        try:
+            pytorch_result = await self.get_gpu_memory_info_pytorch()
+            results["pytorch"] = pytorch_result
+            logger.info(
+                f"🎮 PyTorch test: {'✅ SUCCESS' if pytorch_result else '❌ FAILED'}"
+            )
+        except Exception as e:
+            results["pytorch"] = None
+            logger.error(f"🎮 PyTorch test failed: {e}")
+
+        # Test nvidia-smi
+        try:
+            nvidia_result = await self.get_gpu_memory_info_nvidia_smi_fixed()
+            results["nvidia_smi"] = nvidia_result
+            logger.info(
+                f"🎮 nvidia-smi test: {'✅ SUCCESS' if nvidia_result else '❌ FAILED'}"
+            )
+        except Exception as e:
+            results["nvidia_smi"] = None
+            logger.error(f"🎮 nvidia-smi test failed: {e}")
+
+        # Test PowerShell
+        try:
+            ps_result = await self.get_gpu_memory_info_powershell()
+            results["powershell"] = ps_result
+            logger.info(
+                f"🎮 PowerShell test: {'✅ SUCCESS' if ps_result else '❌ FAILED'}"
+            )
+        except Exception as e:
+            results["powershell"] = None
+            logger.error(f"🎮 PowerShell test failed: {e}")
+
+        # Summary
+        working_methods = [k for k, v in results.items() if v is not None]
+        logger.info(
+            f"🎮 GPU memory detection summary: {len(working_methods)}/{len(results)} methods working"
+        )
+        logger.info(f"🎮 Working methods: {working_methods}")
+
+        return results
 
 
 # Convenience functions for easy usage

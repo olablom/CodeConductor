@@ -312,26 +312,32 @@ class CodeConductorApp:
     def render_sidebar(self):
         """Render the sidebar with all controls"""
         st.sidebar.title("🎼 CodeConductor MVP")
-        st.sidebar.markdown("AI-Powered Development Pipeline with Multi-Model Ensemble Intelligence")
-        
+        st.sidebar.markdown(
+            "AI-Powered Development Pipeline with Multi-Model Ensemble Intelligence"
+        )
+
         # RTX 5090 GPU Memory Monitor
         with st.sidebar.expander("🎮 RTX 5090 GPU Memory", expanded=False):
             if hasattr(self, "model_manager"):
                 try:
                     gpu_info = asyncio.run(self.model_manager.get_gpu_memory_info())
                     if gpu_info:
-                        st.markdown(f"**Memory Usage:** {gpu_info['usage_percent']:.1f}%")
-                        st.markdown(f"**Used:** {gpu_info['used_gb']:.1f}GB / {gpu_info['total_gb']:.1f}GB")
+                        st.markdown(
+                            f"**Memory Usage:** {gpu_info['usage_percent']:.1f}%"
+                        )
+                        st.markdown(
+                            f"**Used:** {gpu_info['used_gb']:.1f}GB / {gpu_info['total_gb']:.1f}GB"
+                        )
                         st.markdown(f"**Free:** {gpu_info['free_gb']:.1f}GB")
-                        
+
                         # Memory warning
-                        if gpu_info['usage_percent'] > 85:
+                        if gpu_info["usage_percent"] > 85:
                             st.warning("⚠️ High Memory Usage!")
-                        elif gpu_info['usage_percent'] > 70:
+                        elif gpu_info["usage_percent"] > 70:
                             st.info("📊 Moderate Memory Usage")
                         else:
                             st.success("✅ Good Memory Availability")
-                        
+
                         # Memory-safe loading controls
                         st.markdown("### Memory-Safe Loading")
                         col1, col2 = st.columns(2)
@@ -340,43 +346,61 @@ class CodeConductorApp:
                                 try:
                                     with st.spinner("Loading light config..."):
                                         loaded_models = asyncio.run(
-                                            self.model_manager.ensure_models_loaded_with_memory_check("light_load")
+                                            self.model_manager.ensure_models_loaded_with_memory_check(
+                                                "light_load"
+                                            )
                                         )
                                     if loaded_models:
-                                        st.success(f"✅ Loaded {len(loaded_models)} models safely")
+                                        st.success(
+                                            f"✅ Loaded {len(loaded_models)} models safely"
+                                        )
+                                        # Auto-refresh GPU memory display
+                                        st.rerun()
                                     else:
                                         st.warning("⚠️ No models could be loaded")
                                 except Exception as e:
                                     st.error(f"❌ Error: {e}")
-                        
+
                         with col2:
                             if st.button("⚖️ Medium Load (21GB)", key="load_medium"):
                                 try:
                                     with st.spinner("Loading medium config..."):
                                         loaded_models = asyncio.run(
-                                            self.model_manager.ensure_models_loaded_with_memory_check("medium_load")
+                                            self.model_manager.ensure_models_loaded_with_memory_check(
+                                                "medium_load"
+                                            )
                                         )
                                     if loaded_models:
-                                        st.success(f"✅ Loaded {len(loaded_models)} models")
+                                        st.success(
+                                            f"✅ Loaded {len(loaded_models)} models"
+                                        )
+                                        # Auto-refresh GPU memory display
+                                        st.rerun()
                                     else:
                                         st.warning("⚠️ No models could be loaded")
                                 except Exception as e:
                                     st.error(f"❌ Error: {e}")
-                        
+
                         # Aggressive loading (separate row)
-                        if st.button("🚀 Aggressive Load (28GB)", key="load_aggressive"):
+                        if st.button(
+                            "🚀 Aggressive Load (28GB)", key="load_aggressive"
+                        ):
                             try:
                                 with st.spinner("Loading aggressive config..."):
                                     loaded_models = asyncio.run(
-                                        self.model_manager.ensure_models_loaded_with_memory_check("aggressive_load")
+                                        self.model_manager.ensure_models_loaded_with_memory_check(
+                                            "aggressive_load"
+                                        )
                                     )
                                 if loaded_models:
                                     st.success(f"✅ Loaded {len(loaded_models)} models")
+                                    # Auto-refresh GPU memory display
+                                    st.rerun()
                                 else:
                                     st.warning("⚠️ No models could be loaded")
                             except Exception as e:
                                 st.error(f"❌ Error: {e}")
-                        
+
                         # Emergency unload
                         if st.button("🚨 Emergency Unload All", key="emergency_unload"):
                             try:
@@ -385,8 +409,32 @@ class CodeConductorApp:
                                         self.model_manager.emergency_unload_all()
                                     )
                                 st.success(f"🚨 Unloaded {unloaded_count} models")
+                                
+                                # Auto-refresh GPU memory display
+                                st.rerun()
                             except Exception as e:
                                 st.error(f"❌ Emergency unload failed: {e}")
+
+                        # Test GPU methods
+                        if st.button("🧪 Test GPU Methods", key="test_gpu"):
+                            try:
+                                with st.spinner("Testing GPU memory methods..."):
+                                    results = asyncio.run(
+                                        self.model_manager.test_all_gpu_methods()
+                                    )
+                                st.success("🧪 GPU Methods Test Complete!")
+                                # Display results in a more readable format
+                                st.markdown("### GPU Memory Detection Results:")
+                                for method, result in results.items():
+                                    if result:
+                                        st.markdown(
+                                            f"**{method.upper()}:** ✅ {result['usage_percent']:.1f}% ({result['used_gb']:.1f}GB / {result['total_gb']:.1f}GB)"
+                                        )
+                                    else:
+                                        st.markdown(f"**{method.upper()}:** ❌ FAILED")
+                                st.json(results)
+                            except Exception as e:
+                                st.error(f"❌ GPU test failed: {e}")
                     else:
                         st.warning("⚠️ Could not get GPU memory info")
                 except Exception as e:
@@ -397,8 +445,12 @@ class CodeConductorApp:
             st.markdown("### Model Loading Status")
             if hasattr(self, "model_manager"):
                 try:
-                    loaded_status = asyncio.run(self.model_manager.get_loaded_models_status())
-                    st.markdown(f"**Loaded Models:** {loaded_status.get('total_loaded', 0)}")
+                    loaded_status = asyncio.run(
+                        self.model_manager.get_loaded_models_status()
+                    )
+                    st.markdown(
+                        f"**Loaded Models:** {loaded_status.get('total_loaded', 0)}"
+                    )
                     if loaded_status.get("loaded_models"):
                         st.markdown("**Currently Loaded:**")
                         for model in loaded_status["loaded_models"]:
@@ -408,20 +460,25 @@ class CodeConductorApp:
                             st.code(loaded_status["cli_output"])
                 except Exception as e:
                     st.warning(f"⚠️ Could not get model status: {e}")
-            
+
             st.markdown("### Load Preferred Models")
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("🚀 Load Complex Task Models", key="load_complex_models"):
                     try:
                         from ensemble.model_manager import LM_STUDIO_PREFERRED_MODELS
+
                         preferred_models = LM_STUDIO_PREFERRED_MODELS[:3]
                         with st.spinner("Loading preferred models..."):
                             loaded_models = asyncio.run(
-                                self.model_manager.ensure_models_loaded(preferred_models)
+                                self.model_manager.ensure_models_loaded(
+                                    preferred_models
+                                )
                             )
                         if loaded_models:
-                            st.success(f"✅ Loaded {len(loaded_models)} models: {', '.join(loaded_models)}")
+                            st.success(
+                                f"✅ Loaded {len(loaded_models)} models: {', '.join(loaded_models)}"
+                            )
                         else:
                             st.warning("⚠️ No models could be loaded")
                     except Exception as e:
