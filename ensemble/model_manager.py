@@ -60,6 +60,35 @@ LM_STUDIO_PREFERRED_MODELS = [
     "codellama-7b-instruct",
 ]
 
+# Memory configurations for RTX 5090 (32GB VRAM) - Q4_K_M quantization
+MEMORY_CONFIGS = {
+    "light_load": {
+        "models": ["meta-llama-3.1-8b-instruct", "mistral-7b-instruct-v0.1", "gemma-2b"],
+        "estimated_vram": 13,  # ~6GB + ~5GB + ~2GB
+        "description": "Safe loading för stability (13GB, 19GB free)"
+    },
+    "medium_load": {
+        "models": ["meta-llama-3.1-8b-instruct", "google/gemma-3-12b", "qwen2-7b-instruct"],
+        "estimated_vram": 21,  # ~6GB + ~10GB + ~5GB
+        "description": "Optimal performance/memory balance (21GB, 11GB free)"
+    },
+    "aggressive_load": {
+        "models": [
+            "meta-llama-3.1-8b-instruct", "google/gemma-3-12b", 
+            "mistral-7b-instruct-v0.1", "qwen2-7b-instruct", "gemma-2b"
+        ],
+        "estimated_vram": 28,  # ~6GB + ~10GB + ~5GB + ~5GB + ~2GB
+        "description": "Maximum models för RTX 5090 (28GB, 4GB free - RISKY!)"
+    }
+}
+
+# Complexity-based loading thresholds
+COMPLEXITY_BASED_LOADING = {
+    (0.0, 0.3): "light_load",      # 1-2 models för enkla tasks
+    (0.3, 0.7): "medium_load",     # 2-3 models för medel tasks  
+    (0.7, 1.0): "aggressive_load"  # 3-5 models för komplexa tasks
+}
+
 
 @dataclass
 class ModelInfo:
@@ -547,6 +576,22 @@ class ModelManager:
         models = await self.list_models()
         return [model.id for model in models]
 
+    async def get_available_model_ids(self):
+        """Get list of available model IDs"""
+        try:
+            all_models = await self.list_models()
+            healthy_models = await self.list_healthy_models()
+            
+            # Filter to healthy models
+            available_models = [
+                model.id for model in all_models if model.id in healthy_models
+            ]
+            
+            return available_models
+        except Exception as e:
+            logger.error(f"Error getting available model IDs: {e}")
+            return []
+
     def update_model_stats(self, model_id: str, success: bool, response_time: float):
         """
         Update statistics for a model after a request.
@@ -779,6 +824,79 @@ class ModelManager:
         except Exception as e:
             logger.error(f"Ollama health check error for {model_info.id}: {e}")
             return False
+
+    async def get_gpu_memory_info(self):
+        """Get GPU memory usage info for RTX 5090"""
+        try:
+            import subprocess
+            result = subprocess.run([
+                "nvidia-smi", "--query-gpu=memory.used,memory.total", 
+                "--format=csv,noheader,nounits"
+            ], capture_output=True, text=True, encoding='utf-8', errors='ignore')
+            
+            if result.returncode == 0:
+                used, total = result.stdout.strip().split(', ')
+                return {
+                    "used_gb": float(used) / 1024,
+                    "total_gb": float(total) / 1024,
+                    "free_gb": (float(total) - float(used)) / 1024,
+                    "usage_percent": (float(used) / float(total)) * 100
+                }
+        except Exception as e:
+            logger.error(f"Could not get GPU memory info: {e}")
+            return None
+
+    async def ensure_models_loaded_with_memory_check(self, config_name="medium_load"):
+        """Load models with memory safety checks for RTX 5090"""
+        config = MEMORY_CONFIGS.get(config_name, MEMORY_CONFIGS["medium_load"])
+        
+        # Check available memory
+        gpu_info = await self.get_gpu_memory_info()
+        if gpu_info:
+            logger.info(f"🎮 RTX 5090 Memory: {gpu_info['used_gb']:.1f}GB used, {gpu_info['free_gb']:.1f}GB free")
+            
+            if gpu_info["free_gb"] < config["estimated_vram"]:
+                logger.warning(f"⚠️ Insufficient VRAM: {gpu_info['free_gb']:.1f}GB available, {config['estimated_vram']}GB needed")
+                # Fallback to smaller config
+                return await self.smart_memory_fallback(gpu_info["free_gb"])
+        
+        # Proceed with loading
+        logger.info(f"🚀 Loading {config_name} config: {config['description']}")
+        return await self.ensure_models_loaded(config["models"])
+
+    async def smart_memory_fallback(self, available_gb: float):
+        """Smart fallback based on available GPU memory for RTX 5090"""
+        if available_gb >= 21:
+            logger.info("🔄 Falling back to medium_load config")
+            return await self.ensure_models_loaded(MEMORY_CONFIGS["medium_load"]["models"])
+        elif available_gb >= 13:
+            logger.info("🔄 Falling back to light_load config")
+            return await self.ensure_models_loaded(MEMORY_CONFIGS["light_load"]["models"])
+        elif available_gb >= 6:
+            logger.info("🔄 Loading single model only")
+            return await self.ensure_models_loaded([MEMORY_CONFIGS["light_load"]["models"][0]])
+        else:
+            logger.warning("❌ Insufficient GPU memory for any models")
+            return []
+
+    async def emergency_unload_all(self):
+        """Emergency unload all models to free GPU memory"""
+        try:
+            # Get currently loaded models
+            loaded_status = await self.get_loaded_models_status()
+            loaded_models = loaded_status.get("loaded_models", [])
+            
+            unloaded_count = 0
+            for model in loaded_models:
+                if await self.unload_model_via_cli(model):
+                    unloaded_count += 1
+                    logger.info(f"🚨 Emergency unloaded: {model}")
+            
+            logger.info(f"🚨 Emergency unloaded {unloaded_count} models")
+            return unloaded_count
+        except Exception as e:
+            logger.error(f"❌ Emergency unload failed: {e}")
+            return 0
 
 
 # Convenience functions for easy usage

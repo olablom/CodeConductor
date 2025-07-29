@@ -359,76 +359,37 @@ class EnsembleEngine:
                 logger.warning(f"Failed to augment task with RAG: {e}")
 
         try:
-            # Get available models with timeout
-            all_models = await asyncio.wait_for(
-                self.model_manager.list_models(), timeout=15.0
-            )
-            healthy_models = await asyncio.wait_for(
-                self.model_manager.list_healthy_models(), timeout=15.0
-            )
+            # Estimate task complexity
+            task_complexity = self._estimate_task_complexity(request.task_description)
+            logger.info(f"🎯 Task complexity: {task_complexity:.2f}")
 
-            # Filter to healthy models
-            available_models = [
-                model for model in all_models if model.id in healthy_models
-            ]
+            # Get available models
+            available_model_ids = await self.model_manager.get_available_model_ids()
+            if not available_model_ids:
+                raise Exception("❌ No models available")
 
-            if len(available_models) < request.min_models:
-                raise Exception(
-                    f"Insufficient models available: {len(available_models)} < {request.min_models}"
-                )
-
-            # Use RLHF to select models if available
-            available_model_ids = [model.id for model in available_models]
-            if self.use_rlhf:
-                selected_model_ids, rlhf_action, rlhf_action_description = (
-                    self._select_models_with_rlhf(request, available_model_ids)
-                )
-                logger.info(f"RLHF selected models: {selected_model_ids}")
+            # Complexity-based loading for RTX 5090
+            from .model_manager import COMPLEXITY_BASED_LOADING
+            
+            # Determine loading config based on complexity
+            loading_config = "medium_load"  # Default
+            for (min_complexity, max_complexity), config in COMPLEXITY_BASED_LOADING.items():
+                if min_complexity <= task_complexity < max_complexity:
+                    loading_config = config
+                    break
+            
+            logger.info(f"🎯 Using {loading_config} config for complexity {task_complexity:.2f}")
+            
+            # Use memory-safe loading for RTX 5090
+            loaded_model_ids = await self.model_manager.ensure_models_loaded_with_memory_check(loading_config)
+            
+            if len(loaded_model_ids) >= 2:
+                selected_model_ids = loaded_model_ids[:3]  # Use up to 3 loaded models
+                logger.info(f"✅ Using {len(selected_model_ids)} memory-safe loaded models: {selected_model_ids}")
             else:
-                # Förbättra model selection för komplexa tasks med smart loading
-                task_complexity = self._estimate_task_complexity(
-                    request.task_description
-                )
-                if task_complexity > 0.7:  # Komplex task
-                    logger.info(
-                        f"🎯 Complex task detected (complexity: {task_complexity:.2f}), using smart model loading"
-                    )
-
-                    # Try to load preferred models for complex tasks
-                    from .model_manager import LM_STUDIO_PREFERRED_MODELS
-
-                    preferred_models = LM_STUDIO_PREFERRED_MODELS[
-                        :3
-                    ]  # Top 3 preferred models
-
-                    # Ensure models are loaded with smart fallback
-                    loaded_model_ids = await self.model_manager.ensure_models_loaded(
-                        preferred_models,
-                        ttl_seconds=7200,  # 2 hours TTL
-                    )
-
-                    # Use loaded models if available, otherwise fallback to available models
-                    if len(loaded_model_ids) >= 2:
-                        selected_model_ids = loaded_model_ids[
-                            :3
-                        ]  # Use up to 3 loaded models
-                        logger.info(
-                            f"✅ Using {len(selected_model_ids)} pre-loaded models: {selected_model_ids}"
-                        )
-                    else:
-                        # Fallback to available models
-                        selected_model_ids = available_model_ids[
-                            : min(3, len(available_model_ids))
-                        ]
-                        logger.info(f"⚠️ Using fallback models: {selected_model_ids}")
-
-                else:
-                    selected_model_ids = available_model_ids[: request.min_models]
-                    logger.info(
-                        f"Simple task, using {len(selected_model_ids)} models: {selected_model_ids}"
-                    )
-                rlhf_action = None
-                rlhf_action_description = None
+                # Fallback to available models
+                selected_model_ids = available_model_ids[: min(3, len(available_model_ids))]
+                logger.info(f"⚠️ Using fallback models: {selected_model_ids}")
 
             # Get model objects
             models = [

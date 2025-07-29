@@ -310,66 +310,122 @@ class CodeConductorApp:
         )
 
     def render_sidebar(self):
-        """Render the sidebar with controls and status."""
-        st.sidebar.title("🎛️ Controls")
-
-        # Model Management Section
-        with st.sidebar.expander("🤖 Model Management", expanded=False):
-            st.markdown("### Model Loading Status")
-
-            # Show loaded models status
+        """Render the sidebar with all controls"""
+        st.sidebar.title("🎼 CodeConductor MVP")
+        st.sidebar.markdown("AI-Powered Development Pipeline with Multi-Model Ensemble Intelligence")
+        
+        # RTX 5090 GPU Memory Monitor
+        with st.sidebar.expander("🎮 RTX 5090 GPU Memory", expanded=False):
             if hasattr(self, "model_manager"):
                 try:
-                    # Get loaded models status
-                    loaded_status = asyncio.run(
-                        self.model_manager.get_loaded_models_status()
-                    )
+                    gpu_info = asyncio.run(self.model_manager.get_gpu_memory_info())
+                    if gpu_info:
+                        st.markdown(f"**Memory Usage:** {gpu_info['usage_percent']:.1f}%")
+                        st.markdown(f"**Used:** {gpu_info['used_gb']:.1f}GB / {gpu_info['total_gb']:.1f}GB")
+                        st.markdown(f"**Free:** {gpu_info['free_gb']:.1f}GB")
+                        
+                        # Memory warning
+                        if gpu_info['usage_percent'] > 85:
+                            st.warning("⚠️ High Memory Usage!")
+                        elif gpu_info['usage_percent'] > 70:
+                            st.info("📊 Moderate Memory Usage")
+                        else:
+                            st.success("✅ Good Memory Availability")
+                        
+                        # Memory-safe loading controls
+                        st.markdown("### Memory-Safe Loading")
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            if st.button("🛡️ Light Load (13GB)", key="load_light"):
+                                try:
+                                    with st.spinner("Loading light config..."):
+                                        loaded_models = asyncio.run(
+                                            self.model_manager.ensure_models_loaded_with_memory_check("light_load")
+                                        )
+                                    if loaded_models:
+                                        st.success(f"✅ Loaded {len(loaded_models)} models safely")
+                                    else:
+                                        st.warning("⚠️ No models could be loaded")
+                                except Exception as e:
+                                    st.error(f"❌ Error: {e}")
+                        
+                        with col2:
+                            if st.button("⚖️ Medium Load (21GB)", key="load_medium"):
+                                try:
+                                    with st.spinner("Loading medium config..."):
+                                        loaded_models = asyncio.run(
+                                            self.model_manager.ensure_models_loaded_with_memory_check("medium_load")
+                                        )
+                                    if loaded_models:
+                                        st.success(f"✅ Loaded {len(loaded_models)} models")
+                                    else:
+                                        st.warning("⚠️ No models could be loaded")
+                                except Exception as e:
+                                    st.error(f"❌ Error: {e}")
+                        
+                        # Aggressive loading (separate row)
+                        if st.button("🚀 Aggressive Load (28GB)", key="load_aggressive"):
+                            try:
+                                with st.spinner("Loading aggressive config..."):
+                                    loaded_models = asyncio.run(
+                                        self.model_manager.ensure_models_loaded_with_memory_check("aggressive_load")
+                                    )
+                                if loaded_models:
+                                    st.success(f"✅ Loaded {len(loaded_models)} models")
+                                else:
+                                    st.warning("⚠️ No models could be loaded")
+                            except Exception as e:
+                                st.error(f"❌ Error: {e}")
+                        
+                        # Emergency unload
+                        if st.button("🚨 Emergency Unload All", key="emergency_unload"):
+                            try:
+                                with st.spinner("Emergency unloading..."):
+                                    unloaded_count = asyncio.run(
+                                        self.model_manager.emergency_unload_all()
+                                    )
+                                st.success(f"🚨 Unloaded {unloaded_count} models")
+                            except Exception as e:
+                                st.error(f"❌ Emergency unload failed: {e}")
+                    else:
+                        st.warning("⚠️ Could not get GPU memory info")
+                except Exception as e:
+                    st.warning(f"⚠️ GPU monitoring error: {e}")
 
-                    st.markdown(
-                        f"**Loaded Models:** {loaded_status.get('total_loaded', 0)}"
-                    )
-
+        # Model Management
+        with st.sidebar.expander("🤖 Model Management", expanded=False):
+            st.markdown("### Model Loading Status")
+            if hasattr(self, "model_manager"):
+                try:
+                    loaded_status = asyncio.run(self.model_manager.get_loaded_models_status())
+                    st.markdown(f"**Loaded Models:** {loaded_status.get('total_loaded', 0)}")
                     if loaded_status.get("loaded_models"):
                         st.markdown("**Currently Loaded:**")
                         for model in loaded_status["loaded_models"]:
                             st.markdown(f"- {model}")
-
-                    # Show CLI output if available
                     if loaded_status.get("cli_output"):
                         with st.expander("📋 CLI Status"):
                             st.code(loaded_status["cli_output"])
-
                 except Exception as e:
                     st.warning(f"⚠️ Could not get model status: {e}")
-
-            # Model loading controls
+            
             st.markdown("### Load Preferred Models")
-
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("🚀 Load Complex Task Models", key="load_complex_models"):
                     try:
                         from ensemble.model_manager import LM_STUDIO_PREFERRED_MODELS
-
                         preferred_models = LM_STUDIO_PREFERRED_MODELS[:3]
-
                         with st.spinner("Loading preferred models..."):
                             loaded_models = asyncio.run(
-                                self.model_manager.ensure_models_loaded(
-                                    preferred_models
-                                )
+                                self.model_manager.ensure_models_loaded(preferred_models)
                             )
-
                         if loaded_models:
-                            st.success(
-                                f"✅ Loaded {len(loaded_models)} models: {', '.join(loaded_models)}"
-                            )
+                            st.success(f"✅ Loaded {len(loaded_models)} models: {', '.join(loaded_models)}")
                         else:
                             st.warning("⚠️ No models could be loaded")
-
                     except Exception as e:
                         st.error(f"❌ Error loading models: {e}")
-
             with col2:
                 if st.button("🔄 Refresh Model Status", key="refresh_model_status"):
                     st.rerun()
