@@ -202,6 +202,16 @@ class ModelManager:
         """
         all_models = await self.list_models()
 
+        # TEMPORARY FIX: Only use mistral model that we know works
+        mistral_models = [
+            model for model in all_models if "mistral" in model.id.lower()
+        ]
+
+        if mistral_models:
+            logger.info(f"🎯 TEMPORARY: Using only mistral model for stability")
+            return mistral_models[:1]  # Return only 1 mistral model
+
+        # Fallback to original logic if no mistral found
         if len(all_models) < min_models:
             logger.warning(
                 f"⚠️ Only {len(all_models)} models available, need {min_models}"
@@ -449,6 +459,13 @@ class ModelManager:
                         model_id = model_data.get("id", "unknown")
                         # Skip embedding models (they don't support chat/completions)
                         if "embedding" in model_id.lower():
+                            continue
+
+                        # TEMPORARY FIX: Skip codellama models that cause crashes
+                        if "codellama" in model_id.lower():
+                            logger.info(
+                                f"🐛 DEBUG: Skipping codellama model: {model_id}"
+                            )
                             continue
 
                         model_info = ModelInfo(

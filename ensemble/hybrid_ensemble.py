@@ -51,11 +51,11 @@ class HybridEnsemble:
         self.consensus_calculator = ConsensusCalculator()
         self.cloud_escalator = CloudEscalator()
 
-        # Performance tuning
-        self.local_timeout = 25  # Increased from 15 to give models more time
+        # Performance tuning - TEMPORARY FIX: Use only mistral
+        self.local_timeout = 15  # Reduced timeout for faster response
         self.cloud_timeout = 30
         self.min_local_confidence = 0.6  # Lower threshold for escalation
-        self.max_local_models = 2  # Reduced to 2 to avoid timeouts
+        self.max_local_models = 1  # TEMPORARY: Use only 1 model (mistral)
 
     async def process_task(
         self, task: str, context: Optional[Dict] = None
@@ -72,95 +72,91 @@ class HybridEnsemble:
         """
         start_time = time.time()
 
-        logger.info(f"🎯 Processing task with hybrid ensemble: {task[:100]}...")
+        try:
+            complexity = self.complexity_analyzer.analyze_complexity(task, context)
+            local_responses = await self._try_local_models_optimized(task, complexity)
+            local_confidence = self._calculate_local_confidence(local_responses)
 
-        # Step 1: Analyze complexity
-        complexity = self.complexity_analyzer.analyze_complexity(task, context)
-        logger.info(
-            f"📊 Complexity: {complexity.level.value} (confidence: {complexity.confidence:.2f})"
-        )
+            # Step 3: Enhanced escalation decision with safety checks
+            escalation_decision = self._make_escalation_decision(
+                complexity, local_confidence, task
+            )
 
-        # Step 2: Try local models first (optimized)
-        local_responses = await self._try_local_models_optimized(task, complexity)
-        local_confidence = self._calculate_local_confidence(local_responses)
+            cloud_responses = []
+            total_cost = 0.0
+            escalation_reason = ""
 
-        logger.info(f"🏠 Local confidence: {local_confidence:.2f}")
+            if escalation_decision["should_escalate"]:
+                escalation_reason = escalation_decision["reason"]
+                logger.info(f"☁️ Escalating to cloud: {escalation_reason}")
 
-        # Step 3: Enhanced escalation decision with safety checks
-        escalation_decision = self._make_escalation_decision(
-            complexity, local_confidence, task
-        )
+                # Safety check: only escalate if cloud APIs are available
+                if not self.cloud_escalator.is_available():
+                    logger.warning("⚠️ Cloud APIs not available, skipping escalation")
+                    escalation_reason = "Cloud APIs not available"
+                    escalation_decision["should_escalate"] = False
 
-        cloud_responses = []
-        total_cost = 0.0
-        escalation_reason = ""
+                if self.cloud_escalator.is_available():
+                    # Get suggested cloud models
+                    cloud_models = complexity.suggested_models[:2]  # Use top 2
 
-        if escalation_decision["should_escalate"]:
-            escalation_reason = escalation_decision["reason"]
-            logger.info(f"☁️ Escalating to cloud: {escalation_reason}")
-
-            # Safety check: only escalate if cloud APIs are available
-            if not self.cloud_escalator.is_available():
-                logger.warning("⚠️ Cloud APIs not available, skipping escalation")
-                escalation_reason = "Cloud APIs not available"
-                escalation_decision["should_escalate"] = False
-
-            if self.cloud_escalator.is_available():
-                # Get suggested cloud models
-                cloud_models = complexity.suggested_models[:2]  # Use top 2
-
-                # Escalate to cloud with timeout
-                try:
-                    cloud_responses = await asyncio.wait_for(
-                        self.cloud_escalator.escalate_task(
-                            task, local_confidence=local_confidence
-                        ),
-                        timeout=self.cloud_timeout,
+                    # Escalate to cloud with timeout
+                    try:
+                        cloud_responses = await asyncio.wait_for(
+                            self.cloud_escalator.escalate_task(
+                                task, local_confidence=local_confidence
+                            ),
+                            timeout=self.cloud_timeout,
+                        )
+                        total_cost = sum(response.cost for response in cloud_responses)
+                        logger.info(
+                            f"✅ Cloud escalation complete: {len(cloud_responses)} responses, cost: ${total_cost:.4f}"
+                        )
+                    except asyncio.TimeoutError:
+                        logger.warning("⏰ Cloud escalation timed out")
+                        escalation_reason += " (timed out)"
+                    except Exception as e:
+                        logger.error(f"❌ Cloud escalation failed: {e}")
+                        escalation_reason += f" (error: {str(e)[:50]})"
+                        cloud_responses = []
+                else:
+                    escalation_reason += " (cloud APIs not available)"
+                    logger.warning(
+                        "⚠️ Cloud escalation requested but APIs not available"
                     )
-                    total_cost = sum(response.cost for response in cloud_responses)
-                    logger.info(
-                        f"✅ Cloud escalation complete: {len(cloud_responses)} responses, cost: ${total_cost:.4f}"
-                    )
-                except asyncio.TimeoutError:
-                    logger.warning("⏰ Cloud escalation timed out")
-                    escalation_reason += " (timed out)"
-                except Exception as e:
-                    logger.error(f"❌ Cloud escalation failed: {e}")
-                    escalation_reason += f" (error: {str(e)[:50]})"
-                    cloud_responses = []
             else:
-                escalation_reason += " (cloud APIs not available)"
-                logger.warning("⚠️ Cloud escalation requested but APIs not available")
-        else:
-            escalation_reason = "Local models sufficient"
-            logger.info(f"🏠 Using local models only: {escalation_reason}")
+                escalation_reason = "Local models sufficient"
+                logger.info(f"🏠 Using local models only: {escalation_reason}")
 
-        # Step 4: Combine results and calculate consensus
-        final_consensus = await self._combine_results(
-            task, local_responses, cloud_responses
-        )
+            # Step 4: Combine results and calculate consensus
+            final_consensus = await self._combine_results(
+                task, local_responses, cloud_responses
+            )
 
-        total_time = time.time() - start_time
-        cloud_confidence = self._calculate_cloud_confidence(cloud_responses)
+            total_time = time.time() - start_time
+            cloud_confidence = self._calculate_cloud_confidence(cloud_responses)
 
-        result = HybridResult(
-            task=task,
-            local_responses=local_responses,
-            cloud_responses=cloud_responses,
-            final_consensus=final_consensus,
-            complexity_analysis=complexity,
-            total_cost=total_cost,
-            total_time=total_time,
-            escalation_used=bool(cloud_responses),
-            escalation_reason=escalation_reason,
-            local_confidence=local_confidence,
-            cloud_confidence=cloud_confidence,
-        )
+            result = HybridResult(
+                task=task,
+                local_responses=local_responses,
+                cloud_responses=cloud_responses,
+                final_consensus=final_consensus,
+                complexity_analysis=complexity,
+                total_cost=total_cost,
+                total_time=total_time,
+                escalation_used=bool(cloud_responses),
+                escalation_reason=escalation_reason,
+                local_confidence=local_confidence,
+                cloud_confidence=cloud_confidence,
+            )
 
-        logger.info(
-            f"🎉 Hybrid processing complete: {total_time:.2f}s, cost: ${total_cost:.4f}"
-        )
-        return result
+            logger.info(
+                f"🎉 Hybrid processing complete: {total_time:.2f}s, cost: ${total_cost:.4f}"
+            )
+            return result
+        except Exception as e:
+            print(f"🚨 EXCEPTION in process_task: {e}", flush=True)
+            raise
 
     async def _try_local_models_optimized(
         self, task: str, complexity: ComplexityResult
@@ -305,38 +301,21 @@ class HybridEnsemble:
         """Combine local and cloud results for final consensus."""
         all_responses = []
 
-        # Add local responses
+        # Add local responses - PASS ORIGINAL FORMAT TO CONSENSUS CALCULATOR
         for model_id, response in local_responses.items():
             if isinstance(response, dict) and "error" not in response:
-                content = ""
-                if "choices" in response and response["choices"]:
-                    content = response["choices"][0]["message"]["content"]
-                elif "response" in response:
-                    content = response["response"]
-                else:
-                    content = str(response)
+                # Pass the original OpenAI format directly to consensus calculator
+                all_responses.append(response)
 
-                all_responses.append(
-                    {
-                        "model_id": f"local_{model_id}",
-                        "success": True,
-                        "response": content,
-                        "response_time": 0,
-                        "confidence": 0.8,  # Local confidence
-                    }
-                )
-
-        # Add cloud responses (with higher weight)
+        # Add cloud responses (convert to OpenAI format)
         for cloud_response in cloud_responses:
-            all_responses.append(
-                {
-                    "model_id": f"cloud_{cloud_response.model}",
-                    "success": True,
-                    "response": cloud_response.content,
-                    "response_time": cloud_response.response_time,
-                    "confidence": cloud_response.confidence,
-                }
-            )
+            # Convert cloud response to OpenAI format
+            openai_format = {
+                "choices": [{"message": {"content": cloud_response.content}}],
+                "model": cloud_response.model,
+                "confidence": cloud_response.confidence,
+            }
+            all_responses.append(openai_format)
 
         # Calculate consensus
         if all_responses:

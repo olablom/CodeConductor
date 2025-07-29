@@ -19,8 +19,8 @@ FAST_TIMEOUT = 30  # seconds - for fast models like Ollama
 SLOW_TIMEOUT = 120  # seconds - for slower models like LM Studio
 
 # Model-specific configurations for optimal performance
-MODEL_CONFIGS = {
-    "phi3:mini": {
+BASE_MODEL_CONFIGS = {
+    "phi3": {
         "temperature": 0.3,  # Slightly higher for more creative code
         "max_tokens": 2048,  # Double the tokens for better code generation
         "top_p": 0.9,  # Nucleus sampling for better quality
@@ -28,7 +28,7 @@ MODEL_CONFIGS = {
         "presence_penalty": 0.1,  # Encourage diverse outputs
         "timeout": 45,  # Slightly longer timeout for phi3
     },
-    "codellama:7b": {
+    "codellama": {
         "temperature": 0.2,  # Lower for more deterministic code
         "max_tokens": 3072,  # More tokens for complex code
         "top_p": 0.95,
@@ -36,12 +36,36 @@ MODEL_CONFIGS = {
         "presence_penalty": 0.0,
         "timeout": 60,
     },
-    "mistral:7b": {
+    "mistral": {
         "temperature": 0.25,
         "max_tokens": 2048,
         "top_p": 0.9,
         "frequency_penalty": 0.05,
         "presence_penalty": 0.05,
+        "timeout": 60,
+    },
+    "deepseek": {
+        "temperature": 0.2,
+        "max_tokens": 2048,
+        "top_p": 0.9,
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "timeout": 60,
+    },
+    "gemma": {
+        "temperature": 0.2,
+        "max_tokens": 2048,
+        "top_p": 0.9,
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
+        "timeout": 60,
+    },
+    "llama": {
+        "temperature": 0.2,
+        "max_tokens": 2048,
+        "top_p": 0.9,
+        "frequency_penalty": 0.0,
+        "presence_penalty": 0.0,
         "timeout": 60,
     },
 }
@@ -55,6 +79,24 @@ DEFAULT_CONFIG = {
     "presence_penalty": 0.0,
     "timeout": FAST_TIMEOUT,
 }
+
+
+def get_model_config(model_id: str) -> dict:
+    """
+    Dynamically match model ID to base configuration using pattern matching.
+    Falls back to default config for unknown models.
+    """
+    model_id_lower = model_id.lower()
+
+    # Try to match against base model patterns
+    for base_model, config in BASE_MODEL_CONFIGS.items():
+        if base_model in model_id_lower:
+            logger.info(f"✅ Matched {model_id} to {base_model} config")
+            return config
+
+    # Fallback to default
+    logger.info(f"⚠️ No specific config for {model_id}, using default")
+    return DEFAULT_CONFIG
 
 
 class QueryDispatcher:
@@ -86,7 +128,7 @@ class QueryDispatcher:
         url = f"{model_info.endpoint}/chat/completions"
 
         # Get model-specific configuration
-        config = MODEL_CONFIGS.get(model_info.id, DEFAULT_CONFIG)
+        config = get_model_config(model_info.id)
 
         payload = {
             "model": model_info.id,
@@ -98,6 +140,11 @@ class QueryDispatcher:
             "presence_penalty": config["presence_penalty"],
         }
 
+        # DEBUG: Log the request
+        logger.info(f"🐛 DEBUG: Sending request to {model_info.id}")
+        logger.info(f"🐛 DEBUG: URL: {url}")
+        logger.info(f"🐛 DEBUG: Payload: {payload}")
+
         # Use model-specific timeout
         timeout = config["timeout"]
         try:
@@ -107,6 +154,28 @@ class QueryDispatcher:
                 ) as resp:
                     resp.raise_for_status()
                     data = await resp.json()
+
+                    # DEBUG: Log the response
+                    logger.info(f"🐛 DEBUG: Response status: {resp.status}")
+                    logger.info(
+                        f"🐛 DEBUG: Response data keys: {list(data.keys()) if isinstance(data, dict) else 'not dict'}"
+                    )
+
+                    if isinstance(data, dict) and "choices" in data:
+                        choices = data["choices"]
+                        if choices and len(choices) > 0:
+                            content = choices[0].get("message", {}).get("content", "")
+                            logger.info(f"🐛 DEBUG: Content length: {len(content)}")
+                            logger.info(
+                                f"🐛 DEBUG: Content preview: {content[:200]}..."
+                            )
+                        else:
+                            logger.warning("🐛 DEBUG: No choices in response")
+                    else:
+                        logger.warning(
+                            f"🐛 DEBUG: Unexpected response format: {type(data)}"
+                        )
+
                     logger.info(
                         f"✅ Successfully queried {model_info.id} with optimized config"
                     )
@@ -130,7 +199,7 @@ class QueryDispatcher:
         url = f"{model_info.endpoint}/api/generate"
 
         # Get model-specific configuration
-        config = MODEL_CONFIGS.get(model_info.id, DEFAULT_CONFIG)
+        config = get_model_config(model_info.id)
 
         payload = {
             "model": model_info.id,

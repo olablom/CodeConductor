@@ -11,6 +11,8 @@ import sys
 import threading
 from collections import defaultdict, deque
 import uuid
+import inspect
+import importlib
 
 # Add the project root to the path
 sys.path.append(str(Path(__file__).parent))
@@ -102,116 +104,134 @@ st.markdown(
 
 class MonitoringSystem:
     """Real-time monitoring system for CodeConductor"""
-    
+
     def __init__(self):
-        self.model_metrics = defaultdict(lambda: {
-            'response_times': deque(maxlen=100),
-            'success_count': 0,
-            'error_count': 0,
-            'last_response_time': 0,
-            'last_check': 0,
-            'circuit_breaker_state': 'CLOSED',  # CLOSED, OPEN, HALF_OPEN
-            'circuit_breaker_failures': 0,
-            'circuit_breaker_last_failure': 0
-        })
+        self.model_metrics = defaultdict(
+            lambda: {
+                "response_times": deque(maxlen=100),
+                "success_count": 0,
+                "error_count": 0,
+                "last_response_time": 0,
+                "last_check": 0,
+                "circuit_breaker_state": "CLOSED",  # CLOSED, OPEN, HALF_OPEN
+                "circuit_breaker_failures": 0,
+                "circuit_breaker_last_failure": 0,
+            }
+        )
         self.system_metrics = {
-            'total_requests': 0,
-            'successful_requests': 0,
-            'failed_requests': 0,
-            'average_response_time': 0,
-            'uptime': time.time()
+            "total_requests": 0,
+            "successful_requests": 0,
+            "failed_requests": 0,
+            "average_response_time": 0,
+            "uptime": time.time(),
         }
         self._lock = threading.Lock()
-    
+
     def record_model_request(self, model_id: str, response_time: float, success: bool):
         """Record metrics for a model request"""
         with self._lock:
             metrics = self.model_metrics[model_id]
-            metrics['response_times'].append(response_time)
-            metrics['last_response_time'] = response_time
-            metrics['last_check'] = time.time()
-            
+            metrics["response_times"].append(response_time)
+            metrics["last_response_time"] = response_time
+            metrics["last_check"] = time.time()
+
             if success:
-                metrics['success_count'] += 1
-                metrics['circuit_breaker_failures'] = 0
+                metrics["success_count"] += 1
+                metrics["circuit_breaker_failures"] = 0
             else:
-                metrics['error_count'] += 1
-                metrics['circuit_breaker_failures'] += 1
-                metrics['circuit_breaker_last_failure'] = time.time()
-            
+                metrics["error_count"] += 1
+                metrics["circuit_breaker_failures"] += 1
+                metrics["circuit_breaker_last_failure"] = time.time()
+
             # Update circuit breaker state
             self._update_circuit_breaker(model_id)
-            
+
             # Update system metrics
-            self.system_metrics['total_requests'] += 1
+            self.system_metrics["total_requests"] += 1
             if success:
-                self.system_metrics['successful_requests'] += 1
+                self.system_metrics["successful_requests"] += 1
             else:
-                self.system_metrics['failed_requests'] += 1
-    
+                self.system_metrics["failed_requests"] += 1
+
     def _update_circuit_breaker(self, model_id: str):
         """Update circuit breaker state based on failure patterns"""
         metrics = self.model_metrics[model_id]
-        
-        if metrics['circuit_breaker_state'] == 'CLOSED':
+
+        if metrics["circuit_breaker_state"] == "CLOSED":
             # Open circuit if too many failures
-            if metrics['circuit_breaker_failures'] >= 5:
-                metrics['circuit_breaker_state'] = 'OPEN'
-        elif metrics['circuit_breaker_state'] == 'OPEN':
+            if metrics["circuit_breaker_failures"] >= 5:
+                metrics["circuit_breaker_state"] = "OPEN"
+        elif metrics["circuit_breaker_state"] == "OPEN":
             # Try to close circuit after timeout
-            if time.time() - metrics['circuit_breaker_last_failure'] > 60:  # 1 minute timeout
-                metrics['circuit_breaker_state'] = 'HALF_OPEN'
-        elif metrics['circuit_breaker_state'] == 'HALF_OPEN':
+            if (
+                time.time() - metrics["circuit_breaker_last_failure"] > 60
+            ):  # 1 minute timeout
+                metrics["circuit_breaker_state"] = "HALF_OPEN"
+        elif metrics["circuit_breaker_state"] == "HALF_OPEN":
             # Close circuit if recent success
-            if metrics['success_count'] > metrics['error_count']:
-                metrics['circuit_breaker_state'] = 'CLOSED'
-    
+            if metrics["success_count"] > metrics["error_count"]:
+                metrics["circuit_breaker_state"] = "CLOSED"
+
     def get_model_health(self, model_id: str) -> dict:
         """Get health status for a specific model"""
         with self._lock:
             metrics = self.model_metrics[model_id]
-            
-            if not metrics['response_times']:
+
+            if not metrics["response_times"]:
                 return {
-                    'status': 'unknown',
-                    'last_response_time': 0,
-                    'success_rate': 0,
-                    'circuit_breaker': metrics['circuit_breaker_state']
+                    "status": "unknown",
+                    "last_response_time": 0,
+                    "success_rate": 0,
+                    "circuit_breaker": metrics["circuit_breaker_state"],
                 }
-            
-            success_rate = metrics['success_count'] / (metrics['success_count'] + metrics['error_count']) if (metrics['success_count'] + metrics['error_count']) > 0 else 0
-            avg_response_time = sum(metrics['response_times']) / len(metrics['response_times'])
-            
+
+            success_rate = (
+                metrics["success_count"]
+                / (metrics["success_count"] + metrics["error_count"])
+                if (metrics["success_count"] + metrics["error_count"]) > 0
+                else 0
+            )
+            avg_response_time = sum(metrics["response_times"]) / len(
+                metrics["response_times"]
+            )
+
             # Determine health status
             if success_rate >= 0.9 and avg_response_time < 5.0:
-                status = 'healthy'
+                status = "healthy"
             elif success_rate >= 0.7 and avg_response_time < 10.0:
-                status = 'degraded'
+                status = "degraded"
             else:
-                status = 'unhealthy'
-            
+                status = "unhealthy"
+
             return {
-                'status': status,
-                'last_response_time': metrics['last_response_time'],
-                'avg_response_time': avg_response_time,
-                'success_rate': success_rate,
-                'circuit_breaker': metrics['circuit_breaker_state'],
-                'total_requests': metrics['success_count'] + metrics['error_count']
+                "status": status,
+                "last_response_time": metrics["last_response_time"],
+                "avg_response_time": avg_response_time,
+                "success_rate": success_rate,
+                "circuit_breaker": metrics["circuit_breaker_state"],
+                "total_requests": metrics["success_count"] + metrics["error_count"],
             }
-    
+
     def get_system_health(self) -> dict:
         """Get overall system health"""
         with self._lock:
-            total_requests = self.system_metrics['total_requests']
-            success_rate = self.system_metrics['successful_requests'] / total_requests if total_requests > 0 else 0
-            uptime = time.time() - self.system_metrics['uptime']
-            
+            total_requests = self.system_metrics["total_requests"]
+            success_rate = (
+                self.system_metrics["successful_requests"] / total_requests
+                if total_requests > 0
+                else 0
+            )
+            uptime = time.time() - self.system_metrics["uptime"]
+
             return {
-                'status': 'healthy' if success_rate >= 0.8 else 'degraded',
-                'success_rate': success_rate,
-                'total_requests': total_requests,
-                'uptime_seconds': uptime,
-                'models': {model_id: self.get_model_health(model_id) for model_id in self.model_metrics.keys()}
+                "status": "healthy" if success_rate >= 0.8 else "degraded",
+                "success_rate": success_rate,
+                "total_requests": total_requests,
+                "uptime_seconds": uptime,
+                "models": {
+                    model_id: self.get_model_health(model_id)
+                    for model_id in self.model_metrics.keys()
+                },
             }
 
 
@@ -227,10 +247,11 @@ class CodeConductorApp:
         self.test_runner = TestRunner()  # Initialize TestRunner
         self.generation_history = []
         self.monitoring = MonitoringSystem()  # Add monitoring system
-        
+
         # Initialize RAG system
         try:
             from context.rag_system import RAGSystem
+
             self.rag_system = RAGSystem()
         except Exception as e:
             st.warning(f"RAG system not available: {e}")
@@ -259,8 +280,36 @@ class CodeConductorApp:
 
     def render_sidebar(self):
         """Render the sidebar with controls and status"""
+        import asyncio  # Add missing import
+
         with st.sidebar:
             st.markdown("## 🎛️ Controls")
+
+            # Refresh Models Button - Make it more prominent
+            if st.button("🔄 Refresh Models", use_container_width=True, type="primary"):
+                with st.spinner("Discovering models..."):
+                    # Clear session state before discovery
+                    st.session_state.models = []
+                    st.session_state.models_discovered = False
+
+                    # Discover models
+                    try:
+                        loop = asyncio.get_event_loop()
+                    except RuntimeError:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+
+                    models = loop.run_until_complete(self.model_manager.list_models())
+
+                    if models:
+                        st.session_state.models = models
+                        st.session_state.models_discovered = True
+                        st.success(f"✅ Discovered {len(models)} models")
+                    else:
+                        st.warning("⚠️ No models found. Please check LM Studio/Ollama.")
+                st.rerun()
+
+            st.markdown("---")
 
             # Model Management Section
             with st.expander("🤖 Model Management", expanded=False):
@@ -330,44 +379,80 @@ class CodeConductorApp:
             with st.expander("📊 Model Status & Health", expanded=False):
                 # System Health Overview
                 system_health = self.monitoring.get_system_health()
-                
+
                 # System status indicator
-                status_color = "🟢" if system_health['status'] == 'healthy' else "🟡" if system_health['status'] == 'degraded' else "🔴"
-                st.markdown(f"**System Status:** {status_color} {system_health['status'].title()}")
-                
+                status_color = (
+                    "🟢"
+                    if system_health["status"] == "healthy"
+                    else "🟡"
+                    if system_health["status"] == "degraded"
+                    else "🔴"
+                )
+                st.markdown(
+                    f"**System Status:** {status_color} {system_health['status'].title()}"
+                )
+
                 # System metrics
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    st.metric("Total Requests", system_health['total_requests'])
+                    st.metric("Total Requests", system_health["total_requests"])
                 with col2:
                     st.metric("Success Rate", f"{system_health['success_rate']:.1%}")
                 with col3:
-                    uptime_hours = system_health['uptime_seconds'] / 3600
+                    uptime_hours = system_health["uptime_seconds"] / 3600
                     st.metric("Uptime", f"{uptime_hours:.1f}h")
-                
+
                 st.markdown("---")
-                
+
                 # Model Health Details
                 st.markdown("**Model Health:**")
-                
+
                 # Get current models
                 try:
-                    models = asyncio.run(self.model_manager.list_models())
-                    
-                    for model in models:
-                        model_health = self.monitoring.get_model_health(model.id)
-                        
-                        # Status indicator
-                        status_icon = "🟢" if model_health['status'] == 'healthy' else "🔴"
-                        status_text = model_health['status'].title()
-                        
-                        col1, col2 = st.columns([3, 1])
-                        with col1:
-                            st.markdown(f"**{model.id}**")
-                            st.caption(f"{model.provider} • {status_text}")
-                        with col2:
-                            st.markdown(f"{status_icon}")
-                            
+                    # Use cached models if available
+                    if st.session_state.models_discovered and st.session_state.models:
+                        models = st.session_state.models
+                    else:
+                        models = []
+
+                    if not models:
+                        st.warning(
+                            "No models found. Click 'Refresh Models' in the sidebar to discover models."
+                        )
+                        return
+
+                    # Create columns for model display
+                    cols = st.columns(3)
+
+                    for i, model in enumerate(models):
+                        col_idx = i % 3
+                        with cols[col_idx]:
+                            # Health check - only if we have models
+                            try:
+                                import asyncio
+
+                                health = asyncio.run(
+                                    self.model_manager.check_health(model)
+                                )
+                                status_icon = "✅" if health else "❌"
+                                status_class = "healthy" if health else "unhealthy"
+                            except:
+                                status_icon = "⚠️"
+                                status_class = "unknown"
+
+                            st.markdown(
+                                f"""
+                            <div class="model-status {status_class}">
+                                <div>
+                                    <strong>{model.id}</strong><br>
+                                    <small>{model.provider}</small>
+                                </div>
+                                <div>{status_icon}</div>
+                            </div>
+                            """,
+                                unsafe_allow_html=True,
+                            )
+
                 except Exception as e:
                     st.warning(f"Could not load model status: {e}")
 
@@ -375,19 +460,28 @@ class CodeConductorApp:
             with st.expander("🔍 RAG Context", expanded=False):
                 try:
                     # Check RAG system availability
-                    rag_available = hasattr(self, 'rag_system') and self.rag_system is not None
-                    
+                    rag_available = (
+                        hasattr(self, "rag_system") and self.rag_system is not None
+                    )
+
                     if rag_available:
                         st.markdown("✅ **RAG System Available**")
-                        
+
                         # Check vector database
-                        vector_db_loaded = hasattr(self.rag_system, 'vector_store') and self.rag_system.vector_store is not None
+                        vector_db_loaded = (
+                            hasattr(self.rag_system, "vector_store")
+                            and self.rag_system.vector_store is not None
+                        )
                         if vector_db_loaded:
                             st.markdown("✅ **Vector Database Loaded**")
-                            
+
                             # Count documents (if available)
                             try:
-                                doc_count = len(self.rag_system.vector_store.get()['ids']) if hasattr(self.rag_system.vector_store, 'get') else 0
+                                doc_count = (
+                                    len(self.rag_system.vector_store.get()["ids"])
+                                    if hasattr(self.rag_system.vector_store, "get")
+                                    else 0
+                                )
                                 st.markdown(f"📚 **{doc_count} documents indexed**")
                             except:
                                 st.markdown("📚 **Documents indexed**")
@@ -396,22 +490,20 @@ class CodeConductorApp:
                             st.caption("RAG functionality limited")
                     else:
                         st.markdown("❌ **RAG System Not Available**")
-                        st.caption("Install sentence-transformers for full RAG functionality")
-                        
+                        st.caption(
+                            "Install sentence-transformers for full RAG functionality"
+                        )
+
                     # External context status
                     st.markdown("---")
                     st.markdown("**External Context:**")
                     st.markdown("🌐 **Stack Overflow Integration**")
                     st.markdown("📖 **Documentation Search**")
                     st.markdown("🔗 **GitHub Examples**")
-                    
+
                 except Exception as e:
                     st.warning(f"RAG system error: {e}")
                     st.caption("RAG functionality disabled")
-
-            # Refresh Models Button
-            if st.button("🔄 Refresh Models", use_container_width=True):
-                st.rerun()
 
             # Generation options
             st.markdown("### ⚙️ Generation Options")
@@ -480,8 +572,11 @@ class CodeConductorApp:
             return
 
         try:
-            # Use cached models from session state - don't fallback to avoid infinite loops
-            models = st.session_state.get("models", [])
+            # Use cached models if available
+            if st.session_state.models_discovered and st.session_state.models:
+                models = st.session_state.models
+            else:
+                models = []
 
             if not models:
                 st.warning(
@@ -489,10 +584,21 @@ class CodeConductorApp:
                 )
                 return
 
+            # TEMPORARY FIX: Filter to show only mistral models for stability
+            mistral_models = [
+                model for model in models if "mistral" in model.id.lower()
+            ]
+
+            if mistral_models:
+                st.info("🎯 TEMPORARY: Showing only mistral model for stability")
+                display_models = mistral_models
+            else:
+                display_models = models
+
             # Create columns for model display
             cols = st.columns(3)
 
-            for i, model in enumerate(models):
+            for i, model in enumerate(display_models):
                 col_idx = i % 3
                 with cols[col_idx]:
                     # Health check - only if we have models
@@ -563,7 +669,7 @@ class CodeConductorApp:
         # Always show Generate Code button
         st.markdown("---")
         col1, col2, col3 = st.columns([1, 1, 1])
-        
+
         with col1:
             if st.button(
                 "🚀 Generate Code",
@@ -746,7 +852,7 @@ class CodeConductorApp:
             st.write(f"- {criteria}")
 
     async def run_generation(self, task):
-        """Run the full generation pipeline using hybrid ensemble with monitoring"""
+        """Run code generation with hybrid ensemble."""
         progress_bar = st.progress(0)
         status_text = st.empty()
         start_time = time.time()
@@ -760,16 +866,8 @@ class CodeConductorApp:
             status_text.text("🤖 Running hybrid ensemble engine...")
             progress_bar.progress(30)
 
-            # Use hybrid ensemble for processing with monitoring
+            # Generate code using hybrid ensemble
             hybrid_result = await self.hybrid_ensemble.process_task(task)
-            
-            # Record metrics for ensemble processing
-            processing_time = time.time() - start_time
-            self.monitoring.record_model_request("ensemble_engine", processing_time, hybrid_result is not None)
-
-            if not hybrid_result:
-                st.error("Hybrid ensemble failed. Please check model availability.")
-                return
 
             # Step 3: Consensus calculation
             status_text.text("🧠 Calculating consensus...")
@@ -849,10 +947,14 @@ class CodeConductorApp:
 
             # Process with fallback strategy
             result = await self.ensemble_engine.process_request_with_fallback(task)
-            
+
             # Record metrics for ensemble test
             processing_time = time.time() - start_time
-            self.monitoring.record_model_request("ensemble_test", processing_time, result is not None and result.get('success', False))
+            self.monitoring.record_model_request(
+                "ensemble_test",
+                processing_time,
+                result is not None and result.get("success", False),
+            )
 
             if not result:
                 st.error("Ensemble test failed. Please check model availability.")
@@ -1179,7 +1281,7 @@ class CodeConductorApp:
         # Generated code display
         if "generated_code" in results and results["generated_code"]:
             st.markdown("#### 💻 Generated Code")
-            
+
             # Display code in a more prominent way
             st.markdown("**Implementation:**")
             st.code(results["generated_code"], language="python")
@@ -1206,16 +1308,42 @@ class CodeConductorApp:
         with st.expander("🧠 Consensus Details", expanded=False):
             if "consensus" in results and results["consensus"]:
                 if hasattr(results["consensus"], "consensus"):
-                    consensus_data = results["consensus"].consensus
-                    if consensus_data:
-                        st.json(consensus_data)
+                    # Display the generated code from consensus
+                    generated_code = results["consensus"].consensus
+
+                    if generated_code:
+                        st.markdown("🤖 **Generated Code:**")
+                        st.code(generated_code, language="python")
+
+                        # Also show consensus metadata
+                        st.markdown("📊 **Consensus Metadata:**")
+                        st.markdown(
+                            f"**Confidence:** {results['consensus'].confidence:.2f}"
+                        )
+                        st.markdown(
+                            f"**Code Quality Score:** {results['consensus'].code_quality_score:.2f}"
+                        )
+                        st.markdown(
+                            f"**Syntax Valid:** {results['consensus'].syntax_valid}"
+                        )
+                        st.markdown(f"**Reasoning:** {results['consensus'].reasoning}")
                     else:
                         st.info("🤖 **Model Consensus Summary**")
-                        st.markdown("**Strategy:** " + results.get("strategy", "consensus"))
-                        st.markdown("**Models Used:** " + str(results.get("models_used", 0)))
-                        st.markdown("**Confidence:** " + f"{results.get('confidence', 0):.2f}")
-                        st.markdown("**Total Time:** " + f"{results.get('total_time', 0):.2f}s")
-                        st.caption("💡 Models provided free-form responses rather than structured consensus data")
+                        st.markdown(
+                            "**Strategy:** " + results.get("strategy", "consensus")
+                        )
+                        st.markdown(
+                            "**Models Used:** " + str(results.get("models_used", 0))
+                        )
+                        st.markdown(
+                            "**Confidence:** " + f"{results.get('confidence', 0):.2f}"
+                        )
+                        st.markdown(
+                            "**Total Time:** " + f"{results.get('total_time', 0):.2f}s"
+                        )
+                        st.caption(
+                            "💡 Models provided free-form responses rather than structured consensus data"
+                        )
                 else:
                     st.write("No structured consensus data available")
             else:
@@ -1950,7 +2078,14 @@ class CodeConductorApp:
             if st.session_state.get("run_ensemble_test", False):
                 st.session_state.run_ensemble_test = False  # Reset
                 try:
-                    results = asyncio.run(self.run_ensemble_test(task))
+                    # Create new event loop if none exists
+                    try:
+                        loop = asyncio.get_event_loop()
+                    except RuntimeError:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+
+                    results = loop.run_until_complete(self.run_ensemble_test(task))
                     if results:
                         self.render_results(results)
                         st.session_state.ensemble_results = results
@@ -1962,7 +2097,14 @@ class CodeConductorApp:
             elif st.session_state.get("run_generation", False):
                 st.session_state.run_generation = False  # Reset
                 try:
-                    results = asyncio.run(self.run_generation(task))
+                    # Create new event loop if none exists
+                    try:
+                        loop = asyncio.get_event_loop()
+                    except RuntimeError:
+                        loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(loop)
+
+                    results = loop.run_until_complete(self.run_generation(task))
                     if results:
                         self.render_results(results)
                         st.session_state.generation_results = results
