@@ -63,6 +63,7 @@ def health_check():
     return jsonify(
         {
             "status": status,
+            "version": "0.2.0",  # Added version field
             "models": [
                 {
                     "name": m["name"],
@@ -99,7 +100,8 @@ def health_ensemble():
 @app.route("/metrics", methods=["GET"])
 def metrics():
     from flask import Response
-    return Response(generate_latest(), mimetype='text/plain')
+
+    return Response(generate_latest(), mimetype="text/plain")
 
 
 @app.route("/ready", methods=["GET"])

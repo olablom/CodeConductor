@@ -385,10 +385,50 @@ class EnsembleEngine:
                 )
                 logger.info(f"RLHF selected models: {selected_model_ids}")
             else:
-                selected_model_ids = available_model_ids[: request.min_models]
+                # Förbättra model selection för komplexa tasks med smart loading
+                task_complexity = self._estimate_task_complexity(
+                    request.task_description
+                )
+                if task_complexity > 0.7:  # Komplex task
+                    logger.info(
+                        f"🎯 Complex task detected (complexity: {task_complexity:.2f}), using smart model loading"
+                    )
+
+                    # Try to load preferred models for complex tasks
+                    from .model_manager import LM_STUDIO_PREFERRED_MODELS
+
+                    preferred_models = LM_STUDIO_PREFERRED_MODELS[
+                        :3
+                    ]  # Top 3 preferred models
+
+                    # Ensure models are loaded with smart fallback
+                    loaded_model_ids = await self.model_manager.ensure_models_loaded(
+                        preferred_models,
+                        ttl_seconds=7200,  # 2 hours TTL
+                    )
+
+                    # Use loaded models if available, otherwise fallback to available models
+                    if len(loaded_model_ids) >= 2:
+                        selected_model_ids = loaded_model_ids[
+                            :3
+                        ]  # Use up to 3 loaded models
+                        logger.info(
+                            f"✅ Using {len(selected_model_ids)} pre-loaded models: {selected_model_ids}"
+                        )
+                    else:
+                        # Fallback to available models
+                        selected_model_ids = available_model_ids[
+                            : min(3, len(available_model_ids))
+                        ]
+                        logger.info(f"⚠️ Using fallback models: {selected_model_ids}")
+
+                else:
+                    selected_model_ids = available_model_ids[: request.min_models]
+                    logger.info(
+                        f"Simple task, using {len(selected_model_ids)} models: {selected_model_ids}"
+                    )
                 rlhf_action = None
                 rlhf_action_description = None
-                logger.info(f"Using default model selection: {selected_model_ids}")
 
             # Get model objects
             models = [

@@ -51,6 +51,15 @@ RECOMMENDED_MODELS = {
     },
 }
 
+# LM Studio preferred models for complex tasks
+LM_STUDIO_PREFERRED_MODELS = [
+    "meta-llama-3.1-8b-instruct",
+    "google/gemma-3-12b",
+    "qwen2-vl-7b-instruct",
+    "mistral-7b-instruct-v0.1",
+    "codellama-7b-instruct",
+]
+
 
 @dataclass
 class ModelInfo:
@@ -72,6 +81,202 @@ class ModelManager:
         self.ollama_endpoint = "http://localhost:11434"
         self.timeout = 30.0  # seconds
         self.health_timeout = 10.0  # shorter timeout for health checks
+        self.loaded_models = set()  # Track currently loaded models
+
+    async def load_model_via_cli(self, model_key: str, ttl_seconds: int = 7200) -> bool:
+        """
+        Load a model via LM Studio CLI with TTL management.
+
+        Args:
+            model_key: The model identifier (e.g., "meta-llama-3.1-8b-instruct")
+            ttl_seconds: Time to live in seconds (default: 2 hours)
+
+        Returns:
+            bool: True if model loaded successfully, False otherwise
+        """
+        try:
+            logger.info(f"🔄 Loading model via CLI: {model_key}")
+
+            # Construct CLI command with TTL and GPU settings
+            command = [
+                "lms",
+                "load",
+                model_key,
+                "--ttl",
+                str(ttl_seconds),
+                "--gpu",
+                "max",  # Use maximum GPU
+                "-y",  # Skip confirmations
+            ]
+
+            # Run command with timeout and proper encoding
+            result = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",  # Fix encoding issue
+                    errors="ignore",  # Ignore encoding errors
+                    timeout=120,  # 2 minute timeout for loading
+                ),
+            )
+
+            if result.returncode == 0:
+                self.loaded_models.add(model_key)
+                logger.info(f"✅ Successfully loaded {model_key} via CLI")
+                return True
+            else:
+                logger.error(f"❌ Failed to load {model_key}: {result.stderr}")
+                return False
+
+        except subprocess.TimeoutExpired:
+            logger.error(f"⏰ Timeout loading {model_key} via CLI")
+            return False
+        except Exception as e:
+            logger.error(f"❌ Error loading {model_key} via CLI: {e}")
+            return False
+
+    async def ensure_models_loaded(
+        self, required_models: List[str], ttl_seconds: int = 7200
+    ) -> List[str]:
+        """
+        Ensure that required models are loaded, with fallback to available models.
+
+        Args:
+            required_models: List of preferred model keys
+            ttl_seconds: Time to live for loaded models
+
+        Returns:
+            List[str]: List of successfully loaded/available model keys
+        """
+        logger.info(f"🎯 Ensuring models loaded: {required_models}")
+
+        loaded_models = []
+
+        # Try to load each required model
+        for model_key in required_models:
+            try:
+                # Check if model is already loaded
+                if model_key in self.loaded_models:
+                    logger.info(f"✅ {model_key} already loaded")
+                    loaded_models.append(model_key)
+                    continue
+
+                # Try to load via CLI
+                success = await self.load_model_via_cli(model_key, ttl_seconds)
+                if success:
+                    loaded_models.append(model_key)
+                    logger.info(f"✅ Successfully loaded {model_key}")
+                else:
+                    logger.warning(
+                        f"⚠️ Failed to load {model_key}, will try JIT loading"
+                    )
+
+            except Exception as e:
+                logger.warning(f"⚠️ Error loading {model_key}: {e}")
+
+        # If we don't have enough models, get available models as fallback
+        if len(loaded_models) < 2:
+            logger.info("🔄 Getting available models as fallback")
+            try:
+                available_models = await self.list_models()
+                available_model_ids = [model.id for model in available_models]
+
+                # Add available models that aren't already in loaded_models
+                for model_id in available_model_ids:
+                    if model_id not in loaded_models and len(loaded_models) < 3:
+                        loaded_models.append(model_id)
+                        logger.info(f"✅ Added fallback model: {model_id}")
+
+            except Exception as e:
+                logger.error(f"❌ Error getting fallback models: {e}")
+
+        logger.info(f"🎯 Final loaded models: {loaded_models}")
+        return loaded_models
+
+    async def unload_model_via_cli(self, model_key: str) -> bool:
+        """
+        Unload a model via LM Studio CLI.
+
+        Args:
+            model_key: The model identifier to unload
+
+        Returns:
+            bool: True if model unloaded successfully, False otherwise
+        """
+        try:
+            logger.info(f"🔄 Unloading model via CLI: {model_key}")
+
+            command = ["lms", "unload", model_key, "-y"]
+
+            result = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",  # Fix encoding issue
+                    errors="ignore",  # Ignore encoding errors
+                    timeout=30,
+                ),
+            )
+
+            if result.returncode == 0:
+                self.loaded_models.discard(model_key)
+                logger.info(f"✅ Successfully unloaded {model_key}")
+                return True
+            else:
+                logger.error(f"❌ Failed to unload {model_key}: {result.stderr}")
+                return False
+
+        except Exception as e:
+            logger.error(f"❌ Error unloading {model_key}: {e}")
+            return False
+
+    async def get_loaded_models_status(self) -> Dict[str, Any]:
+        """
+        Get status of currently loaded models.
+
+        Returns:
+            Dict with loaded models info
+        """
+        try:
+            # Use lms ps to get loaded models
+            command = ["lms", "ps"]
+
+            result = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",  # Fix encoding issue
+                    errors="ignore",  # Ignore encoding errors
+                    timeout=10,
+                ),
+            )
+
+            if result.returncode == 0:
+                return {
+                    "loaded_models": self.loaded_models,
+                    "cli_output": result.stdout,
+                    "total_loaded": len(self.loaded_models),
+                }
+            else:
+                return {
+                    "loaded_models": list(self.loaded_models),
+                    "cli_output": result.stderr,
+                    "total_loaded": len(self.loaded_models),
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Error getting loaded models status: {e}")
+            return {
+                "loaded_models": list(self.loaded_models),
+                "cli_output": f"Error: {e}",
+                "total_loaded": len(self.loaded_models),
+            }
 
     async def list_models(self) -> List[ModelInfo]:
         """
@@ -202,16 +407,7 @@ class ModelManager:
         """
         all_models = await self.list_models()
 
-        # TEMPORARY FIX: Only use mistral model that we know works
-        mistral_models = [
-            model for model in all_models if "mistral" in model.id.lower()
-        ]
-
-        if mistral_models:
-            logger.info(f"🎯 TEMPORARY: Using only mistral model for stability")
-            return mistral_models[:1]  # Return only 1 mistral model
-
-        # Fallback to original logic if no mistral found
+        # Use all available models for best performance
         if len(all_models) < min_models:
             logger.warning(
                 f"⚠️ Only {len(all_models)} models available, need {min_models}"

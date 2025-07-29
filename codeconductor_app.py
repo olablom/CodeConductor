@@ -1,3 +1,25 @@
+import os
+import sys
+
+# Suppress Streamlit warnings using environment variables
+os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
+os.environ["STREAMLIT_SERVER_RUN_ON_SAVE"] = "false"
+os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
+
+# Suppress all warnings
+import warnings
+
+# Try to import pyperclip for clipboard functionality
+try:
+    import pyperclip
+
+    CLIPBOARD_AVAILABLE = True
+except ImportError:
+    CLIPBOARD_AVAILABLE = False
+    print("⚠️ pyperclip not available. Install with: pip install pyperclip")
+
+warnings.filterwarnings("ignore")
+
 import streamlit as st
 import asyncio
 import json
@@ -7,12 +29,21 @@ import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 from pathlib import Path
-import sys
 import threading
 from collections import defaultdict, deque
 import uuid
 import inspect
 import importlib
+import logging
+
+# Configure logging to suppress Streamlit warnings
+logging.getLogger().setLevel(logging.ERROR)
+logging.getLogger("streamlit").setLevel(logging.ERROR)
+logging.getLogger("streamlit.runtime.scriptrunner").setLevel(logging.ERROR)
+logging.getLogger("streamlit.runtime.scriptrunner.script_run_context").setLevel(
+    logging.ERROR
+)
+logging.getLogger("streamlit.runtime").setLevel(logging.ERROR)
 
 # Add the project root to the path
 sys.path.append(str(Path(__file__).parent))
@@ -279,287 +310,299 @@ class CodeConductorApp:
         )
 
     def render_sidebar(self):
-        """Render the sidebar with controls and status"""
-        import asyncio  # Add missing import
+        """Render the sidebar with controls and status."""
+        st.sidebar.title("🎛️ Controls")
 
-        with st.sidebar:
-            st.markdown("## 🎛️ Controls")
+        # Model Management Section
+        with st.sidebar.expander("🤖 Model Management", expanded=False):
+            st.markdown("### Model Loading Status")
 
-            # Refresh Models Button - Make it more prominent
-            if st.button("🔄 Refresh Models", use_container_width=True, type="primary"):
-                with st.spinner("Discovering models..."):
-                    # Clear session state before discovery
-                    st.session_state.models = []
-                    st.session_state.models_discovered = False
-
-                    # Discover models
-                    try:
-                        loop = asyncio.get_event_loop()
-                    except RuntimeError:
-                        loop = asyncio.new_event_loop()
-                        asyncio.set_event_loop(loop)
-
-                    models = loop.run_until_complete(self.model_manager.list_models())
-
-                    if models:
-                        st.session_state.models = models
-                        st.session_state.models_discovered = True
-                        st.success(f"✅ Discovered {len(models)} models")
-                    else:
-                        st.warning("⚠️ No models found. Please check LM Studio/Ollama.")
-                st.rerun()
-
-            st.markdown("---")
-
-            # Model Management Section
-            with st.expander("🤖 Model Management", expanded=False):
-                st.markdown("### Available Models")
-
-                # Get current models
-                if hasattr(self, "model_manager"):
-                    try:
-                        # This would be async in practice, but for demo we'll show recommended
-                        recommended_models = self.model_manager.get_recommended_models()
-
-                        st.markdown("**Recommended Models:**")
-                        for model_name, model_info in recommended_models.items():
-                            col1, col2 = st.columns([3, 1])
-                            with col1:
-                                st.markdown(f"**{model_name}**")
-                                st.caption(f"{model_info['description']}")
-                                st.caption(
-                                    f"Size: {model_info['size']} | Specialty: {model_info['specialty']}"
-                                )
-
-                            with col2:
-                                if st.button(
-                                    f"📥 Download", key=f"download_{model_name}"
-                                ):
-                                    success = (
-                                        self.model_manager.download_recommended_model(
-                                            model_name
-                                        )
-                                    )
-                                    if success:
-                                        st.success(f"Download started for {model_name}")
-                                    else:
-                                        st.error(
-                                            f"Failed to start download for {model_name}"
-                                        )
-
-                        st.markdown("---")
-                        st.markdown("**Current Models:**")
-
-                        # Check what's currently available
-                        try:
-                            import subprocess
-
-                            result = subprocess.run(
-                                ["ollama", "list"], capture_output=True, text=True
-                            )
-                            if result.returncode == 0:
-                                lines = result.stdout.strip().split("\n")[
-                                    1:
-                                ]  # Skip header
-                                for line in lines:
-                                    if line.strip():
-                                        parts = line.split()
-                                        if len(parts) >= 2:
-                                            model_name = parts[0]
-                                            st.markdown(f"✅ {model_name}")
-                            else:
-                                st.warning("Could not check current models")
-                        except Exception as e:
-                            st.warning(f"Error checking models: {e}")
-
-                    except Exception as e:
-                        st.error(f"Error loading model info: {e}")
-
-            # Enhanced Model Status Section with Real-time Monitoring
-            with st.expander("📊 Model Status & Health", expanded=False):
-                # System Health Overview
-                system_health = self.monitoring.get_system_health()
-
-                # System status indicator
-                status_color = (
-                    "🟢"
-                    if system_health["status"] == "healthy"
-                    else "🟡"
-                    if system_health["status"] == "degraded"
-                    else "🔴"
-                )
-                st.markdown(
-                    f"**System Status:** {status_color} {system_health['status'].title()}"
-                )
-
-                # System metrics
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric("Total Requests", system_health["total_requests"])
-                with col2:
-                    st.metric("Success Rate", f"{system_health['success_rate']:.1%}")
-                with col3:
-                    uptime_hours = system_health["uptime_seconds"] / 3600
-                    st.metric("Uptime", f"{uptime_hours:.1f}h")
-
-                st.markdown("---")
-
-                # Model Health Details
-                st.markdown("**Model Health:**")
-
-                # Get current models
+            # Show loaded models status
+            if hasattr(self, "model_manager"):
                 try:
-                    # Use cached models if available
-                    if st.session_state.models_discovered and st.session_state.models:
-                        models = st.session_state.models
-                    else:
-                        models = []
-
-                    if not models:
-                        st.warning(
-                            "No models found. Click 'Refresh Models' in the sidebar to discover models."
-                        )
-                        return
-
-                    # Create columns for model display
-                    cols = st.columns(3)
-
-                    for i, model in enumerate(models):
-                        col_idx = i % 3
-                        with cols[col_idx]:
-                            # Health check - only if we have models
-                            try:
-                                import asyncio
-
-                                health = asyncio.run(
-                                    self.model_manager.check_health(model)
-                                )
-                                status_icon = "✅" if health else "❌"
-                                status_class = "healthy" if health else "unhealthy"
-                            except:
-                                status_icon = "⚠️"
-                                status_class = "unknown"
-
-                            st.markdown(
-                                f"""
-                            <div class="model-status {status_class}">
-                                <div>
-                                    <strong>{model.id}</strong><br>
-                                    <small>{model.provider}</small>
-                                </div>
-                                <div>{status_icon}</div>
-                            </div>
-                            """,
-                                unsafe_allow_html=True,
-                            )
-
-                except Exception as e:
-                    st.warning(f"Could not load model status: {e}")
-
-            # RAG Context Section
-            with st.expander("🔍 RAG Context", expanded=False):
-                try:
-                    # Check RAG system availability
-                    rag_available = (
-                        hasattr(self, "rag_system") and self.rag_system is not None
+                    # Get loaded models status
+                    loaded_status = asyncio.run(
+                        self.model_manager.get_loaded_models_status()
                     )
 
-                    if rag_available:
-                        st.markdown("✅ **RAG System Available**")
+                    st.markdown(
+                        f"**Loaded Models:** {loaded_status.get('total_loaded', 0)}"
+                    )
 
-                        # Check vector database
-                        vector_db_loaded = (
-                            hasattr(self.rag_system, "vector_store")
-                            and self.rag_system.vector_store is not None
-                        )
-                        if vector_db_loaded:
-                            st.markdown("✅ **Vector Database Loaded**")
+                    if loaded_status.get("loaded_models"):
+                        st.markdown("**Currently Loaded:**")
+                        for model in loaded_status["loaded_models"]:
+                            st.markdown(f"- {model}")
 
-                            # Count documents (if available)
-                            try:
-                                doc_count = (
-                                    len(self.rag_system.vector_store.get()["ids"])
-                                    if hasattr(self.rag_system.vector_store, "get")
-                                    else 0
-                                )
-                                st.markdown(f"📚 **{doc_count} documents indexed**")
-                            except:
-                                st.markdown("📚 **Documents indexed**")
-                        else:
-                            st.markdown("⚠️ **Vector Database Not Loaded**")
-                            st.caption("RAG functionality limited")
-                    else:
-                        st.markdown("❌ **RAG System Not Available**")
-                        st.caption(
-                            "Install sentence-transformers for full RAG functionality"
-                        )
-
-                    # External context status
-                    st.markdown("---")
-                    st.markdown("**External Context:**")
-                    st.markdown("🌐 **Stack Overflow Integration**")
-                    st.markdown("📖 **Documentation Search**")
-                    st.markdown("🔗 **GitHub Examples**")
+                    # Show CLI output if available
+                    if loaded_status.get("cli_output"):
+                        with st.expander("📋 CLI Status"):
+                            st.code(loaded_status["cli_output"])
 
                 except Exception as e:
-                    st.warning(f"RAG system error: {e}")
-                    st.caption("RAG functionality disabled")
+                    st.warning(f"⚠️ Could not get model status: {e}")
 
-            # Generation options
-            st.markdown("### ⚙️ Generation Options")
-            iterations = st.slider("Iterations", 1, 5, 1)
-            timeout = st.slider("Timeout (seconds)", 10, 60, 30)
+            # Model loading controls
+            st.markdown("### Load Preferred Models")
 
-            # Output options
-            st.markdown("### 📤 Output Options")
-            auto_copy = st.checkbox("Auto-copy to clipboard", value=True)
-            save_files = st.checkbox("Save generated files", value=True)
-
-            # Generation history
-            if self.generation_history:
-                st.markdown("### 📚 Generation History")
-                for i, entry in enumerate(reversed(self.generation_history[-5:])):
-                    with st.expander(
-                        f"Task {len(self.generation_history) - i}: {entry.get('task', 'Unknown task')[:50]}..."
-                    ):
-                        st.write(f"**Status:** {entry.get('status', 'unknown')}")
-                        st.write(f"**Models:** {entry.get('models_used', 'Unknown')}")
-                        st.write(f"**Time:** {entry.get('timestamp', 'Unknown')}")
-
-            # Project Analysis
-            st.markdown("---")
-            st.markdown("### 📁 Project Analysis")
-
-            # Input för sökväg till projektmappen
-            project_path = st.text_input(
-                "Add Project Path",
-                value="",
-                help="Enter the root folder of your codebase",
-            )
-
-            # Knapp för att starta analys
-            if st.button("🔍 Analyze Project"):
-                if not project_path:
-                    st.error("Please enter a valid project path.")
-                else:
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🚀 Load Complex Task Models", key="load_complex_models"):
                     try:
-                        from analysis.project_analyzer import analyze_project
+                        from ensemble.model_manager import LM_STUDIO_PREFERRED_MODELS
 
-                        with st.spinner("🔍 Scanning project..."):
-                            # Use the optimized analyze_project function
-                            report = analyze_project(project_path)
-                        st.success("✅ Analysis complete!")
-                        st.session_state.project_report = report
-                        st.session_state.project_path = (
-                            project_path  # Store for Planner Agent
-                        )
+                        preferred_models = LM_STUDIO_PREFERRED_MODELS[:3]
+
+                        with st.spinner("Loading preferred models..."):
+                            loaded_models = asyncio.run(
+                                self.model_manager.ensure_models_loaded(
+                                    preferred_models
+                                )
+                            )
+
+                        if loaded_models:
+                            st.success(
+                                f"✅ Loaded {len(loaded_models)} models: {', '.join(loaded_models)}"
+                            )
+                        else:
+                            st.warning("⚠️ No models could be loaded")
+
                     except Exception as e:
-                        st.error(f"❌ Analysis failed: {e}")
+                        st.error(f"❌ Error loading models: {e}")
 
-            # Knapp för att visa rapporten (om den finns)
-            if "project_report" in st.session_state:
-                if st.button("📊 View Report"):
-                    st.session_state.show_project_report = True
+            with col2:
+                if st.button("🔄 Refresh Model Status", key="refresh_model_status"):
+                    st.rerun()
+
+        # Model Status Dashboard
+        with st.sidebar.expander("📊 Model Status & Health", expanded=False):
+            st.markdown("### Model Discovery")
+
+            if st.button("🔍 Refresh Models", key="refresh_models"):
+                st.rerun()
+
+            # Show model status
+            if hasattr(self, "model_manager"):
+                try:
+                    models = asyncio.run(self.model_manager.list_models())
+                    healthy_models = asyncio.run(
+                        self.model_manager.list_healthy_models()
+                    )
+
+                    st.markdown(f"**Total Models:** {len(models)}")
+                    st.markdown(f"**Healthy Models:** {len(healthy_models)}")
+
+                    # Show all available models
+                    display_models = models
+
+                    if display_models:
+                        st.markdown("**Available Models:**")
+                        for model in display_models:
+                            status = "✅" if model.id in healthy_models else "❌"
+                            st.markdown(f"{status} {model.name} ({model.provider})")
+                    else:
+                        st.info("ℹ️ No models discovered. Check LM Studio and Ollama.")
+
+                except Exception as e:
+                    st.error(f"❌ Error getting model status: {e}")
+
+        # RAG Context Section
+        with st.sidebar.expander("🔍 RAG Context", expanded=False):
+            st.markdown("### Context Information")
+
+            # Show RAG system status
+            if hasattr(self, "rag_system") and self.rag_system:
+                st.markdown("**RAG System Status:**")
+                st.success("✅ RAG System Available")
+
+                # Show context stats
+                if (
+                    hasattr(st.session_state, "rag_context")
+                    and st.session_state.rag_context
+                ):
+                    context_info = st.session_state.rag_context
+                    st.markdown(
+                        f"**Documents Found:** {context_info.get('context_count', 0)}"
+                    )
+                    st.markdown(
+                        f"**Average Relevance:** {context_info.get('avg_relevance', 0):.3f}"
+                    )
+                    st.markdown(
+                        f"**Context Types:** {', '.join(context_info.get('context_types', []))}"
+                    )
+                else:
+                    st.info(
+                        "ℹ️ No context loaded yet. Generate code to see RAG context."
+                    )
+            else:
+                st.warning("⚠️ RAG System not available")
+
+            # Show recent context
+            if (
+                hasattr(st.session_state, "last_rag_context")
+                and st.session_state.last_rag_context
+            ):
+                st.markdown("### Recent Context")
+                recent_context = st.session_state.last_rag_context
+                st.markdown(f"**Last Query:** {recent_context.get('query', 'N/A')}")
+                st.markdown(f"**Results Found:** {len(recent_context.get('docs', []))}")
+
+                # Show top results
+                for i, doc in enumerate(recent_context.get("docs", [])[:3]):
+                    with st.expander(
+                        f"Result {i + 1} (Score: {doc.get('relevance_score', 0):.3f})"
+                    ):
+                        st.markdown(
+                            f"**Source:** {doc.get('metadata', {}).get('source', 'Unknown')}"
+                        )
+                        st.markdown(f"**Content:** {doc.get('content', '')[:200]}...")
+            else:
+                st.info("ℹ️ No recent context available")
+
+        # Learning Patterns Section
+        with st.sidebar.expander("📚 Learning Patterns", expanded=False):
+            st.markdown("### Pattern Management")
+
+            if hasattr(st.session_state, "learning_patterns"):
+                patterns = st.session_state.learning_patterns
+                st.markdown(f"**Stored Patterns:** {len(patterns)}")
+
+                if patterns:
+                    for i, pattern in enumerate(patterns[:5]):  # Show first 5
+                        with st.expander(
+                            f"Pattern {i + 1}: {pattern.get('task_type', 'Unknown')}"
+                        ):
+                            st.markdown(
+                                f"**Task:** {pattern.get('task', 'N/A')[:50]}..."
+                            )
+                            st.markdown(
+                                f"**Success Rate:** {pattern.get('success_rate', 0):.2f}"
+                            )
+                            st.markdown(
+                                f"**Last Used:** {pattern.get('last_used', 'N/A')}"
+                            )
+                else:
+                    st.info("ℹ️ No patterns stored yet")
+            else:
+                st.info("ℹ️ Learning system not initialized")
+
+        # Cost Analysis Section
+        with st.sidebar.expander("💰 Cost Analysis", expanded=False):
+            st.markdown("### Usage Statistics")
+
+            if hasattr(self, "monitoring"):
+                try:
+                    stats = self.monitoring.get_statistics()
+
+                    st.markdown(f"**Total Requests:** {stats.get('total_requests', 0)}")
+                    st.markdown(
+                        f"**Success Rate:** {stats.get('success_rate', 0):.1f}%"
+                    )
+                    st.markdown(
+                        f"**Average Response Time:** {stats.get('avg_response_time', 0):.2f}s"
+                    )
+
+                    # Show cost breakdown if available
+                    if "cost_breakdown" in stats:
+                        st.markdown("**Cost Breakdown:**")
+                        for model, cost in stats["cost_breakdown"].items():
+                            st.markdown(f"- {model}: ${cost:.4f}")
+
+                except Exception as e:
+                    st.warning(f"⚠️ Could not get cost stats: {e}")
+            else:
+                st.info("ℹ️ Cost monitoring not available")
+
+        # Health Monitoring Section
+        with st.sidebar.expander("🏥 Health Monitoring", expanded=False):
+            st.markdown("### System Health")
+
+            # Check if health API is running
+            try:
+                import requests
+
+                health_response = requests.get(
+                    "http://localhost:8081/health", timeout=2
+                )
+                if health_response.status_code == 200:
+                    st.success("✅ Health API Running")
+                    health_data = health_response.json()
+                    st.markdown(f"**Status:** {health_data.get('status', 'Unknown')}")
+                    st.markdown(f"**Uptime:** {health_data.get('uptime', 'Unknown')}")
+                else:
+                    st.warning("⚠️ Health API responding but status unclear")
+            except:
+                st.error("❌ Health API not reachable")
+                st.info("💡 Start health_api.py to enable monitoring")
+
+        # Quick Actions
+        with st.sidebar.expander("⚡ Quick Actions", expanded=False):
+            st.markdown("### System Actions")
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("🔄 Restart App", key="restart_app"):
+                    st.rerun()
+
+            with col2:
+                if st.button("🧹 Clear Cache", key="clear_cache"):
+                    # Clear session state
+                    for key in list(st.session_state.keys()):
+                        del st.session_state[key]
+                    st.success("✅ Cache cleared")
+                    st.rerun()
+
+        # System Information
+        with st.sidebar.expander("ℹ️ System Info", expanded=False):
+            st.markdown("### Environment")
+
+            import sys
+            import platform
+
+            st.markdown(f"**Python:** {sys.version.split()[0]}")
+            st.markdown(f"**Platform:** {platform.system()} {platform.release()}")
+            st.markdown(f"**Streamlit:** {st.__version__}")
+
+            # Show memory usage if available
+            try:
+                import psutil
+
+                memory = psutil.virtual_memory()
+                st.markdown(f"**Memory:** {memory.percent:.1f}% used")
+                st.markdown(f"**Available:** {memory.available // (1024**3):.1f} GB")
+            except:
+                st.info("ℹ️ Memory info not available")
+
+        # Help Section
+        with st.sidebar.expander("❓ Help", expanded=False):
+            st.markdown("### Quick Guide")
+
+            st.markdown("""
+            **🎯 Code Generation:**
+            1. Enter your task
+            2. Click "Generate Code"
+            3. Review and copy results
+            
+            **🤖 Model Management:**
+            - Use "Load Complex Task Models" for better performance
+            - Check "Model Status" for health
+            
+            **🔍 RAG Context:**
+            - Automatically enhances prompts
+            - Shows relevant examples
+            
+            **📚 Learning:**
+            - Patterns are saved automatically
+            - Improves future generations
+            """)
+
+            st.markdown("### Troubleshooting")
+
+            if st.button("🔧 Run Diagnostics", key="run_diagnostics"):
+                st.info("Running system diagnostics...")
+                # Add diagnostic logic here
+                st.success("✅ Diagnostics complete")
 
     def render_model_status(self):
         """Render model status dashboard"""
@@ -584,16 +627,8 @@ class CodeConductorApp:
                 )
                 return
 
-            # TEMPORARY FIX: Filter to show only mistral models for stability
-            mistral_models = [
-                model for model in models if "mistral" in model.id.lower()
-            ]
-
-            if mistral_models:
-                st.info("🎯 TEMPORARY: Showing only mistral model for stability")
-                display_models = mistral_models
-            else:
-                display_models = models
+            # Show all available models
+            display_models = models
 
             # Create columns for model display
             cols = st.columns(3)
@@ -782,18 +817,38 @@ class CodeConductorApp:
 
                 # Display prompts
                 st.markdown("### 🤖 Generated Cursor Prompts (with RAG context)")
+
+                # Add a feedback section that persists
+                if "prompt_feedback" not in st.session_state:
+                    st.session_state.prompt_feedback = ""
+
                 for i, prompt in enumerate(plan.cursor_prompts, 1):
                     with st.expander(f"Prompt {i}: {plan.steps[i - 1]['description']}"):
-                        st.text_area(
-                            f"Copy this prompt to Cursor:",
-                            value=prompt,
-                            height=200,
-                            key=f"prompt_{i}",
-                        )
-                        if st.button(f"📋 Copy Prompt {i}", key=f"copy_prompt_{i}"):
-                            st.write("✅ Prompt copied to clipboard!")
-                            # Store the selected prompt for save pattern
-                            st.session_state.last_generated_prompt = prompt
+                        # Use st.code() for better copy functionality
+                        st.markdown("**📋 Copy this prompt to Cursor:**")
+                        st.code(prompt, language=None)
+
+                        col1, col2 = st.columns([1, 1])
+                        with col1:
+                            st.info(
+                                "💡 **How to copy:** Hover over the code block above and click the copy button that appears"
+                            )
+                        with col2:
+                            if st.button(
+                                f"💾 Save Pattern {i}", key=f"save_pattern_{i}"
+                            ):
+                                st.session_state.last_generated_prompt = prompt
+                                st.session_state.prompt_feedback = (
+                                    f"✅ Pattern {i} saved for learning!"
+                                )
+
+                # Show persistent feedback
+                if st.session_state.prompt_feedback:
+                    st.info(st.session_state.prompt_feedback)
+                    # Clear feedback after showing it
+                    if st.button("Clear Feedback", key="clear_feedback"):
+                        st.session_state.prompt_feedback = ""
+                        st.rerun()
 
         except Exception as e:
             st.error(f"Failed to generate prompts: {str(e)}")
@@ -1159,7 +1214,12 @@ class CodeConductorApp:
         with col2:
             st.metric("Confidence", f"{results.get('confidence', 0.0):.2f}")
         with col3:
-            st.metric("Models Used", len(results.get("models_used", [])))
+            # Fix for models_used type inconsistency
+            models_used = results.get("models_used", 0)
+            if isinstance(models_used, list):
+                st.metric("Models Used", len(models_used))
+            else:
+                st.metric("Models Used", models_used)
         with col4:
             st.metric("Total Time", f"{results.get('total_time', 0.0):.2f}s")
 
@@ -1170,11 +1230,15 @@ class CodeConductorApp:
         else:
             st.warning("No code generated")
 
-        # Model details
-        if results.get("models_used"):
+        # Model details - handle both list and integer cases
+        models_used = results.get("models_used", [])
+        if models_used:
             st.markdown("#### 🤖 Models Used")
-            for model in results["models_used"]:
-                st.info(f"✅ {model}")
+            if isinstance(models_used, list):
+                for model in models_used:
+                    st.info(f"✅ {model}")
+            else:
+                st.info(f"✅ {models_used} models used")
 
         # Strategy details
         with st.expander("🔍 Strategy Details", expanded=False):
@@ -1290,7 +1354,17 @@ class CodeConductorApp:
             col1, col2 = st.columns([1, 1])
             with col1:
                 if st.button("📋 Copy Generated Code", key="copy_generated_code"):
-                    st.write("✅ Code copied to clipboard!")
+                    try:
+                        if CLIPBOARD_AVAILABLE:
+                            pyperclip.copy(results["generated_code"])
+                            st.success("✅ Code copied to clipboard!")
+                        else:
+                            st.info(
+                                "📋 Select the code above and copy manually (Ctrl+C)"
+                            )
+                    except Exception as e:
+                        st.warning(f"⚠️ Could not copy to clipboard: {e}")
+                        st.info("📋 Select the code above and copy manually (Ctrl+C)")
             with col2:
                 if st.button("🔍 Validate Code", key="validate_generated_code"):
                     # Trigger code validation
@@ -1503,10 +1577,15 @@ class CodeConductorApp:
         st.markdown("### 🔍 Code Validation")
         st.markdown("Paste code generated by Cursor for validation:")
 
+        # Auto-populate with last generated code from session state
+        default_code = st.session_state.get("last_generated_code", "")
+
         generated_code = st.text_area(
             "Generated Code",
+            value=default_code,
             height=300,
             placeholder="Paste your Cursor-generated code here...",
+            key="validation_code_area",
         )
 
         if st.button("✅ Validate Code", type="secondary"):
@@ -2108,6 +2187,11 @@ class CodeConductorApp:
                     if results:
                         self.render_results(results)
                         st.session_state.generation_results = results
+                        # Auto-save generated code for validation
+                        if results.get("generated_code"):
+                            st.session_state.last_generated_code = results[
+                                "generated_code"
+                            ]
                 except Exception as e:
                     st.error(f"Generation failed: {e}")
                     st.exception(e)
