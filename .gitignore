@@ -214,3 +214,30 @@ htmlcov/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Private validation files
+EMPIRICAL_VALIDATION_PLAN.md
+baseline_metrics.log
+codeconductor_metrics.log
+
+# Validation data
+validation_log.csv
+validation_logs/
+validation_metrics.csv
+
+# Vector database and backups
+vector_db/
+vector_db_backup/
+*.sqlite3
+
+# Test backup files
+*_backup.csv
+*_backup/
+
+# Runtime logs
+logs/
+*.log
+
+# Configuration files with sensitive data
+configs/*.env
+configs/*.key

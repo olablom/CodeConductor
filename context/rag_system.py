@@ -358,6 +358,105 @@ class RAGSystem:
         logger.info("Documentation context fetching not yet implemented")
         return []
 
+    def add_document(self, doc_id: str, content: str, metadata: Dict[str, Any] = None):
+        """
+        Add a document to the vector database.
+
+        Args:
+            doc_id: Unique document identifier
+            content: Document content
+            metadata: Optional metadata dictionary
+        """
+        if not self.vector_store or not RAG_AVAILABLE:
+            logger.warning("Document addition skipped - RAG not available")
+            return
+
+        try:
+            # Create document
+            doc = Document(
+                page_content=content,
+                metadata=metadata or {"id": doc_id, "type": "document"},
+            )
+
+            # Add to vector store
+            self.vector_store.add_documents([doc])
+            self.vector_store.persist()
+
+            logger.info(f"Added document '{doc_id}' to context database")
+
+        except Exception as e:
+            logger.error(f"Error adding document '{doc_id}': {e}")
+
+    def search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+        """
+        Search for relevant documents in the vector database.
+
+        Args:
+            query: Search query
+            top_k: Number of results to return
+
+        Returns:
+            List of relevant documents with metadata
+        """
+        if not self.vector_store:
+            logger.warning("Search skipped - RAG not available")
+            return []
+
+        try:
+            # Search vector store
+            results = self.vector_store.similarity_search_with_relevance_scores(
+                query, k=top_k
+            )
+
+            # Format results
+            formatted_results = []
+            for doc, score in results:
+                formatted_results.append(
+                    {
+                        "id": doc.metadata.get("id", "unknown"),
+                        "content": doc.page_content,
+                        "metadata": doc.metadata,
+                        "relevance_score": score,
+                    }
+                )
+
+            logger.info(f"Search returned {len(formatted_results)} results")
+            return formatted_results
+
+        except Exception as e:
+            logger.error(f"Error searching documents: {e}")
+            return []
+
+    def search_external(self, query: str, max_results: int = 3) -> List[str]:
+        """
+        Search external sources (Stack Overflow, etc.).
+
+        Args:
+            query: Search query
+            max_results: Maximum number of results
+
+        Returns:
+            List of external content strings
+        """
+        try:
+            return self.fetch_external_context(query, max_results=max_results)
+        except Exception as e:
+            logger.error(f"Error searching external sources: {e}")
+            return []
+
+    def get_context(self, task_description: str, k: int = 5) -> List[Dict[str, Any]]:
+        """
+        Get context for a task description (alias for retrieve_context).
+
+        Args:
+            task_description: Description of the coding task
+            k: Number of relevant documents to retrieve
+
+        Returns:
+            List of relevant documents with metadata
+        """
+        return self.retrieve_context(task_description, k)
+
     def add_pattern_to_context(self, pattern: Dict[str, Any]):
         """
         Add a successful pattern to the context database.
