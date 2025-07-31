@@ -48,18 +48,18 @@ logging.getLogger("streamlit.runtime").setLevel(logging.ERROR)
 # Add the project root to the path
 sys.path.append(str(Path(__file__).parent))
 
-from ensemble.model_manager import ModelManager
-from ensemble.query_dispatcher import QueryDispatcher
-from ensemble.consensus_calculator import ConsensusCalculator
-from ensemble.hybrid_ensemble import HybridEnsemble
-from ensemble.ensemble_engine import EnsembleEngine
-from generators.prompt_generator import PromptGenerator
-from integrations.notifications import notify_success, notify_error
-from analysis.planner_agent import PlannerAgent
-from feedback.validation_system import validate_cursor_output
-from feedback.learning_system import save_successful_pattern, LearningSystem
-from context.rag_system import rag_system
-from runners.test_runner import TestRunner, PytestRunner
+from .ensemble.model_manager import ModelManager
+from .ensemble.query_dispatcher import QueryDispatcher
+from .ensemble.consensus_calculator import ConsensusCalculator
+from .ensemble.hybrid_ensemble import HybridEnsemble
+from .ensemble.ensemble_engine import EnsembleEngine
+from .generators.prompt_generator import PromptGenerator
+from .integrations.notifications import notify_success, notify_error
+from .analysis.planner_agent import PlannerAgent
+from .feedback.validation_system import validate_cursor_output
+from .feedback.learning_system import save_successful_pattern, LearningSystem
+from .context.rag_system import rag_system
+from .runners.test_runner import TestRunner, PytestRunner
 
 # Page configuration
 st.set_page_config(

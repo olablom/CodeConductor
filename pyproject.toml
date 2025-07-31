@@ -1,0 +1,169 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codeconductor"
+version = "0.1.0"
+description = "Personal AI Development Platform with advanced ensemble consensus and RTX 5090 optimization"
+authors = [
+    { name = "Ola Blom", email = "olablom@github.com" }
+]
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+keywords = ["ai", "code-generation", "ensemble", "rtx5090", "vllm", "tauri"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Code Generators",
+]
+
+dependencies = [
+    "streamlit>=1.28.0",
+    "requests>=2.31.0",
+    "pytest>=7.4.0",
+    "aiohttp>=3.8.0",
+    "pyperclip>=1.8.0",
+    "flask>=2.3.0",
+    "prometheus_client>=0.17.0",
+    "pandas>=2.0.0",
+    "plotly>=5.17.0",
+    "numpy>=1.23.0",
+    "torch>=2.0.0",
+    "transformers>=4.30.0",
+    "accelerate>=0.20.0",
+    "sentencepiece>=0.1.99",
+    "protobuf>=3.20.0",
+    "langchain>=0.1.0",
+    "langchain-community>=0.0.10",
+    "langchain-huggingface>=0.0.5",
+    "langchain-chroma>=0.0.5",
+    "sentence-transformers>=2.2.0",
+    "chromadb>=0.4.0",
+    "gymnasium>=0.29.0",
+    "stable-baselines3>=2.0.0",
+    "win10toast>=0.9",
+    "pynvml>=11.5.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "coverage>=7.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "coverage>=7.0.0",
+    "ruff>=0.1.0",
+]
+gpu = [
+    "torch>=2.0.0",
+    "vllm[all]>=0.3.0",
+]
+full = [
+    "codeconductor[dev,gpu]"
+]
+
+[project.scripts]
+codeconductor = "codeconductor.cli:main"
+cc-app = "codeconductor.app:main"
+
+[project.urls]
+Homepage = "https://github.com/olablom/CodeConductor"
+Repository = "https://github.com/olablom/CodeConductor"
+Documentation = "https://github.com/olablom/CodeConductor#readme"
+Issues = "https://github.com/olablom/CodeConductor/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+codeconductor = ["*.md", "*.txt", "*.json", "*.yaml", "*.yml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+    "--disable-warnings",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "gpu: marks tests that require GPU",
+]
+
+[tool.coverage.run]
+source = ["src/codeconductor"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.ruff]
+target-version = "py39"
+line-length = 88
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*" = ["B011"] 

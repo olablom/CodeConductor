@@ -8,6 +8,7 @@ from .ensemble_engine import EnsembleEngine, EnsembleRequest, EnsembleResponse
 from .model_manager import ModelManager
 from .query_dispatcher import QueryDispatcher
 from .consensus_calculator import ConsensusCalculator
+from .hybrid_ensemble import HybridEnsemble
 
 __all__ = [
     "EnsembleEngine",
@@ -16,4 +17,5 @@ __all__ = [
     "ModelManager",
     "QueryDispatcher",
     "ConsensusCalculator",
+    "HybridEnsemble",
 ]
