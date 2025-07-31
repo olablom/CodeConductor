@@ -28,12 +28,13 @@ Examples:
   codeconductor dashboard    # Start the validation dashboard
   codeconductor test         # Run automated tests
   codeconductor validate     # Validate code quality
+  codeconductor vllm         # Test vLLM integration
         """
     )
     
     parser.add_argument(
         "command",
-        choices=["app", "dashboard", "test", "validate", "version"],
+        choices=["app", "dashboard", "test", "validate", "version", "vllm"],
         help="Command to execute"
     )
     
@@ -121,6 +122,46 @@ def example_function():
         
         result = validate_cursor_output(test_code)
         print(f"Validation result: {result}")
+    
+    elif args.command == "vllm":
+        print("🚀 Testing vLLM Integration...")
+        import asyncio
+        
+        async def test_vllm():
+            try:
+                from codeconductor.vllm_integration import create_vllm_engine
+                
+                print("📦 Creating vLLM engine...")
+                engine = await create_vllm_engine(
+                    model_name="microsoft/DialoGPT-medium",
+                    quantization="awq"
+                )
+                
+                print("🔧 Engine info:")
+                info = engine.get_model_info()
+                for key, value in info.items():
+                    print(f"  {key}: {value}")
+                
+                print("\n🧪 Testing code generation...")
+                prompt = "Write a Python function to calculate the factorial of a number:"
+                result = await engine.generate_code(prompt)
+                
+                print(f"Generated code:\n{result}")
+                
+                print("\n🎯 Testing consensus generation...")
+                consensus_result = await engine.generate_with_consensus(prompt)
+                print(f"Consensus metrics: {consensus_result['consensus_metrics']}")
+                
+                await engine.cleanup()
+                print("✅ vLLM test completed successfully!")
+                
+            except ImportError as e:
+                print(f"❌ vLLM not available: {e}")
+                print("💡 Make sure vLLM is installed in WSL2 environment")
+            except Exception as e:
+                print(f"❌ vLLM test failed: {e}")
+        
+        asyncio.run(test_vllm())
     
     else:
         parser.print_help()

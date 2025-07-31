@@ -13,6 +13,9 @@ from .app import CodeConductorApp
 from .dashboard import ValidationDashboard
 from .logger import ValidationLogger
 
+# vLLM Integration
+from .vllm_integration import VLLMEngine, create_vllm_engine
+
 # Ensemble imports
 from .ensemble import (
     ModelManager,
@@ -67,8 +70,12 @@ from .runners import TestRunner
 __all__ = [
     # Core
     "CodeConductorApp",
-    "ValidationDashboard", 
+    "ValidationDashboard",
     "ValidationLogger",
+    
+    # vLLM Integration
+    "VLLMEngine",
+    "create_vllm_engine",
     
     # Ensemble
     "ModelManager",
