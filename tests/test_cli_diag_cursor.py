@@ -8,7 +8,9 @@ def run_cli_in_cwd(argv, cwd: Path):
     env = os.environ.copy()
     env["PYTHONWARNINGS"] = "ignore"
     repo_root = Path(__file__).resolve().parents[1]
-    env["PYTHONPATH"] = str((repo_root / "src").resolve()) + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = (
+        str((repo_root / "src").resolve()) + os.pathsep + env.get("PYTHONPATH", "")
+    )
     cli_path = (repo_root / "src" / "codeconductor" / "cli.py").resolve()
     code = (
         "import runpy, sys;"
@@ -65,5 +67,3 @@ def test_diag_cursor_no_port(tmp_path: Path):
     code, out = run_cli_in_cwd(["diag", "cursor"], project)
     assert code == 0
     assert "Cursor API    : NOT LISTENING" in out
-
-

@@ -1,5 +1,11 @@
 # 📊 **VALIDATION DASHBOARD - Real-Time Monitoring System**
 
+import os
+import re
+import platform
+import subprocess
+from pathlib import Path
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -16,6 +22,9 @@ class ValidationDashboard:
 
     def render_dashboard(self):
         """Main dashboard rendering"""
+        # Sidebar preflight first
+        self.render_preflight_sidebar()
+
         st.title("🎯 CodeConductor Validation Dashboard")
         st.markdown("**Real-time monitoring of empirical validation progress**")
 
@@ -87,6 +96,106 @@ class ValidationDashboard:
         st.markdown("---")
         st.subheader("📋 Raw Validation Data")
         st.dataframe(df, use_container_width=True)
+
+    def render_preflight_sidebar(self):
+        """Render a small preflight panel in the sidebar for Cursor/Ollama status."""
+        with st.sidebar:
+            st.subheader("🔎 Preflight")
+
+            cursor_mode = os.environ.get("CURSOR_MODE", "(not set)")
+            cursor_api_base = os.environ.get("CURSOR_API_BASE", "(not set)")
+            st.caption("Environment")
+            st.code(f"CURSOR_MODE={cursor_mode}\nCURSOR_API_BASE={cursor_api_base}")
+
+            latest_path = Path("artifacts/diagnostics/diagnose_latest.txt")
+            ollama_up = None
+            cursor_api_up = None
+            detected_port = None
+            if latest_path.exists():
+                try:
+                    text = latest_path.read_text(encoding="utf-8", errors="ignore")
+                    ollama_up = "Port 11434 -> TcpTestSucceeded=True" in text
+                    m = re.search(r"Detected Cursor API port:\s*(\d+)", text)
+                    if m:
+                        detected_port = m.group(1)
+                    # Treat any non-Ollama health hit as up
+                    for line in text.splitlines():
+                        if ("GET /api/health" in line or "GET /health" in line) and "11434" not in line:
+                            cursor_api_up = True
+                            break
+                    if cursor_api_up is None:
+                        cursor_api_up = False
+                except Exception as e:
+                    st.warning(f"Could not parse diagnostics: {e}")
+            else:
+                st.info("diagnose_latest.txt not found. Run the diagnostics script.")
+
+            # Status badges
+            col1, col2 = st.columns(2)
+            with col1:
+                if ollama_up is True:
+                    st.success("Ollama 11434: OK")
+                elif ollama_up is False:
+                    st.error("Ollama 11434: DOWN")
+                else:
+                    st.warning("Ollama 11434: N/A")
+            with col2:
+                if cursor_api_up is True:
+                    st.success("Cursor API: OK")
+                elif cursor_api_up is False:
+                    st.error("Cursor API: NOT LISTENING")
+                else:
+                    st.warning("Cursor API: N/A")
+
+            if detected_port:
+                st.write(f"Detected Cursor API port: {detected_port}")
+                st.code(
+                    """
+[Environment]::SetEnvironmentVariable('CURSOR_API_BASE','http://127.0.0.1:{port}','User')
+[Environment]::SetEnvironmentVariable('CURSOR_MODE','auto','User')
+                    """.strip().format(port=detected_port)
+                )
+
+            # Actions
+            st.markdown("---")
+            col_a, col_b = st.columns(2)
+            with col_a:
+                if st.button("Open diagnostics folder"):
+                    diag_dir = str((latest_path.parent if latest_path.exists() else Path("artifacts/diagnostics")).resolve())
+                    try:
+                        if platform.system() == "Windows":
+                            os.startfile(diag_dir)  # type: ignore[attr-defined]
+                        elif platform.system() == "Darwin":
+                            subprocess.Popen(["open", diag_dir])
+                        else:
+                            subprocess.Popen(["xdg-open", diag_dir])
+                    except Exception as e:
+                        st.warning(f"Could not open folder: {e}")
+            with col_b:
+                if st.button("Run diagnostics now"):
+                    try:
+                        if platform.system() == "Windows":
+                            cmd = [
+                                "powershell",
+                                "-NoProfile",
+                                "-ExecutionPolicy",
+                                "Bypass",
+                                "-File",
+                                "scripts/diagnose_cursor.ps1",
+                                "-Ports",
+                                "11434",
+                                "3000",
+                                "5123",
+                                "5173",
+                                "8000",
+                            ]
+                            subprocess.run(cmd, check=False)
+                            st.success("Diagnostics executed. Reloading...")
+                            st.experimental_rerun()
+                        else:
+                            st.info("Diagnostics script is PowerShell-based; run it on Windows.")
+                    except Exception as e:
+                        st.error(f"Diagnostics failed: {e}")
 
     def render_time_comparison_chart(self, df: pd.DataFrame):
         """Time comparison chart - Simplified and professional"""
