@@ -7,13 +7,25 @@ Orchestrates multiple LLMs for consensus-based code generation with RLHF integra
 import asyncio
 import logging
 import numpy as np
+import os
+import json
+from datetime import datetime
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from pathlib import Path
 
 from .model_manager import ModelManager
+from .model_selector import ModelSelector, SelectionInput
 from .query_dispatcher import QueryDispatcher
 from .consensus_calculator import ConsensusCalculator, ConsensusResult
+from .code_reviewer import CodeReviewer
+from codeconductor.feedback.rlhf_agent import RLHFAgent
+from codeconductor.context.rag_system import RAGSystem
+from codeconductor.monitoring.memory_watchdog import (
+    start_memory_watchdog,
+    stop_memory_watchdog,
+    get_memory_watchdog,
+)
 
 # Try to import RLHF components
 try:
@@ -80,6 +92,19 @@ class EnsembleEngine:
     ):
         self.model_manager = ModelManager()
         self.consensus_calculator = ConsensusCalculator()
+        self.model_selector = ModelSelector()
+        # LRU cache with TTL (env-configurable)
+        try:
+            from codeconductor.utils.lru_cache import LRUCacheTTL
+
+            cache_size = int(os.getenv("CACHE_SIZE", "100"))
+            cache_ttl = int(os.getenv("CACHE_TTL_SECONDS", "1800"))
+            cache_ns = os.getenv("CACHE_NAMESPACE", "default")
+            self.response_cache = LRUCacheTTL(
+                max_entries=cache_size, ttl_seconds=cache_ttl, namespace=cache_ns
+            )
+        except Exception:  # pragma: no cover
+            self.response_cache = None
         self.min_confidence = min_confidence
         self.use_rlhf = use_rlhf and RLHF_AVAILABLE
         self.use_rag = use_rag and RAG_AVAILABLE
@@ -87,6 +112,11 @@ class EnsembleEngine:
         self.rlhf_agent = None
         self.rag_system = None
         self.code_reviewer = None
+        # Telemetry snapshots
+        self.last_selector_decision: Dict[str, Any] = {}
+        self.last_cache_hit: bool = False
+        self.last_artifacts_dir: Optional[str] = None
+        self.last_export_path: Optional[str] = None
 
         if self.use_rlhf:
             self._initialize_rlhf()
@@ -96,6 +126,125 @@ class EnsembleEngine:
 
         if self.use_code_reviewer:
             self._initialize_code_reviewer()
+
+    def _get_selector_policy(self) -> str:
+        return (os.getenv("SELECTOR_POLICY", "latency") or "latency").lower()
+
+    def _build_cache_key(
+        self,
+        *,
+        prompt: str,
+        persona: str,
+        policy: str,
+        model: str,
+        sampling: dict,
+    ) -> str:
+        if not self.response_cache:
+            return ""
+
+    def _save_run_artifacts(
+        self,
+        prompt: str,
+        policy: str,
+        selector: Dict[str, Any],
+        consensus_meta: Dict[str, Any],
+        consensus_obj: Optional[ConsensusResult] = None,
+    ) -> None:
+        base = os.getenv("ARTIFACTS_DIR", "artifacts")
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        run_dir = os.path.join(base, "runs", ts)
+        os.makedirs(run_dir, exist_ok=True)
+        self.last_artifacts_dir = run_dir
+
+        def _write(name: str, obj: Any) -> None:
+            try:
+                with open(os.path.join(run_dir, name), "w", encoding="utf-8") as f:
+                    json.dump(obj, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+
+        # run_config
+        run_config = {
+            "policy": policy,
+            "env": {
+                "SELECTOR_POLICY": os.getenv("SELECTOR_POLICY", ""),
+                "CACHE_SIZE": os.getenv("CACHE_SIZE", ""),
+                "CACHE_TTL_SECONDS": os.getenv("CACHE_TTL_SECONDS", ""),
+                "CACHE_NAMESPACE": os.getenv("CACHE_NAMESPACE", ""),
+            },
+            "prompt_len": len(prompt or ""),
+        }
+        _write("run_config.json", run_config)
+
+        # selector decision
+        _write("selector_decision.json", selector)
+
+        # consensus
+        consensus_dump = {
+            "method": consensus_meta.get("method"),
+            "winner": consensus_meta.get("winner"),
+            "cached": consensus_meta.get("cached", False),
+        }
+        if consensus_obj is not None:
+            consensus_dump.update(
+                {
+                    "confidence": consensus_obj.confidence,
+                    "code_quality": consensus_obj.code_quality_score,
+                    "syntax_valid": consensus_obj.syntax_valid,
+                }
+            )
+        _write("consensus.json", consensus_dump)
+
+    def _maybe_attach_export(self, policy: str) -> None:
+        try:
+            if os.getenv("ATTACH_EXPORT", "0") != "1":
+                return
+            # Lazy import to avoid hard dependency during tests where package path differs
+            from codeconductor.utils.exporter import export_latest_run, verify_manifest
+
+            zip_path, manifest = export_latest_run(
+                artifacts_dir=os.getenv("ARTIFACTS_DIR", "artifacts"),
+                include_raw=os.getenv("EXPORT_INCLUDE_RAW", "0") == "1",
+                redact_env=os.getenv("EXPORT_REDACT_ENV", "1") != "0",
+                size_limit_mb=int(os.getenv("EXPORT_SIZE_LIMIT_MB", "50")),
+                retention=int(os.getenv("EXPORT_RETENTION", "20")),
+                policy=policy,
+                selected_model=self.last_selector_decision.get("chosen"),
+                cache_hit=self.last_cache_hit,
+                app_version=os.getenv("APP_VERSION", None),
+                git_commit=os.getenv("GIT_COMMIT", None),
+            )
+            self.last_export_path = zip_path
+            ver = verify_manifest(zip_path)
+            size_mb = 0.0
+            try:
+                size_mb = round(os.path.getsize(zip_path) / (1024 * 1024), 2)
+            except Exception:
+                pass
+            logger.info(
+                json.dumps(
+                    {
+                        "event": "export_bundle",
+                        "path": zip_path,
+                        "size_mb": size_mb,
+                        "policy": policy,
+                        "hit": self.last_cache_hit,
+                        "verified": bool(ver.get("verified")),
+                    }
+                )
+            )
+        except Exception as e:
+            logger.warning(f"Export attach failed: {e}")
+        try:
+            return self.response_cache.make_key(
+                prompt=prompt,
+                persona=persona,
+                policy=policy,
+                model=model,
+                params=sampling,
+            )
+        except Exception:
+            return ""
 
     def _initialize_rlhf(self):
         """Initialize RLHF agent if available."""
@@ -274,41 +423,72 @@ class EnsembleEngine:
         return f"{code}\n\n{fix_comments}"
 
     async def initialize(self) -> bool:
-        """Initialize the ensemble engine and discover models."""
-        logger.info("Initializing Ensemble Engine...")
-
+        """Initialize the ensemble engine and all components."""
         try:
-            # Discover available models
-            models = await self.model_manager.list_models()
+            logger.info("🚀 Initializing Ensemble Engine...")
 
-            if not models:
-                logger.error("No models discovered")
-                return False
+            # Initialize model manager
+            self.model_manager = ModelManager()
+            logger.info("✅ Model manager initialized")
 
-            # Perform health checks on discovered models
-            health_tasks = []
-            for model_info in models:
-                task = self.model_manager.check_health(model_info)
-                health_tasks.append(task)
+            # Initialize consensus calculator
+            self.consensus_calculator = ConsensusCalculator()
+            logger.info("✅ Consensus calculator initialized")
 
-            health_results = await asyncio.gather(*health_tasks, return_exceptions=True)
+            # Initialize query dispatcher
+            self.query_dispatcher = QueryDispatcher()
+            logger.info("✅ Query dispatcher initialized")
 
-            online_models = 0
-            for model_info, result in zip(models, health_results):
-                if isinstance(result, bool) and result:
-                    online_models += 1
-                    logger.info(f"Model {model_info.name} is online")
-                else:
-                    logger.warning(f"Model {model_info.name} failed health check")
+            # Initialize RLHF agent if enabled
+            if self.use_rlhf:
+                self._initialize_rlhf()
 
-            logger.info(
-                f"Ensemble Engine initialized with {online_models} online models"
-            )
-            return online_models >= 2
+            # Initialize RAG system if enabled
+            if self.use_rag:
+                self._initialize_rag()
+
+            # Initialize code reviewer if enabled
+            if self.use_code_reviewer:
+                self._initialize_code_reviewer()
+
+            # Start memory watchdog
+            try:
+                await start_memory_watchdog(self.model_manager, check_interval=30.0)
+                logger.info("✅ Memory watchdog started")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to start memory watchdog: {e}")
+
+            logger.info("✅ Ensemble Engine initialization completed")
+            return True
 
         except Exception as e:
-            logger.error(f"Failed to initialize Ensemble Engine: {e}")
+            logger.error(f"❌ Ensemble Engine initialization failed: {e}")
             return False
+
+    async def cleanup(self):
+        """Clean up resources and stop background tasks."""
+        try:
+            logger.info("🧹 Cleaning up Ensemble Engine...")
+
+            # Stop memory watchdog
+            try:
+                await stop_memory_watchdog()
+                logger.info("✅ Memory watchdog stopped")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to stop memory watchdog: {e}")
+
+            # Emergency unload all models
+            try:
+                if hasattr(self, "model_manager") and self.model_manager:
+                    unloaded_count = await self.model_manager.emergency_unload_all()
+                    logger.info(f"✅ Emergency unloaded {unloaded_count} models")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to unload models: {e}")
+
+            logger.info("✅ Ensemble Engine cleanup completed")
+
+        except Exception as e:
+            logger.error(f"❌ Ensemble Engine cleanup failed: {e}")
 
     async def process_request(
         self,
@@ -370,31 +550,123 @@ class EnsembleEngine:
 
             # Complexity-based loading for RTX 5090
             from .model_manager import COMPLEXITY_BASED_LOADING
-            
+
             # Determine loading config based on complexity
             loading_config = "medium_load"  # Default
-            for (min_complexity, max_complexity), config in COMPLEXITY_BASED_LOADING.items():
+            for (
+                min_complexity,
+                max_complexity,
+            ), config in COMPLEXITY_BASED_LOADING.items():
                 if min_complexity <= task_complexity < max_complexity:
                     loading_config = config
                     break
-            
-            logger.info(f"🎯 Using {loading_config} config for complexity {task_complexity:.2f}")
-            
-            # Use memory-safe loading for RTX 5090
-            loaded_model_ids = await self.model_manager.ensure_models_loaded_with_memory_check(loading_config)
-            
-            if len(loaded_model_ids) >= 2:
-                selected_model_ids = loaded_model_ids[:3]  # Use up to 3 loaded models
-                logger.info(f"✅ Using {len(selected_model_ids)} memory-safe loaded models: {selected_model_ids}")
+
+            logger.info(
+                f"🎯 Using {loading_config} config for complexity {task_complexity:.2f}"
+            )
+
+            # Use memory-safe loading for RTX 5090 and ensure 3-5 models when possible
+            loaded_model_ids = (
+                await self.model_manager.ensure_models_loaded_with_memory_check(
+                    loading_config
+                )
+            )
+
+            # Prefer 3 models (up to 5 if aggressive load), else fallback to available
+            if len(loaded_model_ids) >= 3:
+                max_models = 5 if loading_config == "aggressive_load" else 3
+                selected_model_ids = loaded_model_ids[:max_models]
+                logger.info(
+                    f"✅ Using {len(selected_model_ids)} memory-safe loaded models (voting): {selected_model_ids}"
+                )
             else:
                 # Fallback to available models
-                selected_model_ids = available_model_ids[: min(3, len(available_model_ids))]
+                fallback_k = min(3, len(available_model_ids))
+                selected_model_ids = available_model_ids[:fallback_k]
                 logger.info(f"⚠️ Using fallback models: {selected_model_ids}")
 
-            # Get model objects
-            models = [
-                model for model in available_models if model.id in selected_model_ids
+            # Get model objects from model manager
+            all_models = await self.model_manager.list_models()
+            models = [model for model in all_models if model.id in selected_model_ids]
+
+            # Model selection policy ordering + sampling
+            policy = self._get_selector_policy()
+            prompt_text = (
+                augmented_task
+                if isinstance(augmented_task, str)
+                else request.task_description
+            )
+            prompt_len = len(prompt_text or "")
+            selection = self.model_selector.select(
+                SelectionInput(models=models, prompt_len=prompt_len, policy=policy)
+            )
+            # Expose selector decision for UI/telemetry
+            try:
+                self.last_selector_decision = {
+                    "policy": policy,
+                    "scores": selection.scores,
+                    "chosen": selection.selected_model,
+                    "fallbacks": selection.fallbacks,
+                    "sampling": selection.sampling,
+                }
+            except Exception:
+                self.last_selector_decision = {"policy": policy}
+            # Reorder models by selector decision (primary first)
+            id_to_model = {m.id: m for m in models}
+            ordered_ids = [
+                mid
+                for mid, _ in sorted(
+                    selection.scores.items(), key=lambda kv: kv[1], reverse=True
+                )
             ]
+            models = [id_to_model[mid] for mid in ordered_ids if mid in id_to_model]
+
+            # Cache short-circuit (best-effort)
+            cached_code = None
+            if self.response_cache and models:
+                persona = (
+                    (request.context or {}).get("persona", "default")
+                    if hasattr(request, "context")
+                    else "default"
+                )
+                primary_id = models[0].id
+                cache_key = self._build_cache_key(
+                    prompt=prompt_text or "",
+                    persona=persona,
+                    policy=policy,
+                    model=primary_id,
+                    sampling=selection.sampling,
+                )
+                if cache_key:
+                    cached_code = self.response_cache.get(cache_key)
+            if cached_code:
+                # Build a minimal response using cached consensus
+                logger.info("🔥 Cache hit – skipping inference")
+                self.last_cache_hit = True
+                # Save minimal artifacts for cache hit
+                try:
+                    self._save_run_artifacts(
+                        prompt_text or "",
+                        policy,
+                        self.last_selector_decision,
+                        {
+                            "method": "codebleu+heuristic",
+                            "winner": {"model": models[0].id, "score": 1.0},
+                            "cached": True,
+                        },
+                    )
+                except Exception:
+                    pass
+                return EnsembleResponse(
+                    consensus={"content": cached_code},
+                    confidence=1.0,
+                    disagreements=[],
+                    model_responses=[],
+                    execution_time=0.0,
+                    selected_model=models[0].id if models else None,
+                )
+            else:
+                self.last_cache_hit = False
 
             # Dispatch queries in parallel with timeout
             async with QueryDispatcher(timeout=request.timeout) as dispatcher:
@@ -409,10 +681,55 @@ class EnsembleEngine:
             # Convert raw results to format expected by consensus calculator
             formatted_results = self._format_results_for_consensus(raw_results)
 
-            # Calculate consensus
+            # Calculate consensus (majority/best-score handled inside calculator)
             consensus_result = self.consensus_calculator.calculate_consensus(
                 formatted_results
             )
+
+            # Save successful result to cache (best-effort)
+            try:
+                if (
+                    self.response_cache
+                    and models
+                    and consensus_result
+                    and consensus_result.consensus
+                ):
+                    persona = (
+                        (request.context or {}).get("persona", "default")
+                        if hasattr(request, "context")
+                        else "default"
+                    )
+                    primary_id = models[0].id
+                    cache_key = self._build_cache_key(
+                        prompt=prompt_text or "",
+                        persona=persona,
+                        policy=policy,
+                        model=primary_id,
+                        sampling=selection.sampling,
+                    )
+                    if cache_key:
+                        self.response_cache.set(cache_key, consensus_result.consensus)
+            except Exception:
+                pass
+
+            # Save artifacts for this run
+            try:
+                self._save_run_artifacts(
+                    prompt_text or "",
+                    policy,
+                    self.last_selector_decision,
+                    {
+                        "method": "codebleu+heuristic",
+                        "winner": {
+                            "model": models[0].id if models else None,
+                            "score": consensus_result.confidence,
+                        },
+                        "cached": False,
+                    },
+                    consensus_result,
+                )
+            except Exception:
+                pass
 
             # Extract generated code from consensus
             generated_code = consensus_result.consensus
@@ -424,54 +741,41 @@ class EnsembleEngine:
                     review_results = self.code_reviewer.review_code(
                         request.task_description, generated_code, request.test_results
                     )
-
-                    # Apply suggested fixes if any
-                    if review_results.get("suggested_fixes"):
-                        logger.info(
-                            f"🔧 Applying {len(review_results['suggested_fixes'])} suggested fixes"
-                        )
-                        improved_code = self.apply_fixes(
-                            generated_code, review_results["suggested_fixes"]
-                        )
-                        # consensus_result.consensus is a string, not a dict
-                        consensus_result.consensus = improved_code
-                        logger.info("✅ Code review completed and fixes applied")
-                    else:
-                        logger.info("✅ Code review completed - no fixes needed")
-
+                    logger.info(f"🔍 Code review completed: {review_results}")
                 except Exception as e:
                     logger.warning(f"⚠️ Code review failed: {e}")
 
-            # Update model statistics
-            for result in formatted_results:
-                if result["success"]:
-                    self.model_manager.update_model_stats(
-                        result["model"], True, result["response_time"]
-                    )
+            # Post-request memory cleanup
+            try:
+                logger.info("🧹 Performing post-request memory cleanup...")
+                cleanup_performed = await self.model_manager.check_and_cleanup_memory(
+                    loading_config
+                )
+                if cleanup_performed:
+                    logger.info("🧹 Memory cleanup completed")
                 else:
-                    self.model_manager.update_model_stats(
-                        result["model"], False, result["response_time"]
-                    )
+                    logger.info("🧹 No memory cleanup needed")
+            except Exception as e:
+                logger.warning(f"⚠️ Post-request memory cleanup failed: {e}")
 
+            # Calculate execution time
             execution_time = asyncio.get_event_loop().time() - start_time
 
+            # Create response
             response = EnsembleResponse(
-                consensus={"content": consensus_result.consensus},
+                consensus={
+                    "code": generated_code,
+                    "explanation": consensus_result.explanation,
+                    "confidence": consensus_result.confidence,
+                    "model_agreement": consensus_result.model_agreement,
+                },
                 confidence=consensus_result.confidence,
-                disagreements=[],  # consensus_result doesn't have disagreements
+                disagreements=consensus_result.disagreements,
                 model_responses=formatted_results,
                 execution_time=execution_time,
-                rlhf_action=rlhf_action,
-                rlhf_action_description=rlhf_action_description,
-                selected_model=selected_model_ids[0]
-                if selected_model_ids
-                else None,  # Assuming the first selected model is the primary one
             )
 
-            logger.info(
-                f"Ensemble request completed in {execution_time:.2f}s with confidence {consensus_result.confidence:.2f}"
-            )
-
+            logger.info(f"✅ Ensemble request completed in {execution_time:.2f}s")
             return response
 
         except Exception as e:

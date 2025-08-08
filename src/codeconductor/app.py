@@ -35,6 +35,7 @@ import uuid
 import inspect
 import importlib
 import logging
+import webbrowser
 
 # Configure logging to suppress Streamlit warnings
 logging.getLogger().setLevel(logging.ERROR)
@@ -409,11 +410,48 @@ class CodeConductorApp:
                                         self.model_manager.emergency_unload_all()
                                     )
                                 st.success(f"🚨 Unloaded {unloaded_count} models")
-                                
+
                                 # Auto-refresh GPU memory display
                                 st.rerun()
                             except Exception as e:
                                 st.error(f"❌ Emergency unload failed: {e}")
+
+                        # Smart memory cleanup
+                        if st.button("🧹 Smart Memory Cleanup", key="smart_cleanup"):
+                            try:
+                                with st.spinner("Performing smart memory cleanup..."):
+                                    unloaded_count = asyncio.run(
+                                        self.model_manager.smart_memory_cleanup(60.0)
+                                    )
+                                st.success(
+                                    f"🧹 Smart cleanup completed: unloaded {unloaded_count} models"
+                                )
+
+                                # Auto-refresh GPU memory display
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"❌ Smart cleanup failed: {e}")
+
+                        # Check and cleanup memory
+                        if st.button("🔍 Check & Cleanup Memory", key="check_cleanup"):
+                            try:
+                                with st.spinner(
+                                    "Checking memory and performing cleanup..."
+                                ):
+                                    cleanup_performed = asyncio.run(
+                                        self.model_manager.check_and_cleanup_memory(
+                                            "medium_load"
+                                        )
+                                    )
+                                if cleanup_performed:
+                                    st.success("🧹 Memory cleanup performed")
+                                else:
+                                    st.info("✅ No memory cleanup needed")
+
+                                # Auto-refresh GPU memory display
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"❌ Memory check failed: {e}")
 
                         # Test GPU methods
                         if st.button("🧪 Test GPU Methods", key="test_gpu"):
@@ -435,6 +473,38 @@ class CodeConductorApp:
                                 st.json(results)
                             except Exception as e:
                                 st.error(f"❌ GPU test failed: {e}")
+
+                        # Memory Watchdog Status
+                        st.markdown("### 🐕 Memory Watchdog")
+                        try:
+                            from monitoring.memory_watchdog import get_memory_watchdog
+
+                            watchdog = get_memory_watchdog()
+
+                            if watchdog:
+                                stats = watchdog.get_stats()
+                                if stats["is_running"]:
+                                    st.success("✅ Memory watchdog is running")
+                                    st.markdown(f"**Checks:** {stats['total_checks']}")
+                                    st.markdown(
+                                        f"**Cleanup triggers:** {stats['cleanup_triggers']}"
+                                    )
+                                    st.markdown(
+                                        f"**Emergency triggers:** {stats['emergency_triggers']}"
+                                    )
+                                    if stats["last_check"]:
+                                        st.markdown(
+                                            f"**Last check:** {stats['last_check']}"
+                                        )
+                                    st.markdown(
+                                        f"**Current VRAM:** {stats['last_vram_percent']:.1f}%"
+                                    )
+                                else:
+                                    st.warning("⚠️ Memory watchdog is not running")
+                            else:
+                                st.info("ℹ️ Memory watchdog not initialized")
+                        except Exception as e:
+                            st.warning(f"⚠️ Could not get watchdog status: {e}")
                     else:
                         st.warning("⚠️ Could not get GPU memory info")
                 except Exception as e:
@@ -518,6 +588,300 @@ class CodeConductorApp:
 
                 except Exception as e:
                     st.error(f"❌ Error getting model status: {e}")
+
+        # Selector & Cache Telemetry
+        with st.sidebar.expander("🧭 Selector & Cache", expanded=False):
+            sel_policy = os.getenv("SELECTOR_POLICY", "latency")
+            st.markdown(f"**Policy:** `{sel_policy}`")
+            if self.ensemble_engine is not None:
+                dec = getattr(self.ensemble_engine, "last_selector_decision", {}) or {}
+                chosen = dec.get("chosen", "-")
+                sampling = dec.get("sampling", {})
+                st.markdown(f"**Chosen model:** `{chosen}`")
+                st.markdown(
+                    f"**Sampling:** temp={sampling.get('temperature', '-')}, top_p={sampling.get('top_p', '-')}"
+                )
+                scores = dec.get("scores", {})
+                if scores:
+                    st.markdown("**Candidates:**")
+                    st.dataframe(
+                        {
+                            "model": list(scores.keys()),
+                            "score": [round(v, 3) for v in scores.values()],
+                        }
+                    )
+                cache_obj = getattr(self.ensemble_engine, "response_cache", None)
+                if cache_obj is not None:
+                    st.markdown(
+                        f"**Cache:** hits={cache_obj.stats.hits}, misses={cache_obj.stats.misses}, evictions={cache_obj.stats.evictions}"
+                    )
+                    total = cache_obj.stats.hits + cache_obj.stats.misses
+                    hr = (cache_obj.stats.hits / total * 100.0) if total else 0.0
+                    st.markdown(
+                        f"**Hit-rate:** {hr:.1f}%  |  ns=`{cache_obj.namespace}`  TTL={cache_obj.ttl_seconds}s"
+                    )
+                    last_hit = getattr(self.ensemble_engine, "last_cache_hit", False)
+                    st.markdown(
+                        "**Last request:** " + ("✅ HIT" if last_hit else "MISS")
+                    )
+
+            st.markdown("---")
+            st.markdown("### Export bundle")
+            include_raw = st.toggle(
+                "Include raw outputs",
+                value=False,
+                help="Include raw text/log files in the bundle",
+            )
+            redact_env = st.toggle(
+                "Redact env",
+                value=True,
+                help="Redact sensitive environment values and paths",
+            )
+            size_limit = st.number_input(
+                "Size limit (MB)", min_value=5, max_value=500, value=50, step=5
+            )
+            retention = st.number_input(
+                "Retention (zips)", min_value=1, max_value=200, value=20, step=1
+            )
+
+            col_a, col_b, col_c = st.columns([1, 1, 1])
+            with col_a:
+                if st.button("📦 Export bundle", use_container_width=True):
+                    try:
+                        from codeconductor.utils.exporter import (
+                            export_latest_run,
+                            verify_manifest,
+                        )
+
+                        zip_path, manifest = export_latest_run(
+                            artifacts_dir=os.getenv("ARTIFACTS_DIR", "artifacts"),
+                            include_raw=include_raw,
+                            redact_env=redact_env,
+                            size_limit_mb=int(size_limit),
+                            retention=int(retention),
+                            policy=os.getenv("SELECTOR_POLICY", "latency"),
+                            selected_model=(
+                                getattr(
+                                    self.ensemble_engine, "last_selector_decision", {}
+                                )
+                                or {}
+                            ).get("chosen"),
+                            cache_hit=getattr(
+                                self.ensemble_engine, "last_cache_hit", False
+                            ),
+                            app_version=os.getenv("APP_VERSION"),
+                            git_commit=os.getenv("GIT_COMMIT"),
+                        )
+                        ver = verify_manifest(zip_path)
+                        ok = bool(ver.get("verified"))
+                        size_mb = 0.0
+                        try:
+                            size_mb = round(
+                                os.path.getsize(zip_path) / (1024 * 1024), 2
+                            )
+                        except Exception:
+                            pass
+                        st.success(
+                            f"Exported: {zip_path} ({size_mb} MB) — Verified {'✓' if ok else '✗'}"
+                        )
+                        if (
+                            hasattr(self.ensemble_engine, "last_artifacts_dir")
+                            and self.ensemble_engine.last_artifacts_dir
+                        ):
+                            st.caption(
+                                f"Run dir: {self.ensemble_engine.last_artifacts_dir}"
+                            )
+                    except Exception as e:
+                        st.error(f"Export failed: {e}")
+
+            with col_b:
+                if st.button("📂 Open run folder", use_container_width=True):
+                    try:
+                        run_dir = getattr(
+                            self.ensemble_engine, "last_artifacts_dir", None
+                        )
+                        if run_dir:
+                            os.startfile(run_dir)
+                        else:
+                            st.info("No run folder yet")
+                    except Exception as e:
+                        st.error(f"Open failed: {e}")
+
+            with col_c:
+                if st.button("📋 Copy zip path", use_container_width=True):
+                    try:
+                        path = getattr(self.ensemble_engine, "last_export_path", None)
+                        if path:
+                            st.code(path)
+                            if CLIPBOARD_AVAILABLE:
+                                pyperclip.copy(path)
+                        else:
+                            st.info("No export yet")
+                    except Exception as e:
+                        st.error(f"Copy failed: {e}")
+
+            # Row 2: Send to support & retention tools
+            st.markdown("")
+            col_s1, col_s2, col_s3 = st.columns([1, 1, 1])
+            with col_s1:
+                public_safe = st.toggle(
+                    "Generate public-safe bundle",
+                    value=False,
+                    help="Force minimal export: no raw outputs, extra redaction",
+                )
+            with col_s2:
+                if st.button("✉️ Send to support", use_container_width=True):
+                    try:
+                        # Ensure we have an export
+                        from codeconductor.utils.exporter import (
+                            export_latest_run,
+                            verify_manifest,
+                        )
+
+                        if public_safe or not getattr(
+                            self.ensemble_engine, "last_export_path", None
+                        ):
+                            zip_path, _ = export_latest_run(
+                                artifacts_dir=os.getenv("ARTIFACTS_DIR", "artifacts"),
+                                include_raw=False,
+                                redact_env=True,
+                                size_limit_mb=int(size_limit),
+                                retention=int(retention),
+                                policy=os.getenv("SELECTOR_POLICY", "latency"),
+                                selected_model=(
+                                    getattr(
+                                        self.ensemble_engine,
+                                        "last_selector_decision",
+                                        {},
+                                    )
+                                    or {}
+                                ).get("chosen"),
+                                cache_hit=getattr(
+                                    self.ensemble_engine, "last_cache_hit", False
+                                ),
+                                app_version=os.getenv("APP_VERSION"),
+                                git_commit=os.getenv("GIT_COMMIT"),
+                            )
+                            self.ensemble_engine.last_export_path = zip_path
+
+                        zip_path = getattr(
+                            self.ensemble_engine, "last_export_path", None
+                        )
+                        if not zip_path:
+                            st.info("Create an export first")
+                        else:
+                            ver = verify_manifest(zip_path)
+                            if not bool(ver.get("verified")):
+                                st.warning("Bundle not verified — please re-export")
+                            else:
+                                # Clipboard
+                                try:
+                                    if CLIPBOARD_AVAILABLE:
+                                        pyperclip.copy(zip_path)
+                                except Exception:
+                                    pass
+
+                                # Prepare mailto
+                                hitmiss = (
+                                    "HIT"
+                                    if getattr(
+                                        self.ensemble_engine, "last_cache_hit", False
+                                    )
+                                    else "MISS"
+                                )
+                                policy = os.getenv("SELECTOR_POLICY", "latency")
+                                chosen = (
+                                    getattr(
+                                        self.ensemble_engine,
+                                        "last_selector_decision",
+                                        {},
+                                    )
+                                    or {}
+                                ).get("chosen", "-")
+                                # Try to extract ts from filename
+                                ts = ""
+                                try:
+                                    import re
+
+                                    m = re.search(r"codeconductor_run_(.*?)_", zip_path)
+                                    if m:
+                                        ts = m.group(1)
+                                except Exception:
+                                    pass
+                                # Hit rate
+                                hr = 0.0
+                                cache_obj = getattr(
+                                    self.ensemble_engine, "response_cache", None
+                                )
+                                if cache_obj is not None:
+                                    total = (
+                                        cache_obj.stats.hits + cache_obj.stats.misses
+                                    )
+                                    if total:
+                                        hr = round(
+                                            cache_obj.stats.hits / total * 100.0, 1
+                                        )
+                                app_version = os.getenv("APP_VERSION", "")
+                                commit = os.getenv("GIT_COMMIT", "")
+
+                                subject = f"CodeConductor bug report – {ts or 'N/A'} – {policy} – {hitmiss}"
+                                body = (
+                                    "Summary: \n"
+                                    f"Policy: {policy} | Model: {chosen}\n"
+                                    f"Cache: hit={'true' if hitmiss == 'HIT' else 'false'}, hit_rate={hr}%\n"
+                                    "Latency: p50=N/A ms, p95=N/A ms\n"
+                                    f"Export path (local): {zip_path}\n"
+                                    "Hash verified: Yes\n"
+                                    f"Version: {app_version} | Commit: {commit}\n"
+                                    "Notes: \n"
+                                )
+                                try:
+                                    import urllib.parse as ul
+
+                                    mailto = f"mailto:?subject={ul.quote(subject)}&body={ul.quote(body)}"
+                                    webbrowser.open(mailto)
+                                except Exception:
+                                    pass
+
+                                # Log telemetry event (local)
+                                try:
+                                    size_mb = 0.0
+                                    try:
+                                        size_mb = round(
+                                            os.path.getsize(zip_path) / (1024 * 1024), 2
+                                        )
+                                    except Exception:
+                                        pass
+                                    logging.getLogger(__name__).info(
+                                        json.dumps(
+                                            {
+                                                "event": "send_to_support_clicked",
+                                                "has_export": True,
+                                                "verified": True,
+                                                "size_mb": size_mb,
+                                            }
+                                        )
+                                    )
+                                except Exception:
+                                    pass
+                    except Exception as e:
+                        st.error(f"Send failed: {e}")
+
+            with col_s3:
+                if st.button("🧹 Clear exports", use_container_width=True):
+                    try:
+                        base = Path(os.getenv("ARTIFACTS_DIR", "artifacts")) / "exports"
+                        count = 0
+                        if base.exists():
+                            for p in base.glob("codeconductor_run_*.zip"):
+                                try:
+                                    p.unlink()
+                                    count += 1
+                                except Exception:
+                                    continue
+                        st.success(f"Cleared {count} export(s)")
+                    except Exception as e:
+                        st.error(f"Clear failed: {e}")
 
         # RAG Context Section
         with st.sidebar.expander("🔍 RAG Context", expanded=False):

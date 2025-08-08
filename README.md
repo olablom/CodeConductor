@@ -126,6 +126,33 @@ PYTHONIOENCODING=utf-8 python tests/test_codeconductor_2agents_focused.py
 
 > CI note: GitHub Actions runs a deterministic mock smoke (`CC_QUICK_CI=1`) that never calls LM Studio. Full GPU tests are intended to run locally.
 
+## 🐛 Bug report bundle
+
+When you hit a problem, create a local bug report bundle from the UI to share relevant run data without leaking sensitive info.
+
+### Create a bundle
+
+1. Open the sidebar section “Selector & Cache”.
+2. Optional settings:
+   - Include raw outputs (default: off) – includes full model outputs. Not recommended outside your team.
+   - Redact env (default: on) – removes sensitive environment variables and paths.
+   - Generate public-safe bundle – forces a minimal, safe export for external sharing.
+3. Click “Export bundle”.
+4. Wait for “Verified ✓”.
+
+### Send the bundle
+
+- Manual: open `artifacts/exports/` and share the zip `codeconductor_run_<ts>_<policy>_<hit|miss>.zip` via an approved channel.
+- Send to support (opt-in): copies the zip path to clipboard and opens a prefilled email in your default mail client.
+  - Note: mailto cannot attach the file automatically – attach the zip manually.
+  - Always use a public-safe bundle for external sharing.
+
+### Retention & cleanup
+
+- Only the latest 20 exports are kept.
+- Click “Clear exports” in the UI to remove all.
+
+
 ## 📊 **Performance Benchmarks**
 
 ### **Test Results (Latest):**
