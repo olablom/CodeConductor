@@ -95,6 +95,40 @@ codeconductor doctor
 
 See `docs/CURSOR_TROUBLESHOOTING.md` for Cursor integration issues and local-first workarounds.
 
+### Diagnose Cursor API (Windows)
+
+Use the PowerShell diagnostics script to check local ports and auto-detect a Cursor Local API port.
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/diagnose_cursor.ps1 -Ports 11434 3000
+```
+
+- The script writes `artifacts/diagnostics/diagnose_latest.txt`.
+- If a Cursor API port is detected, the log will include a line like:
+  - `- Detected Cursor API port: 5123`
+- Ollama `11434` health endpoint returning `404` is OK (port alive, no route).
+
+Set env vars when a port is detected (persist for new sessions):
+
+```powershell
+[Environment]::SetEnvironmentVariable('CURSOR_API_BASE','http://127.0.0.1:<detected>','User')
+[Environment]::SetEnvironmentVariable('CURSOR_MODE','auto','User')
+```
+
+Open a new PowerShell and verify:
+
+```powershell
+curl.exe -vk "http://127.0.0.1:<detected>/api/health"
+```
+
+If no port is detected yet, run in manual mode until Cursor Local API is listening:
+
+```powershell
+[Environment]::SetEnvironmentVariable('CURSOR_MODE','manual','User')
+```
+
+Git Bash tip: run the script with `-File` and avoid inline `-Command` with double quotes to prevent `$...` expansion issues.
+
 ### Mock vs Real
 
 - Mock (`CC_QUICK_CI=1`): deterministic outputs, no model loading; safe for CI.
@@ -151,7 +185,6 @@ When you hit a problem, create a local bug report bundle from the UI to share re
 
 - Only the latest 20 exports are kept.
 - Click “Clear exports” in the UI to remove all.
-
 
 ## 📊 **Performance Benchmarks**
 
