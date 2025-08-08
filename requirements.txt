@@ -1,11 +1,12 @@
 # Core dependencies
-streamlit>=1.28.0
-requests>=2.31.0
-pytest>=7.4.0
-aiohttp>=3.8.0
-pyperclip>=1.8.0
-flask>=2.3.0
-prometheus_client>=0.17.0
+streamlit==1.32.2
+requests==2.31.0
+pytest==7.4.0
+aiohttp==3.8.0
+pyperclip==1.8.0
+PyYAML>=6.0
+flask==2.3.0
+prometheus_client==0.17.0
 
 # Data processing and visualization
 pandas>=2.0.0
@@ -13,13 +14,14 @@ plotly>=5.17.0
 numpy>=1.23.0
 
 # LLM and AI dependencies
-torch==2.7.0+cu128
+torch==2.7.0+cu128; sys_platform=="linux" and platform_machine=="x86_64"
+torch==2.7.0; sys_platform!="linux" or platform_machine!="x86_64"
 torchvision
 torchaudio
-transformers>=4.30.0
-accelerate>=0.20.0
-sentencepiece>=0.1.99
-protobuf>=3.20.0
+transformers==4.30.0
+accelerate==0.20.0
+sentencepiece==0.1.99
+protobuf==3.20.0
 
 # LangChain dependencies
 langchain>=0.1.0
@@ -30,7 +32,6 @@ langchain-chroma>=0.0.5
 # RAG dependencies (required for context retrieval)
 sentence-transformers>=2.2.0
 chromadb>=0.4.0
-requests>=2.31.0
 
 # RLHF dependencies
 gymnasium>=0.29.0
@@ -41,11 +42,15 @@ win10toast>=0.9
 
 # GPU monitoring (RTX 5090 support)
 pynvml>=11.5.0
+GPUtil>=1.4.0
 
 # Development and testing
 black>=23.0.0
 flake8>=6.0.0
 coverage>=7.0.0
+
+# System monitoring
+psutil>=5.9.0
 
 # Optional: For advanced features
 # openai>=1.0.0  # For OpenAI integration
