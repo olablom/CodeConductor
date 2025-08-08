@@ -6,6 +6,7 @@ Provides clipboard management and code extraction for manual Cursor integration.
 """
 
 import re
+import os
 import logging
 from pathlib import Path
 from typing import List, Tuple, Optional
@@ -39,6 +40,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Feature flag to mute verbose Cursor logs in manual mode
+_CURSOR_MODE = (os.getenv("CURSOR_MODE") or "").lower() if 'os' in globals() else ""
+_MUTE_CURSOR_LOGS = (_CURSOR_MODE == "manual")
+
+def _log_info(msg: str) -> None:
+    if not _MUTE_CURSOR_LOGS:
+        logger.info(msg)
+
+def _log_warning(msg: str) -> None:
+    if not _MUTE_CURSOR_LOGS:
+        logger.warning(msg)
+
 
 @dataclass
 class ExtractedFile:
@@ -55,7 +68,7 @@ class ClipboardManager:
     def __init__(self):
         self.available = CLIPBOARD_AVAILABLE
         if not self.available:
-            logger.warning("pyperclip not available. Clipboard operations will fail.")
+            _log_warning("pyperclip not available. Clipboard operations will fail.")
 
     def copy_to_clipboard(self, text: str) -> bool:
         """
@@ -73,7 +86,7 @@ class ClipboardManager:
 
         try:
             pyperclip.copy(text)
-            logger.info(f"Copied {len(text)} characters to clipboard")
+            _log_info(f"Copied {len(text)} characters to clipboard")
             return True
         except Exception as e:
             logger.error(f"Failed to copy to clipboard: {e}")
@@ -92,7 +105,7 @@ class ClipboardManager:
 
         try:
             content = pyperclip.paste()
-            logger.info(f"Read {len(content)} characters from clipboard")
+            _log_info(f"Read {len(content)} characters from clipboard")
             return content
         except Exception as e:
             logger.error(f"Failed to read from clipboard: {e}")
@@ -120,7 +133,7 @@ class CodeExtractor:
             List of (file_path, code_content) tuples
         """
         if not cursor_output:
-            logger.warning("Empty cursor output provided")
+            _log_warning("Empty cursor output provided")
             return []
 
         extracted_files = []
@@ -153,9 +166,9 @@ class CodeExtractor:
             if code_content.strip():
                 file_path = Path(filename)
                 extracted_files.append((file_path, code_content))
-                logger.info(f"Extracted {filename} ({len(code_content)} chars)")
+                _log_info(f"Extracted {filename} ({len(code_content)} chars)")
 
-        logger.info(f"Extracted {len(extracted_files)} files from Cursor output")
+        _log_info(f"Extracted {len(extracted_files)} files from Cursor output")
         return extracted_files
 
     def _extract_filename(self, filename_comment: str, language: str) -> str:
@@ -229,9 +242,9 @@ class CursorIntegration:
             self.clipboard_monitor = get_global_monitor()
             self.notification_manager = get_notification_manager()
             self.hotkey_manager = get_hotkey_manager()
-            logger.info("Cursor integration enhancements enabled")
+            _log_info("Cursor integration enhancements enabled")
         else:
-            logger.info("Cursor integration enhancements disabled")
+            _log_info("Cursor integration enhancements disabled")
 
     def copy_prompt_to_clipboard(self, prompt: str) -> bool:
         """
@@ -243,7 +256,7 @@ class CursorIntegration:
         Returns:
             True if successful
         """
-        logger.info("Copying prompt to clipboard for Cursor...")
+        _log_info("Copying prompt to clipboard for Cursor...")
         success = self.clipboard_manager.copy_to_clipboard(prompt)
 
         # Show notification if enhancements enabled
@@ -298,7 +311,7 @@ class CursorIntegration:
                 f"✅ Clipboard updated: {len(original_content)} → {len(new_content)} chars"
             )
 
-        logger.info("Reading Cursor output from clipboard...")
+        _log_info("Reading Cursor output from clipboard...")
         return new_content
 
     def wait_for_cursor_output_auto(self, timeout: float = 60.0) -> str:
@@ -312,7 +325,7 @@ class CursorIntegration:
             Cursor output as string
         """
         if not self.enhancements_enabled:
-            logger.warning("Auto-detection not available, falling back to manual mode")
+            _log_warning("Auto-detection not available, falling back to manual mode")
             return self.wait_for_cursor_output()
 
         print("\n" + "=" * 60)
@@ -409,13 +422,13 @@ class CursorIntegration:
 
         # Start global hotkeys
         start_global_hotkeys(callbacks)
-        logger.info("Enhanced workflow started with hotkeys")
+        _log_info("Enhanced workflow started with hotkeys")
 
     def stop_enhanced_workflow(self):
         """Stop enhanced workflow."""
         if self.enhancements_enabled:
             stop_global_hotkeys()
-            logger.info("Enhanced workflow stopped")
+            _log_info("Enhanced workflow stopped")
 
     def run_cursor_workflow(self, prompt: str, output_dir: Path = None) -> List[Path]:
         """
@@ -428,7 +441,7 @@ class CursorIntegration:
         Returns:
             List of generated file paths
         """
-        logger.info("Starting Cursor workflow...")
+        _log_info("Starting Cursor workflow...")
 
         # Step 1: Copy prompt to clipboard
         if not self.copy_prompt_to_clipboard(prompt):
@@ -443,7 +456,7 @@ class CursorIntegration:
             else:
                 cursor_output = self.wait_for_cursor_output()
         except Exception as e:
-            logger.warning(f"Cursor workflow auto-detect failed, falling back: {e}")
+            _log_warning(f"Cursor workflow auto-detect failed, falling back: {e}")
             cursor_output = self.wait_for_cursor_output()
 
         if not cursor_output.strip():
@@ -453,7 +466,7 @@ class CursorIntegration:
         # Step 3: Extract and save files
         saved_files = self.extract_and_save_files(cursor_output, output_dir)
 
-        logger.info(f"Cursor workflow completed. Generated {len(saved_files)} files.")
+        _log_info(f"Cursor workflow completed. Generated {len(saved_files)} files.")
         return saved_files
 
 
