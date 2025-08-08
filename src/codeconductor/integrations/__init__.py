@@ -13,21 +13,33 @@ from .cursor_integration import (
 from .clipboard_monitor import ClipboardMonitor
 from .cloud_escalator import CloudEscalator
 from .cursor_local_api import CursorLocalAPI
-from .hotkeys import HotkeyManager, get_hotkey_manager, start_global_hotkeys, stop_global_hotkeys
+from .hotkeys import (
+    HotkeyManager,
+    get_hotkey_manager,
+    start_global_hotkeys,
+    stop_global_hotkeys,
+)
 from .notifications import notify_success, notify_error
 
+# Optional external adapters (behind ALLOW_NET)
+try:
+    from .net.github_code_search import GitHubCodeSearch  # type: ignore
+except Exception:
+    GitHubCodeSearch = None  # type: ignore
+
 __all__ = [
-    "ClipboardManager", 
-    "CodeExtractor", 
-    "CursorIntegration", 
+    "ClipboardManager",
+    "CodeExtractor",
+    "CursorIntegration",
     "ExtractedFile",
     "ClipboardMonitor",
-    "CloudEscalator", 
+    "CloudEscalator",
     "CursorLocalAPI",
     "HotkeyManager",
     "get_hotkey_manager",
-    "start_global_hotkeys", 
+    "start_global_hotkeys",
     "stop_global_hotkeys",
     "notify_success",
     "notify_error",
+    "GitHubCodeSearch",
 ]

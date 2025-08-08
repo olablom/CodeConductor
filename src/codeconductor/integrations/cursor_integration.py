@@ -435,8 +435,16 @@ class CursorIntegration:
             logger.error("Failed to copy prompt to clipboard")
             return []
 
-        # Step 2: Wait for user to generate code in Cursor
-        cursor_output = self.wait_for_cursor_output()
+        # Step 2: Wait for user to generate code in Cursor (auto-fallback mode)
+        # Prefer auto-detect if enhancements enabled; else manual clipboard prompt
+        try:
+            if self.enhancements_enabled:
+                cursor_output = self.wait_for_cursor_output_auto(timeout=60.0)
+            else:
+                cursor_output = self.wait_for_cursor_output()
+        except Exception as e:
+            logger.warning(f"Cursor workflow auto-detect failed, falling back: {e}")
+            cursor_output = self.wait_for_cursor_output()
 
         if not cursor_output.strip():
             logger.error("No Cursor output received")

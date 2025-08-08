@@ -142,12 +142,12 @@ live_gui_test_results_*.json
 field_test_results_*.json
 test_results_*.json
 
-# Temporary test files
-test_*.py
-test_functions.py
-test_math.py
+# Temporary test files (keep real tests in tests/)
+*_snapshot.py
+*_baseline.py
 test_gui_live_automated.py
 test_automated_suite.py
+# DO NOT ignore committed tests under tests/
 
 # Vector database
 vector_db/
@@ -172,6 +172,10 @@ Thumbs.db
 # Logs
 *.log
 logs/
+artifacts/
+.tmp/
+**/__pycache__/
+configs/*.json
 
 # GPU monitoring logs
 gpu_memory_*.log
@@ -241,3 +245,6 @@ logs/
 # Configuration files with sensitive data
 configs/*.env
 configs/*.key
+
+# AI Project Advisor (temporary import)
+ai-project-advisor/
