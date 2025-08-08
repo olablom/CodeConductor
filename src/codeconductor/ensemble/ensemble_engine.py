@@ -608,6 +608,7 @@ class EnsembleEngine:
                     "chosen": selection.selected_model,
                     "fallbacks": selection.fallbacks,
                     "sampling": selection.sampling,
+                    "why": getattr(selection, "why", {}),
                 }
             except Exception:
                 self.last_selector_decision = {"policy": policy}

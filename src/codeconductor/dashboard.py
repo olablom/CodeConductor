@@ -244,6 +244,25 @@ class ValidationDashboard:
             if os.environ.get("CC_TELEMETRY", "0") == "1":
                 st.caption("preflight logged locally (JSONL)")
 
+            # Selector decision card (if available via artifact/telemetry)
+            st.markdown("---")
+            st.subheader("🧠 Selector Decision")
+            # Try to read a recent selector decision snapshot if present
+            dec = None
+            try:
+                # Prefer a recent manifest path if exposed; else look for a cached file
+                # Fallback: read from a known snapshot if UI writes it later
+                pass
+            except Exception:
+                dec = None
+            # For now, display environment overrides and guidance
+            policy = os.environ.get("SELECTOR_POLICY", "latency")
+            st.caption(f"Policy: {policy}")
+            forced = os.environ.get("FORCE_MODEL") or os.environ.get("SELECTOR_FORCE")
+            if forced:
+                st.warning(f"Forced model via env: {forced}")
+            st.caption("Why chosen and candidate scores will appear here during runs.")
+
     def render_time_comparison_chart(self, df: pd.DataFrame):
         """Time comparison chart - Simplified and professional"""
         st.subheader("⏱️ Time Comparison")
