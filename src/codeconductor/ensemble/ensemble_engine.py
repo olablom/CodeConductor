@@ -622,6 +622,20 @@ class EnsembleEngine:
             ]
             models = [id_to_model[mid] for mid in ordered_ids if mid in id_to_model]
 
+            # Persist selector decision artifact for UI
+            try:
+                from datetime import datetime
+                import json as _json
+                base = os.getenv("ARTIFACTS_DIR", "artifacts")
+                ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                run_dir = os.path.join(base, "runs", ts)
+                os.makedirs(run_dir, exist_ok=True)
+                self.last_artifacts_dir = run_dir
+                with open(os.path.join(run_dir, "selector_decision.json"), "w", encoding="utf-8") as f:
+                    _json.dump(self.last_selector_decision, f, ensure_ascii=False, indent=2)
+            except Exception:
+                pass
+
             # Cache short-circuit (best-effort)
             cached_code = None
             if self.response_cache and models:

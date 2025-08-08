@@ -247,21 +247,44 @@ class ValidationDashboard:
             # Selector decision card (if available via artifact/telemetry)
             st.markdown("---")
             st.subheader("🧠 Selector Decision")
-            # Try to read a recent selector decision snapshot if present
-            dec = None
+            # Try to read latest artifacts/runs/*/selector_decision.json
             try:
-                # Prefer a recent manifest path if exposed; else look for a cached file
-                # Fallback: read from a known snapshot if UI writes it later
-                pass
-            except Exception:
-                dec = None
-            # For now, display environment overrides and guidance
-            policy = os.environ.get("SELECTOR_POLICY", "latency")
-            st.caption(f"Policy: {policy}")
-            forced = os.environ.get("FORCE_MODEL") or os.environ.get("SELECTOR_FORCE")
-            if forced:
-                st.warning(f"Forced model via env: {forced}")
-            st.caption("Why chosen and candidate scores will appear here during runs.")
+                runs_dir = Path("artifacts/runs")
+                latest = None
+                if runs_dir.exists():
+                    run_dirs = sorted(runs_dir.glob("*"), key=lambda p: p.name, reverse=True)
+                    latest = run_dirs[0] if run_dirs else None
+                decision = None
+                if latest:
+                    sel_file = latest / "selector_decision.json"
+                    if sel_file.exists():
+                        import json as _json
+                        decision = _json.loads(sel_file.read_text(encoding="utf-8"))
+
+                if decision:
+                    pol = decision.get("policy", os.environ.get("SELECTOR_POLICY", "latency"))
+                    chosen = decision.get("chosen") or decision.get("selected_model")
+                    sampling = decision.get("sampling", {})
+                    st.caption(f"Policy: {pol}")
+                    st.write(f"Chosen: {chosen}")
+                    if sampling:
+                        st.code(_json.dumps(sampling, ensure_ascii=False, indent=2))
+                    scores = decision.get("scores", {})
+                    if scores:
+                        top3 = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:3]
+                        st.write("Top candidates:")
+                        for mid, sc in top3:
+                            st.write(f"- {mid}: {sc:.3f}")
+                    if st.button("Copy decision JSON"):
+                        try:
+                            st.session_state["_selector_json"] = decision
+                            st.success("Decision JSON ready to copy")
+                        except Exception:
+                            pass
+                else:
+                    st.info("No recent decision. Run a task to populate artifacts.")
+            except Exception as e:
+                st.warning(f"Selector decision unavailable: {e}")
 
     def render_time_comparison_chart(self, df: pd.DataFrame):
         """Time comparison chart - Simplified and professional"""
