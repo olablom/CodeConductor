@@ -425,66 +425,160 @@ Examples:
         - Extracts Ollama status and Cursor API status
         - If a detected Cursor API port is present, prints ready setx lines
         """
+        def _color(text: str, color: str) -> str:
+            if not sys.stdout.isatty():
+                return text
+            colors = {"green": "\033[32m", "red": "\033[31m", "yellow": "\033[33m", "reset": "\033[0m"}
+            return f"{colors.get(color,'')}{text}{colors['reset']}"
+
+        def _summarize(latest_path: Path) -> Dict[str, Any]:
+            cursor_mode = os.getenv("CURSOR_MODE") or "(not set)"
+            cursor_api_base = os.getenv("CURSOR_API_BASE") or "(not set)"
+            summary: Dict[str, Any] = {
+                "cursor_mode": cursor_mode,
+                "cursor_api_base": cursor_api_base,
+                "ollama_status": "na",
+                "cursor_api_status": "na",
+                "detected_port": None,
+                "log_path": str(latest_path),
+            }
+
+            if latest_path.exists():
+                try:
+                    text = latest_path.read_text(encoding="utf-8", errors="ignore")
+                    summary["ollama_status"] = "up" if ("Port 11434 -> TcpTestSucceeded=True" in text) else "down"
+                    m = re.search(r"Detected Cursor API port:\s*(\d+)", text)
+                    if m:
+                        summary["detected_port"] = int(m.group(1))
+                    cursor_api_up = False
+                    for line in text.splitlines():
+                        if ("GET /api/health" in line or "GET /health" in line) and "11434" not in line:
+                            cursor_api_up = True
+                            break
+                    summary["cursor_api_status"] = "up" if cursor_api_up else "not_listening"
+                except Exception:
+                    summary["cursor_api_status"] = "na"
+            else:
+                summary["ollama_status"] = "na"
+                summary["cursor_api_status"] = "na"
+
+            return summary
+
+        # Optional: trigger diagnostics before reading
+        if getattr(args, "run", False):
+            if os.name == "nt":
+                try:
+                    subprocess.run(
+                        [
+                            "powershell",
+                            "-NoProfile",
+                            "-ExecutionPolicy",
+                            "Bypass",
+                            "-File",
+                            "scripts/diagnose_cursor.ps1",
+                            "-Ports",
+                            "11434",
+                            "3000",
+                            "5123",
+                            "5173",
+                            "8000",
+                        ],
+                        check=False,
+                    )
+                except Exception as e:
+                    print(f"Failed to run diagnostics: {e}")
+            else:
+                print("Note: '--run' diagnostics is Windows-only (PowerShell script). Skipping.")
+
+        latest_path = Path("artifacts/diagnostics/diagnose_latest.txt")
+        result = _summarize(latest_path)
+
+        # Optional local telemetry (append-only JSONL, private)
+        if os.getenv("CC_TELEMETRY", "0") == "1":
+            try:
+                events_dir = Path("artifacts/diagnostics")
+                events_dir.mkdir(parents=True, exist_ok=True)
+                ev_path = events_dir / "preflight_events.jsonl"
+                from datetime import datetime as _dt
+
+                payload = {
+                    "event": "preflight_ran",
+                    "ts": _dt.utcnow().isoformat() + "Z",
+                    "cursor_mode": result["cursor_mode"],
+                    "cursor_detected_port": result["detected_port"],
+                    "ollama_status": result["ollama_status"],
+                    "cursor_api_status": result["cursor_api_status"],
+                }
+                with open(ev_path, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(payload) + "\n")
+            except Exception:
+                pass
+
+        if getattr(args, "json", False):
+            print(json.dumps(result, ensure_ascii=False))
+            return 0
+
         print("Cursor preflight")
         print("=" * 30)
 
-        cursor_mode = os.getenv("CURSOR_MODE") or "(not set)"
-        cursor_api_base = os.getenv("CURSOR_API_BASE") or "(not set)"
+        cursor_mode = result["cursor_mode"]
+        cursor_api_base = result["cursor_api_base"]
         print(f"CURSOR_MODE       : {cursor_mode}")
         print(f"CURSOR_API_BASE   : {cursor_api_base}")
 
-        latest_path = Path("artifacts/diagnostics/diagnose_latest.txt")
-        if not latest_path.exists():
+        if not Path(result["log_path"]).exists():
             print("diagnose_latest.txt not found. Run the PowerShell script:")
             print("  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/diagnose_cursor.ps1 -Ports 11434 3000")
             return 0
 
-        try:
-            text = latest_path.read_text(encoding="utf-8", errors="ignore")
-        except Exception as e:
-            print(f"Failed to read {latest_path}: {e}")
-            return 1
-
-        # Parse statuses
-        ollama_up = "Port 11434 -> TcpTestSucceeded=True" in text
-        detected_port: Optional[str] = None
-        m = re.search(r"Detected Cursor API port:\s*(\d+)", text)
-        if m:
-            detected_port = m.group(1)
-
-        # Heuristic for Cursor API up: any GET /api/health with 2xx/3xx
-        cursor_api_up = False
-        for line in text.splitlines():
-            if "GET /api/health" in line or "GET /health" in line:
-                # Ignore Ollama line explicitly
-                if "11434" in line:
-                    continue
-                # Treat presence as signal; detailed status codes often included
-                cursor_api_up = True
-                break
-
         print("")
         print("Latest diagnostics summary (diagnose_latest.txt):")
-        print(f" - Ollama (11434): {'UP' if ollama_up else 'DOWN'}")
-        print(f" - Cursor API    : {'UP (health endpoint responded)' if cursor_api_up else 'NOT LISTENING'}")
+        if result["ollama_status"] == "up":
+            print(f" - Ollama (11434): {_color('OK', 'green')}")
+        elif result["ollama_status"] == "down":
+            print(f" - Ollama (11434): {_color('DOWN', 'red')}")
+        else:
+            print(f" - Ollama (11434): {_color('N/A', 'yellow')}")
 
+        if result["cursor_api_status"] == "up":
+            print(f" - Cursor API    : {_color('UP (health endpoint responded)', 'green')}")
+        elif result["cursor_api_status"] == "not_listening":
+            print(f" - Cursor API    : {_color('NOT LISTENING', 'red')}")
+        else:
+            print(f" - Cursor API    : {_color('N/A', 'yellow')}")
+
+        detected_port = result["detected_port"]
         if detected_port:
             print("")
             print(f"Detected Cursor API port: {detected_port}")
             print("Ready-to-run commands (persist for new sessions):")
-            print(f"  [Environment]::SetEnvironmentVariable('CURSOR_API_BASE','http://127.0.0.1:{detected_port}','User')")
+            print(
+                f"  [Environment]::SetEnvironmentVariable('CURSOR_API_BASE','http://127.0.0.1:{int(detected_port)}','User')"
+            )
             print("  [Environment]::SetEnvironmentVariable('CURSOR_MODE','auto','User')")
 
         # CI hint: don't fail pipeline if Cursor isn't listening
         if os.getenv("CI") == "true":
-            print("CI note: diagnostics printed for logging; not failing pipeline if Cursor is not listening.")
+            print(
+                "CI note: diagnostics printed for logging; not failing pipeline if Cursor is not listening."
+            )
 
         return 0
 
     diag_parser = subparsers.add_parser("diag", help="Diagnostics utilities")
-    diag_subparsers = diag_parser.add_subparsers(dest="diag_cmd", help="Diagnostics commands")
+    diag_subparsers = diag_parser.add_subparsers(
+        dest="diag_cmd", help="Diagnostics commands"
+    )
     diag_cursor_parser = diag_subparsers.add_parser(
         "cursor", help="Show Cursor env and latest diagnostics summary"
+    )
+    diag_cursor_parser.add_argument(
+        "--json", action="store_true", help="Print JSON summary for scripts/CI"
+    )
+    diag_cursor_parser.add_argument(
+        "--run",
+        action="store_true",
+        help="Run PowerShell diagnostics before reading summary (Windows only)",
     )
     diag_cursor_parser.set_defaults(func=diag_cursor_command)
 
