@@ -17,6 +17,7 @@ import sys
 import threading
 import time
 from typing import Optional
+from pathlib import Path
 
 import requests
 
@@ -24,8 +25,13 @@ import requests
 def start_server_in_thread(host: str, port: int) -> threading.Thread:
     import uvicorn  # type: ignore
 
+    # Ensure local 'src' is importable for codeconductor.*
+    repo_root = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(repo_root / "src"))
+    from codeconductor.api.server import app  # type: ignore
+
     config = uvicorn.Config(
-        "codeconductor.api.server:app",
+        app,
         host=host,
         port=port,
         workers=1,
@@ -94,12 +100,30 @@ def run_smoke(host: str, port: int, prompt: str, timeout: float) -> int:
 
     t_elapsed = time.perf_counter() - t_start
     token_text = "".join(tokens)
-    tps = (len(tokens) / max(0.001, t_elapsed))
+    tps = len(tokens) / max(0.001, t_elapsed)
+
+    # Write metrics file
+    ts = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+    out_dir = Path("artifacts/latency")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"stream_smoke_{ts}.json"
+    summary = {
+        "timestamp": ts,
+        "host": host,
+        "port": port,
+        "prompt": prompt,
+        "ttft_ms": ttft_ms,
+        "tokens": len(tokens),
+        "tps": round(tps, 2),
+        "sample": token_text[:80],
+    }
+    out_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print("SSE smoke: OK")
     print(f"  TTFT: {ttft_ms if ttft_ms is not None else 'n/a'} ms")
     print(f"  Tokens: {len(tokens)}  Tok/s: {tps:.1f}")
     print(f"  Output sample: {token_text[:80]!r}")
+    print(f"  Metrics written: {out_path}")
     return 0
 
 
@@ -107,9 +131,13 @@ def main() -> int:
     p = argparse.ArgumentParser(description="SSE streaming smoke test")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8000)
-    p.add_argument("--prompt", default="Hello from streaming test")
-    p.add_argument("--timeout", type=float, default=5.0, help="overall read timeout (s)")
-    p.add_argument("--start-server", action="store_true", help="start uvicorn server in background")
+    p.add_argument("--prompt", action="append", default=["Hello from streaming test"], help="Prompt(s) to stream; can be repeated")
+    p.add_argument(
+        "--timeout", type=float, default=5.0, help="overall read timeout (s)"
+    )
+    p.add_argument(
+        "--start-server", action="store_true", help="start uvicorn server in background"
+    )
     args = p.parse_args()
 
     server_thread: Optional[threading.Thread] = None
@@ -120,12 +148,14 @@ def main() -> int:
             print(f"Failed to start server: {e}")
             return 1
 
-    code = run_smoke(args.host, args.port, args.prompt, args.timeout)
+    overall = 0
+    for pr in args.prompt:
+        code = run_smoke(args.host, args.port, pr, args.timeout)
+        if code != 0:
+            overall = code
     # Server thread is daemon=True; it will exit with the process
-    return code
+    return overall
 
 
 if __name__ == "__main__":
     sys.exit(main())
-
-
