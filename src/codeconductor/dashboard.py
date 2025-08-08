@@ -152,7 +152,10 @@ class ValidationDashboard:
             col1, col2 = st.columns(2)
             with col1:
                 if ollama_up is True:
-                    st.success("Ollama 11434: OK", help="404 on /health is normal — port is alive.")
+                    st.success(
+                        "Ollama 11434: OK",
+                        help="404 on /health is normal — port is alive.",
+                    )
                 elif ollama_up is False:
                     st.error("Ollama 11434: DOWN")
                 else:
@@ -176,12 +179,10 @@ class ValidationDashboard:
 
             if detected_port:
                 st.write(f"Detected Cursor API port: {detected_port}")
-                setx_block = (
-                    """
+                setx_block = """
 [Environment]::SetEnvironmentVariable('CURSOR_API_BASE','http://127.0.0.1:{port}','User')
 [Environment]::SetEnvironmentVariable('CURSOR_MODE','auto','User')
                     """.strip().format(port=detected_port)
-                )
                 st.code(setx_block)
                 if st.button("Copy setx commands"):
                     try:
@@ -229,7 +230,7 @@ class ValidationDashboard:
                                 "5173",
                                 "8000",
                             ]
-                            subprocess.run(cmd, check=False)
+                            subprocess.run(cmd, check=False, timeout=5)
                             st.success("Diagnostics executed. Reloading...")
                             st.experimental_rerun()
                         else:

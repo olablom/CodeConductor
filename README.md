@@ -8,6 +8,7 @@
 [![Local](https://img.shields.io/badge/local-100%25%20private-blue)](https://github.com/your-repo)
 [![Cost](https://img.shields.io/badge/cost-$0%20API%20fees-green)](https://github.com/your-repo)
 [![Quick CI](https://github.com/your-repo/CodeConductor/actions/workflows/ci.yml/badge.svg)](https://github.com/your-repo/CodeConductor/actions/workflows/ci.yml)
+[![Preflight Ready](https://img.shields.io/badge/preflight-ready-brightgreen)](#diagnose-cursor-api-windows)
 
 ## 🚀 **The Problem**
 
@@ -128,6 +129,14 @@ If no port is detected yet, run in manual mode until Cursor Local API is listeni
 ```
 
 Git Bash tip: run the script with `-File` and avoid inline `-Command` with double quotes to prevent `$...` expansion issues.
+
+#### Preflight
+
+- Quick check (CLI):
+  - `codeconductor diag cursor --run`
+- Makefile/Tasks (shortcuts):
+  - `make diag-cursor` (Unix)
+  - `scripts/tasks.ps1 -Task diag-cursor` (Windows)
 
 ### Mock vs Real
 
