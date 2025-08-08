@@ -425,11 +425,17 @@ Examples:
         - Extracts Ollama status and Cursor API status
         - If a detected Cursor API port is present, prints ready setx lines
         """
+
         def _color(text: str, color: str) -> str:
             if not sys.stdout.isatty():
                 return text
-            colors = {"green": "\033[32m", "red": "\033[31m", "yellow": "\033[33m", "reset": "\033[0m"}
-            return f"{colors.get(color,'')}{text}{colors['reset']}"
+            colors = {
+                "green": "\033[32m",
+                "red": "\033[31m",
+                "yellow": "\033[33m",
+                "reset": "\033[0m",
+            }
+            return f"{colors.get(color, '')}{text}{colors['reset']}"
 
         def _summarize(latest_path: Path) -> Dict[str, Any]:
             cursor_mode = os.getenv("CURSOR_MODE") or "(not set)"
@@ -446,16 +452,24 @@ Examples:
             if latest_path.exists():
                 try:
                     text = latest_path.read_text(encoding="utf-8", errors="ignore")
-                    summary["ollama_status"] = "up" if ("Port 11434 -> TcpTestSucceeded=True" in text) else "down"
+                    summary["ollama_status"] = (
+                        "up"
+                        if ("Port 11434 -> TcpTestSucceeded=True" in text)
+                        else "down"
+                    )
                     m = re.search(r"Detected Cursor API port:\s*(\d+)", text)
                     if m:
                         summary["detected_port"] = int(m.group(1))
                     cursor_api_up = False
                     for line in text.splitlines():
-                        if ("GET /api/health" in line or "GET /health" in line) and "11434" not in line:
+                        if (
+                            "GET /api/health" in line or "GET /health" in line
+                        ) and "11434" not in line:
                             cursor_api_up = True
                             break
-                    summary["cursor_api_status"] = "up" if cursor_api_up else "not_listening"
+                    summary["cursor_api_status"] = (
+                        "up" if cursor_api_up else "not_listening"
+                    )
                 except Exception:
                     summary["cursor_api_status"] = "na"
             else:
@@ -488,7 +502,9 @@ Examples:
                 except Exception as e:
                     print(f"Failed to run diagnostics: {e}")
             else:
-                print("Note: '--run' diagnostics is Windows-only (PowerShell script). Skipping.")
+                print(
+                    "Note: '--run' diagnostics is Windows-only (PowerShell script). Skipping."
+                )
 
         latest_path = Path("artifacts/diagnostics/diagnose_latest.txt")
         result = _summarize(latest_path)
@@ -528,7 +544,9 @@ Examples:
 
         if not Path(result["log_path"]).exists():
             print("diagnose_latest.txt not found. Run the PowerShell script:")
-            print("  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/diagnose_cursor.ps1 -Ports 11434 3000")
+            print(
+                "  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/diagnose_cursor.ps1 -Ports 11434 3000"
+            )
             return 0
 
         print("")
@@ -541,7 +559,9 @@ Examples:
             print(f" - Ollama (11434): {_color('N/A', 'yellow')}")
 
         if result["cursor_api_status"] == "up":
-            print(f" - Cursor API    : {_color('UP (health endpoint responded)', 'green')}")
+            print(
+                f" - Cursor API    : {_color('UP (health endpoint responded)', 'green')}"
+            )
         elif result["cursor_api_status"] == "not_listening":
             print(f" - Cursor API    : {_color('NOT LISTENING', 'red')}")
         else:
@@ -555,7 +575,9 @@ Examples:
             print(
                 f"  [Environment]::SetEnvironmentVariable('CURSOR_API_BASE','http://127.0.0.1:{int(detected_port)}','User')"
             )
-            print("  [Environment]::SetEnvironmentVariable('CURSOR_MODE','auto','User')")
+            print(
+                "  [Environment]::SetEnvironmentVariable('CURSOR_MODE','auto','User')"
+            )
 
         # CI hint: don't fail pipeline if Cursor isn't listening
         if os.getenv("CI") == "true":

@@ -100,33 +100,51 @@ class ValidationDashboard:
     def render_preflight_sidebar(self):
         """Render a small preflight panel in the sidebar for Cursor/Ollama status."""
         with st.sidebar:
-            st.subheader("🔎 Preflight")
-
             cursor_mode = os.environ.get("CURSOR_MODE", "(not set)")
+            badge = "[Auto]" if cursor_mode.lower() == "auto" else "[Manual]"
+            st.subheader(f"🔎 Preflight {badge}")
+
             cursor_api_base = os.environ.get("CURSOR_API_BASE", "(not set)")
             st.caption("Environment")
             st.code(f"CURSOR_MODE={cursor_mode}\nCURSOR_API_BASE={cursor_api_base}")
+            # Tooltips for modes
+            if cursor_mode.lower() == "manual":
+                st.caption(
+                    "Manual mode: Cursor-integration muted. Use clipboard flow. Set CURSOR_MODE=auto when Cursor API listens."
+                )
+            elif cursor_mode.lower() == "auto":
+                st.caption(
+                    "Auto mode: Tries Cursor API first, falls back on failure. Base URL via CURSOR_API_BASE."
+                )
 
             latest_path = Path("artifacts/diagnostics/diagnose_latest.txt")
             ollama_up = None
             cursor_api_up = None
             detected_port = None
+            diagnostics_ts = None
+            parse_error: str | None = None
             if latest_path.exists():
                 try:
                     text = latest_path.read_text(encoding="utf-8", errors="ignore")
                     ollama_up = "Port 11434 -> TcpTestSucceeded=True" in text
+                    # Timestamp line (=== ... ===)
+                    m_ts = re.search(r"^===\s*(.+?)\s*===\s*$", text, re.MULTILINE)
+                    if m_ts:
+                        diagnostics_ts = m_ts.group(1)
                     m = re.search(r"Detected Cursor API port:\s*(\d+)", text)
                     if m:
                         detected_port = m.group(1)
                     # Treat any non-Ollama health hit as up
                     for line in text.splitlines():
-                        if ("GET /api/health" in line or "GET /health" in line) and "11434" not in line:
+                        if (
+                            "GET /api/health" in line or "GET /health" in line
+                        ) and "11434" not in line:
                             cursor_api_up = True
                             break
                     if cursor_api_up is None:
                         cursor_api_up = False
                 except Exception as e:
-                    st.warning(f"Could not parse diagnostics: {e}")
+                    parse_error = str(e)
             else:
                 st.info("diagnose_latest.txt not found. Run the diagnostics script.")
 
@@ -134,7 +152,7 @@ class ValidationDashboard:
             col1, col2 = st.columns(2)
             with col1:
                 if ollama_up is True:
-                    st.success("Ollama 11434: OK")
+                    st.success("Ollama 11434: OK", help="404 on /health is normal — port is alive.")
                 elif ollama_up is False:
                     st.error("Ollama 11434: DOWN")
                 else:
@@ -143,25 +161,47 @@ class ValidationDashboard:
                 if cursor_api_up is True:
                     st.success("Cursor API: OK")
                 elif cursor_api_up is False:
-                    st.error("Cursor API: NOT LISTENING")
+                    st.error(
+                        "Cursor API: NOT LISTENING",
+                        help="No process is listening. Start/enable Local API or point CURSOR_API_BASE to the correct port.",
+                    )
                 else:
                     st.warning("Cursor API: N/A")
 
+            if parse_error:
+                st.warning("Cursor API: ERROR (parse/access)")
+
+            if diagnostics_ts:
+                st.caption(f"Last run: {diagnostics_ts}")
+
             if detected_port:
                 st.write(f"Detected Cursor API port: {detected_port}")
-                st.code(
+                setx_block = (
                     """
 [Environment]::SetEnvironmentVariable('CURSOR_API_BASE','http://127.0.0.1:{port}','User')
 [Environment]::SetEnvironmentVariable('CURSOR_MODE','auto','User')
                     """.strip().format(port=detected_port)
                 )
+                st.code(setx_block)
+                if st.button("Copy setx commands"):
+                    try:
+                        st.session_state["_setx_clipboard"] = setx_block
+                        st.success("Commands copied to clipboard (or ready to copy)")
+                    except Exception:
+                        pass
 
             # Actions
             st.markdown("---")
             col_a, col_b = st.columns(2)
             with col_a:
                 if st.button("Open diagnostics folder"):
-                    diag_dir = str((latest_path.parent if latest_path.exists() else Path("artifacts/diagnostics")).resolve())
+                    diag_dir = str(
+                        (
+                            latest_path.parent
+                            if latest_path.exists()
+                            else Path("artifacts/diagnostics")
+                        ).resolve()
+                    )
                     try:
                         if platform.system() == "Windows":
                             os.startfile(diag_dir)  # type: ignore[attr-defined]
@@ -193,9 +233,15 @@ class ValidationDashboard:
                             st.success("Diagnostics executed. Reloading...")
                             st.experimental_rerun()
                         else:
-                            st.info("Diagnostics script is PowerShell-based; run it on Windows.")
+                            st.info(
+                                "Diagnostics script is PowerShell-based; run it on Windows."
+                            )
                     except Exception as e:
                         st.error(f"Diagnostics failed: {e}")
+
+            # Telemetry hint
+            if os.environ.get("CC_TELEMETRY", "0") == "1":
+                st.caption("preflight logged locally (JSONL)")
 
     def render_time_comparison_chart(self, df: pd.DataFrame):
         """Time comparison chart - Simplified and professional"""
