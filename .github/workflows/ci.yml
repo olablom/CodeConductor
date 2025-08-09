@@ -1,0 +1,62 @@
+name: CodeConductor CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quick-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up pip cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run quick focused smoke
+        env:
+          CC_QUICK_CI: "1"
+          CC_QUICK_CI_SEED: "42"
+          PYTHONIOENCODING: "utf-8"
+        run: |
+          python tests/ci_quick_smoke.py | tee ci_quick_log.txt
+
+      - name: Run personas smoke (mock)
+        env:
+          CC_QUICK_CI: "1"
+          CC_QUICK_CI_SEED: "42"
+          PYTHONIOENCODING: "utf-8"
+        run: |
+          python tests/ci_personas_smoke.py | tee -a ci_quick_log.txt
+
+      - name: Assert mock breadcrumbs present
+        run: |
+          grep "\[MOCK\] CC_QUICK_CI=1 active" -n ci_quick_log.txt
+          grep "\[PERSONA\]" -n ci_quick_log.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: focused-test-results
+          path: |
+            focused_test_results_*.json
+            focused_summary_*.yaml
+            ci_quick_log.txt

@@ -9,6 +9,7 @@ import logging
 import numpy as np
 import os
 import json
+import hashlib
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
@@ -21,6 +22,8 @@ from .consensus_calculator import ConsensusCalculator, ConsensusResult
 from .code_reviewer import CodeReviewer
 from codeconductor.feedback.rlhf_agent import RLHFAgent
 from codeconductor.context.rag_system import RAGSystem
+from codeconductor.runners.test_runner import PytestRunner
+from codeconductor.utils.kpi import build_kpi, write_json, TestSummary
 from codeconductor.monitoring.memory_watchdog import (
     start_memory_watchdog,
     stop_memory_watchdog,
@@ -107,7 +110,10 @@ class EnsembleEngine:
             self.response_cache = None
         self.min_confidence = min_confidence
         self.use_rlhf = use_rlhf and RLHF_AVAILABLE
-        self.use_rag = use_rag and RAG_AVAILABLE
+        # Respect ALLOW_NET: when set to '0', disable RAG completely
+        self.use_rag = (
+            use_rag and RAG_AVAILABLE and (os.getenv("ALLOW_NET", "0") != "0")
+        )
         self.use_code_reviewer = use_code_reviewer and CODE_REVIEWER_AVAILABLE
         self.rlhf_agent = None
         self.rag_system = None
@@ -179,20 +185,42 @@ class EnsembleEngine:
         # selector decision
         _write("selector_decision.json", selector)
 
-        # consensus
-        consensus_dump = {
-            "method": consensus_meta.get("method"),
-            "winner": consensus_meta.get("winner"),
-            "cached": consensus_meta.get("cached", False),
-        }
-        if consensus_obj is not None:
-            consensus_dump.update(
-                {
-                    "confidence": consensus_obj.confidence,
-                    "code_quality": consensus_obj.code_quality_score,
-                    "syntax_valid": consensus_obj.syntax_valid,
-                }
-            )
+        # consensus (robust guards against non-dict types)
+        consensus_dump = {}
+        try:
+            if isinstance(consensus_meta, dict):
+                consensus_dump.update(
+                    {
+                        "method": consensus_meta.get("method"),
+                        "winner": consensus_meta.get("winner"),
+                        "cached": bool(consensus_meta.get("cached", False)),
+                    }
+                )
+                if isinstance(consensus_meta.get("candidates"), list):
+                    consensus_dump["candidates"] = consensus_meta.get("candidates", [])
+            else:
+                consensus_dump.update({"method": None, "winner": None, "cached": False})
+        except Exception:
+            consensus_dump.update({"method": None, "winner": None, "cached": False})
+
+        try:
+            if consensus_obj is not None:
+                consensus_dump.update(
+                    {
+                        "confidence": float(
+                            getattr(consensus_obj, "confidence", 0.0) or 0.0
+                        ),
+                        "code_quality": float(
+                            getattr(consensus_obj, "code_quality_score", 0.0) or 0.0
+                        ),
+                        "syntax_valid": bool(
+                            getattr(consensus_obj, "syntax_valid", False)
+                        ),
+                    }
+                )
+        except Exception:
+            pass
+
         _write("consensus.json", consensus_dump)
 
     def _maybe_attach_export(self, policy: str) -> None:
@@ -524,6 +552,8 @@ class EnsembleEngine:
     ) -> EnsembleResponse:
         """Process a task request through the ensemble."""
         start_time = asyncio.get_event_loop().time()
+        wall_start_iso = datetime.utcnow().replace(tzinfo=None).isoformat() + "Z"
+        t_first_green_iso: str | None = None
 
         logger.info(f"Processing ensemble request: {request.task_description[:50]}...")
 
@@ -575,15 +605,29 @@ class EnsembleEngine:
             # Prefer 3 models (up to 5 if aggressive load), else fallback to available
             if len(loaded_model_ids) >= 3:
                 max_models = 5 if loading_config == "aggressive_load" else 3
-                selected_model_ids = loaded_model_ids[:max_models]
+                # Env override to cap parallelism
+                try:
+                    max_env = int(os.getenv("MAX_PARALLEL_MODELS", "0") or "0")
+                    if max_env > 0:
+                        max_models = max_env
+                except Exception:
+                    pass
+                selected_model_ids = loaded_model_ids[: max(1, max_models)]
                 logger.info(
                     f"✅ Using {len(selected_model_ids)} memory-safe loaded models (voting): {selected_model_ids}"
                 )
             else:
-                # Fallback to available models
-                fallback_k = min(3, len(available_model_ids))
+                # Fallback to available models — honor MAX_PARALLEL_MODELS if provided
+                try:
+                    max_env = int(os.getenv("MAX_PARALLEL_MODELS", "0") or "0")
+                except Exception:
+                    max_env = 0
+                fallback_cap = max_env if max_env > 0 else 3
+                fallback_k = min(fallback_cap, len(available_model_ids))
                 selected_model_ids = available_model_ids[:fallback_k]
-                logger.info(f"⚠️ Using fallback models: {selected_model_ids}")
+                logger.info(
+                    f"⚠️ Using fallback models (cap={fallback_cap}): {selected_model_ids}"
+                )
 
             # Get model objects from model manager
             all_models = await self.model_manager.list_models()
@@ -624,15 +668,21 @@ class EnsembleEngine:
 
             # Persist selector decision artifact for UI
             try:
-                from datetime import datetime
                 import json as _json
+
                 base = os.getenv("ARTIFACTS_DIR", "artifacts")
                 ts = datetime.now().strftime("%Y%m%d_%H%M%S")
                 run_dir = os.path.join(base, "runs", ts)
                 os.makedirs(run_dir, exist_ok=True)
                 self.last_artifacts_dir = run_dir
-                with open(os.path.join(run_dir, "selector_decision.json"), "w", encoding="utf-8") as f:
-                    _json.dump(self.last_selector_decision, f, ensure_ascii=False, indent=2)
+                with open(
+                    os.path.join(run_dir, "selector_decision.json"),
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    _json.dump(
+                        self.last_selector_decision, f, ensure_ascii=False, indent=2
+                    )
             except Exception:
                 pass
 
@@ -667,6 +717,7 @@ class EnsembleEngine:
                         {
                             "method": "codebleu+heuristic",
                             "winner": {"model": models[0].id, "score": 1.0},
+                            "candidates": [],
                             "cached": True,
                         },
                     )
@@ -696,10 +747,47 @@ class EnsembleEngine:
             # Convert raw results to format expected by consensus calculator
             formatted_results = self._format_results_for_consensus(raw_results)
 
+            # Handle empty results path with optional single-consensus fallback
+            if not formatted_results:
+                if os.getenv("CONSENSUS_ALLOW_SINGLE", "0") == "1":
+                    logger.warning(
+                        "CONSENSUS_ALLOW_SINGLE=1 — writing degraded consensus artifact"
+                    )
+                    try:
+                        self._save_run_artifacts(
+                            prompt_text or "",
+                            policy,
+                            self.last_selector_decision,
+                            {
+                                "method": "codebleu_fast",
+                                "winner": {
+                                    "model": models[0].id if models else None,
+                                    "score": 1.0,
+                                },
+                                "candidates": [],
+                                "cached": False,
+                                "degraded": True,
+                            },
+                        )
+                    except Exception:
+                        pass
+                    return EnsembleResponse(
+                        consensus={"content": ""},
+                        confidence=0.0,
+                        disagreements=["degraded"],
+                        model_responses=[],
+                        execution_time=asyncio.get_event_loop().time() - start_time,
+                        selected_model=models[0].id if models else None,
+                    )
+                else:
+                    raise Exception("No model results available for consensus")
+
             # Calculate consensus (majority/best-score handled inside calculator)
             consensus_result = self.consensus_calculator.calculate_consensus(
                 formatted_results
             )
+            # Make consensus content available for downstream steps (tests, review)
+            generated_code = consensus_result.consensus
 
             # Save successful result to cache (best-effort)
             try:
@@ -729,25 +817,160 @@ class EnsembleEngine:
 
             # Save artifacts for this run
             try:
+                # Build candidates list with CodeBLEU-like scores and output SHA
+                candidates: list[dict[str, Any]] = []
+                try:
+                    model_scores = getattr(consensus_result, "model_scores", {}) or {}
+                    for item in formatted_results:
+                        model_id = item.get("model")
+                        content = item.get("content", "") or ""
+                        score = float(model_scores.get(model_id, 0.0))
+                        output_sha = (
+                            hashlib.sha256(content.encode("utf-8")).hexdigest()
+                            if content
+                            else None
+                        )
+                        candidates.append(
+                            {
+                                "model": model_id,
+                                "score": score,
+                                "output_sha": output_sha,
+                            }
+                        )
+                    # Sort by score desc, keep all (UI may show top-3)
+                    candidates.sort(key=lambda d: d.get("score", 0.0), reverse=True)
+                except Exception:
+                    candidates = []
+
+                # Determine winner model (highest score)
+                try:
+                    best_model = None
+                    best_score = float(consensus_result.confidence)
+                    if candidates:
+                        best_model = candidates[0].get("model")
+                        best_score = float(candidates[0].get("score", best_score))
+                    elif formatted_results:
+                        best_model = formatted_results[0].get("model")
+                    winner_obj = {"model": best_model, "score": best_score}
+                except Exception:
+                    winner_obj = {
+                        "model": models[0].id if models else None,
+                        "score": float(consensus_result.confidence),
+                    }
+
                 self._save_run_artifacts(
                     prompt_text or "",
                     policy,
                     self.last_selector_decision,
                     {
                         "method": "codebleu+heuristic",
-                        "winner": {
-                            "model": models[0].id if models else None,
-                            "score": consensus_result.confidence,
-                        },
+                        "winner": winner_obj,
+                        "candidates": candidates,
                         "cached": False,
                     },
                     consensus_result,
                 )
+                # --- KPI writing (after consensus) ---
+                try:
+                    run_dir = Path(
+                        self.last_artifacts_dir
+                        or os.getenv("ARTIFACTS_DIR", "artifacts")
+                    )
+                    tests_dir = run_dir / "tests"
+                    tests_dir.mkdir(parents=True, exist_ok=True)
+
+                    # Run tests before/after (best effort). If before not known, treat as 0.
+                    # For MVP, we execute pytest only once (after) to reduce overhead, and set before=0.
+                    # Future PR can persist a pre-run snapshot.
+                    before = TestSummary(
+                        suite_name="pytest", total=0, passed=0, failed=0, skipped=0
+                    )
+
+                    pr = PytestRunner(
+                        prompt=request.task_description, code=generated_code or ""
+                    )
+                    pr_res = pr.run()
+                    total = int(pr_res.get("total_tests", 0))
+                    passed = int(pr_res.get("passed_tests", 0))
+                    failed = max(0, total - passed)
+                    after = TestSummary(
+                        suite_name="pytest",
+                        total=total,
+                        passed=passed,
+                        failed=failed,
+                        skipped=0,
+                    )
+                    # Persist raw reports (best effort)
+                    write_json(
+                        tests_dir / "before_report.json",
+                        {
+                            "total": 0,
+                            "passed": 0,
+                            "failed": 0,
+                            "skipped": 0,
+                            "suite": "pytest",
+                        },
+                    )
+                    write_json(tests_dir / "after_report.json", pr_res)
+
+                    # Mark first green
+                    if after.total > 0 and after.failed == 0:
+                        t_first_green_iso = (
+                            datetime.utcnow().replace(tzinfo=None).isoformat() + "Z"
+                        )
+
+                    # KPI fields
+                    sampling = (
+                        self.last_selector_decision.get("sampling", {})
+                        if isinstance(self.last_selector_decision, dict)
+                        else {}
+                    )
+                    codebleu_weights_env = os.getenv("CODEBLEU_WEIGHTS")
+                    codebleu_lang_env = (
+                        os.getenv("CODEBLEU_LANG")
+                        or os.getenv("CODEBLEU_LANGUAGE")
+                        or "python"
+                    )
+
+                    # Exit status
+                    tests_missing = after.total == 0
+                    exit_status = {
+                        "patched": bool(bool(generated_code)),
+                        "tests_passed": bool(after.total > 0 and after.failed == 0),
+                        "tests_missing": bool(tests_missing),
+                        "error": None,
+                    }
+
+                    kpi = build_kpi(
+                        run_id=(
+                            self.last_selector_decision.get("run_id")
+                            or os.path.basename(str(run_dir))
+                            or "unknown"
+                        ),
+                        artifacts_dir=run_dir,
+                        t_start_iso=wall_start_iso,
+                        t_first_green_iso=t_first_green_iso,
+                        ttft_ms=int(
+                            (asyncio.get_event_loop().time() - start_time) * 1000.0
+                        ),
+                        tests_before=before,
+                        tests_after=after,
+                        winner_model=winner_obj.get("model"),
+                        winner_score=float(winner_obj.get("score", 0.0)),
+                        consensus_method="codebleu+heuristic",
+                        sampling=sampling,
+                        codebleu_weights_env=codebleu_weights_env,
+                        codebleu_lang_env=codebleu_lang_env,
+                        exit_status=exit_status,
+                    )
+                    write_json(run_dir / "kpi.json", kpi)
+                    logger.info(
+                        f"KPI written: {run_dir / 'kpi.json'} run_id={kpi.get('run_id')}"
+                    )
+                except Exception as e:  # pragma: no cover
+                    logger.warning(f"KPI writing failed: {e}")
             except Exception:
                 pass
-
-            # Extract generated code from consensus
-            generated_code = consensus_result.consensus
 
             # Review code if CodeReviewer is available
             if self.use_code_reviewer and self.code_reviewer and generated_code:
@@ -776,16 +999,33 @@ class EnsembleEngine:
             # Calculate execution time
             execution_time = asyncio.get_event_loop().time() - start_time
 
+            # Compute a simple agreement heuristic from model scores
+            try:
+                scores_list = sorted(
+                    (consensus_result.model_scores or {}).values(), reverse=True
+                )
+                if len(scores_list) >= 2:
+                    # High agreement when top two scores are close
+                    model_agreement = max(
+                        0.0, min(1.0, 1.0 - (scores_list[0] - scores_list[1]))
+                    )
+                elif len(scores_list) == 1:
+                    model_agreement = 1.0
+                else:
+                    model_agreement = 0.0
+            except Exception:
+                model_agreement = 0.0
+
             # Create response
             response = EnsembleResponse(
                 consensus={
                     "code": generated_code,
-                    "explanation": consensus_result.explanation,
+                    "explanation": getattr(consensus_result, "reasoning", ""),
                     "confidence": consensus_result.confidence,
-                    "model_agreement": consensus_result.model_agreement,
+                    "model_agreement": model_agreement,
                 },
                 confidence=consensus_result.confidence,
-                disagreements=consensus_result.disagreements,
+                disagreements=[],
                 model_responses=formatted_results,
                 execution_time=execution_time,
             )
@@ -796,6 +1036,55 @@ class EnsembleEngine:
         except Exception as e:
             logger.error(f"Ensemble request failed: {e}")
             execution_time = asyncio.get_event_loop().time() - start_time
+            # Best-effort: write a minimal KPI so exporters/benchmarks can proceed
+            try:
+                base = os.getenv("ARTIFACTS_DIR", "artifacts")
+                ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+                run_dir = Path(
+                    self.last_artifacts_dir or os.path.join(base, "runs", ts)
+                )
+                run_dir.mkdir(parents=True, exist_ok=True)
+                self.last_artifacts_dir = str(run_dir)
+                before = TestSummary(
+                    suite_name="pytest", total=0, passed=0, failed=0, skipped=0
+                )
+                after = TestSummary(
+                    suite_name="pytest", total=0, passed=0, failed=0, skipped=0
+                )
+                sampling = (
+                    self.last_selector_decision.get("sampling", {})
+                    if isinstance(self.last_selector_decision, dict)
+                    else {}
+                )
+                kpi = build_kpi(
+                    run_id=os.path.basename(str(run_dir)),
+                    artifacts_dir=str(run_dir),
+                    t_start_iso=wall_start_iso,
+                    t_first_green_iso=None,
+                    ttft_ms=int(execution_time * 1000.0),
+                    tests_before=before,
+                    tests_after=after,
+                    winner_model=None,
+                    winner_score=0.0,
+                    consensus_method="failed",
+                    sampling=sampling,
+                    codebleu_weights_env=os.getenv("CODEBLEU_WEIGHTS"),
+                    codebleu_lang_env=(
+                        os.getenv("CODEBLEU_LANG")
+                        or os.getenv("CODEBLEU_LANGUAGE")
+                        or "python"
+                    ),
+                    exit_status={
+                        "patched": False,
+                        "tests_passed": False,
+                        "tests_missing": True,
+                        "error": str(e),
+                    },
+                )
+                write_json(run_dir / "kpi.json", kpi)
+                logger.info(f"KPI written (failure): {run_dir / 'kpi.json'}")
+            except Exception:
+                pass
 
             return EnsembleResponse(
                 consensus={},
@@ -812,21 +1101,42 @@ class EnsembleEngine:
         self, raw_results: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
         """Convert raw dispatch results to format expected by consensus calculator."""
-        formatted_results = []
+        formatted_results: List[Dict[str, Any]] = []
         logger.info(f"🔍 Formatting raw_results: {raw_results}")
 
-        for model_id, response_data in raw_results.items():
-            # Create a dictionary with content key as expected by consensus calculator
-            result_dict = {
-                "model": model_id,
-                "success": "error" not in response_data,
-                "content": self._extract_response_content(response_data),
-                "response_time": 0.0,  # We don't track this in ensemble engine
-            }
-            formatted_results.append(result_dict)
-            logger.info(
-                f"🔍 Formatted result for {model_id}: success={result_dict['success']}, response_length={len(result_dict['content'])}"
-            )
+        # Support either {model_id: response} or dispatcher summary {successful:{}, failed:{}}
+        source_mapping: Dict[str, Any] = {}
+        if isinstance(raw_results, dict) and isinstance(
+            raw_results.get("successful"), dict
+        ):
+            source_mapping = raw_results.get("successful", {})  # type: ignore[assignment]
+        elif isinstance(raw_results, dict):
+            source_mapping = raw_results
+        else:
+            source_mapping = {}
+
+        for model_id, response_data in source_mapping.items():
+            try:
+                content = (
+                    self._extract_response_content(response_data)
+                    if isinstance(response_data, dict)
+                    else ""
+                )
+                success = isinstance(response_data, dict) and (
+                    "error" not in response_data
+                )
+                result_dict = {
+                    "model": model_id,
+                    "success": success,
+                    "content": content,
+                    "response_time": 0.0,
+                }
+                formatted_results.append(result_dict)
+                logger.info(
+                    f"🔍 Formatted result for {model_id}: success={result_dict['success']}, response_length={len(result_dict['content'])}"
+                )
+            except Exception as e:
+                logger.warning(f"Formatting failed for {model_id}: {e}")
 
         return formatted_results
 

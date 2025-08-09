@@ -259,8 +259,15 @@ class RAGSystem:
         else:
             logger.info("Local context retrieval skipped - RAG not available")
 
-        # Fetch external context
-        external_context = self.fetch_external_context(task_description)
+        # Fetch external context (respect ALLOW_NET)
+        try:
+            if os.getenv("ALLOW_NET", "0").strip() in {"1", "true", "yes"}:
+                external_context = self.fetch_external_context(task_description)
+            else:
+                external_context = []
+        except Exception:
+            external_context = []
+
         for i, content in enumerate(external_context):
             context_docs.append(
                 {
@@ -270,7 +277,7 @@ class RAGSystem:
                         "type": "external_context",
                         "filename": f"external_{i + 1}",
                     },
-                    "relevance_score": 0.8,  # Default high score for external content
+                    "relevance_score": 0.8,
                     "source": "external",
                 }
             )
@@ -309,37 +316,94 @@ class RAGSystem:
     def _fetch_stackoverflow_context(
         self, query: str, max_results: int = 3
     ) -> List[str]:
-        """Fetch context from Stack Overflow API."""
+        """Fetch context from Stack Overflow API with optional key and disk cache."""
         try:
-            # Use Stack Exchange API
+            import hashlib
+            import json as _json
+            import time as _time
+            from pathlib import Path as _Path
+            import random as _random
+            import re
+
+            # Env controls
+            timeout_s = float(os.getenv("NET_TIMEOUT_S", "10") or "10")
+            max_retries = max(0, int(os.getenv("NET_MAX_RETRIES", "2") or "2"))
+            cache_ttl = max(
+                0, int(os.getenv("NET_CACHE_TTL_SECONDS", "3600") or "3600")
+            )
+            pagesize = max(
+                1, int(os.getenv("SO_PAGESIZE", str(max_results)) or str(max_results))
+            )
+            stack_key = (os.getenv("STACKEXCHANGE_KEY") or "").strip()
+            cache_dir = _Path(os.getenv("NET_CACHE_DIR", "artifacts/net_cache"))
+            cache_dir.mkdir(parents=True, exist_ok=True)
+
+            # Build URL
             encoded_query = quote_plus(query)
-            url = f"https://api.stackexchange.com/2.3/search/advanced?order=desc&sort=relevance&q={encoded_query}&site=stackoverflow&filter=withbody&pagesize={max_results}"
+            base = (
+                f"https://api.stackexchange.com/2.3/search/advanced?order=desc&sort=relevance"
+                f"&q={encoded_query}&site=stackoverflow&filter=withbody&pagesize={pagesize}"
+            )
+            if stack_key:
+                base += f"&key={quote_plus(stack_key)}"
 
-            response = requests.get(url, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                results = []
+            # Cache key
+            ck = hashlib.sha256(base.encode("utf-8")).hexdigest()
+            cpath = cache_dir / f"so_{ck}.json"
 
-                for item in data.get("items", []):
-                    title = item.get("title", "")
-                    body = item.get("body", "")
-                    # Clean HTML tags (simple approach)
-                    import re
+            # Try cache first
+            if cache_ttl > 0 and cpath.exists():
+                try:
+                    stat = cpath.stat()
+                    if (_time.time() - stat.st_mtime) <= cache_ttl:
+                        cached = _json.loads(cpath.read_text(encoding="utf-8"))
+                        if isinstance(cached, list):
+                            return cached
+                except Exception:
+                    pass
 
-                    body = re.sub(r"<[^>]+>", "", body)
-                    body = body[:500]  # Limit length
-
-                    result = f"Stack Overflow: {title}\n\n{body}..."
-                    results.append(result)
-
-                logger.info(f"Fetched {len(results)} Stack Overflow results")
-                return results
-            else:
-                logger.warning(
-                    f"Stack Overflow API returned status {response.status_code}"
-                )
-                return []
-
+            last_error: Exception | None = None
+            for attempt in range(max_retries + 1):
+                try:
+                    response = requests.get(base, timeout=timeout_s)
+                    if response.status_code == 200:
+                        data = response.json()
+                        results = []
+                        for item in data.get("items", []):
+                            title = item.get("title", "")
+                            body = item.get("body", "")
+                            body = re.sub(r"<[^>]+>", "", body)
+                            body = body[:500]
+                            results.append(f"Stack Overflow: {title}\n\n{body}...")
+                        # Write cache
+                        try:
+                            cpath.write_text(
+                                _json.dumps(results, ensure_ascii=False),
+                                encoding="utf-8",
+                            )
+                        except Exception:
+                            pass
+                        logger.info(f"Fetched {len(results)} Stack Overflow results")
+                        return results
+                    elif response.status_code in (429, 502, 503):
+                        # backoff with jitter
+                        delay = min(
+                            60.0, (1.0 * (2**attempt)) + _random.uniform(0.0, 0.5)
+                        )
+                        _time.sleep(delay)
+                        last_error = RuntimeError(f"HTTP {response.status_code}")
+                    else:
+                        logger.warning(
+                            f"Stack Overflow API returned status {response.status_code}"
+                        )
+                        return []
+                except Exception as e:
+                    last_error = e
+                    delay = min(10.0, 0.5 * (2**attempt) + _random.uniform(0.0, 0.25))
+                    _time.sleep(delay)
+            if last_error:
+                logger.warning(f"Stack Overflow fetch failed: {last_error}")
+            return []
         except Exception as e:
             logger.error(f"Error fetching Stack Overflow context: {e}")
             return []
@@ -380,7 +444,11 @@ class RAGSystem:
 
             # Add to vector store
             self.vector_store.add_documents([doc])
-            self.vector_store.persist()
+            # Fix persist method call
+            if hasattr(self.vector_store, "persist"):
+                self.vector_store.persist()
+            elif hasattr(self.vector_store, "_persist"):
+                self.vector_store._persist()
 
             logger.info(f"Added document '{doc_id}' to context database")
 
@@ -494,7 +562,11 @@ Rating: {pattern.get("user_rating", 0)}/5
 
             # Add to vector store
             self.vector_store.add_documents([doc])
-            self.vector_store.persist()
+            # Fix persist method call
+            if hasattr(self.vector_store, "persist"):
+                self.vector_store.persist()
+            elif hasattr(self.vector_store, "_persist"):
+                self.vector_store._persist()
 
             logger.info("Added pattern to context database")
 

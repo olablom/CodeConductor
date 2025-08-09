@@ -20,8 +20,48 @@ from codeconductor.ensemble.single_model_engine import (
     SingleModelEngine,
     SingleModelRequest,
 )
+import os
+
+# Optional Prometheus metrics (opt-in)
+_ENABLE_METRICS = os.getenv("ENABLE_METRICS", "").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+}
+try:
+    if _ENABLE_METRICS:
+        from prometheus_fastapi_instrumentator import Instrumentator
+        from prometheus_fastapi_instrumentator.metrics import (
+            default,
+        )
+    else:  # pragma: no cover
+        Instrumentator = None  # type: ignore
+except Exception:  # pragma: no cover
+    Instrumentator = None  # type: ignore
 
 app = FastAPI(title="CodeConductor API", version="0.1.0")
+
+# Mount /metrics if enabled and dependency available
+if _ENABLE_METRICS and Instrumentator is not None:  # pragma: no cover
+    try:
+        labels = {
+            "app": "codeconductor",
+            "version": os.getenv("APP_VERSION", "0.1.0"),
+            "commit": os.getenv("GIT_COMMIT", "dev"),
+        }
+        instr = Instrumentator(
+            should_group_status_codes=True,
+            should_ignore_untemplated=True,
+            should_respect_env_var=False,
+            excluded_handlers=set(),
+            inprogress_granularity=True,
+            grouped_status_codes=True,
+        )
+        # Use defaults (requests, latency, etc.) and attach constant labels
+        instr.add(default(info=labels))
+        instr.instrument(app).expose(app, include_in_schema=False)
+    except Exception:
+        pass
 
 
 # ---- Models ----

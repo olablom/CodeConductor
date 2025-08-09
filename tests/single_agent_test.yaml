@@ -1,0 +1,4 @@
+agent: PortfolioBuilder
+prompt: Create a simple REST API endpoint that accepts a JSON payload and returns
+  a response. Use Python with Flask.
+response: '{''error'': ''timeout'', ''model'': ''meta-llama-3.1-8b-instruct''}'

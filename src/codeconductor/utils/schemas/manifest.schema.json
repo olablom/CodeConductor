@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeconductor.ai/schema/manifest.schema.json",
+  "title": "CodeConductor Bundle Manifest",
+  "type": "object",
+  "required": [
+    "manifest_schema_version",
+    "run_id",
+    "ts",
+    "version",
+    "privacy_level",
+    "paths",
+    "files",
+    "hashes",
+    "code_hashes",
+    "bundle_truncated",
+    "generated_by",
+    "engine",
+    "models",
+    "agents"
+  ],
+  "properties": {
+    "manifest_schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "run_id": { "type": "string" },
+    "ts": { "type": "string", "format": "date-time", "description": "UTC ISO8601" },
+
+    "version": { "type": "string", "description": "Product/app version or tag" },
+    "privacy_level": { "type": "string", "enum": ["public_safe", "team_safe", "full_internal"] },
+
+    "paths": {
+      "type": "object",
+      "required": ["kpi", "consensus", "selector_decision", "before_dir", "after_dir", "diffs_dir", "tests_dir", "logs_dir", "readme_case"],
+      "properties": {
+        "kpi": { "type": "string" },
+        "consensus": { "type": "string" },
+        "selector_decision": { "type": "string" },
+        "before_dir": { "type": "string" },
+        "after_dir": { "type": "string" },
+        "diffs_dir": { "type": "string" },
+        "tests_dir": { "type": "string" },
+        "logs_dir": { "type": "string" },
+        "readme_case": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "files": {
+      "type": "array",
+      "description": "Flat inventory of all files in the bundle.",
+      "items": {
+        "type": "object",
+        "required": ["path", "size_bytes"],
+        "properties": {
+          "path": { "type": "string" },
+          "size_bytes": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "hashes": {
+      "type": "object",
+      "description": "SHA256 per file in bundle (relative path → sha256).",
+      "additionalProperties": { "type": "string" }
+    },
+
+    "code_hashes": {
+      "type": "object",
+      "description": "SHA256 för alla kodfiler i diffs/after (relative path → sha256).",
+      "additionalProperties": { "type": "string" }
+    },
+
+    "bundle_truncated": { "type": "boolean" },
+
+    "generated_by": {
+      "type": "object",
+      "required": ["commit", "config_digest"],
+      "properties": {
+        "commit": { "type": "string", "description": "Git commit SHA (producer)." },
+        "config_digest": { "type": "string", "description": "Digest of key env/config used for this export." }
+      },
+      "additionalProperties": false
+    },
+
+    "engine": {
+      "type": "object",
+      "required": ["backend", "version"],
+      "properties": {
+        "backend": { "type": "string", "enum": ["ollama", "lmstudio", "vllm", "other"] },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "source", "quant", "context_length"],
+        "properties": {
+          "name": { "type": "string" },
+          "source": { "type": "string" },
+          "quant": { "type": ["string", "null"] },
+          "context_length": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "role"],
+        "properties": {
+          "name": { "type": "string" },
+          "role": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
+
+

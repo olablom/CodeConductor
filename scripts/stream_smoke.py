@@ -117,7 +117,9 @@ def run_smoke(host: str, port: int, prompt: str, timeout: float) -> int:
         "tps": round(tps, 2),
         "sample": token_text[:80],
     }
-    out_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    out_path.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     print("SSE smoke: OK")
     print(f"  TTFT: {ttft_ms if ttft_ms is not None else 'n/a'} ms")
@@ -131,7 +133,12 @@ def main() -> int:
     p = argparse.ArgumentParser(description="SSE streaming smoke test")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8000)
-    p.add_argument("--prompt", action="append", default=["Hello from streaming test"], help="Prompt(s) to stream; can be repeated")
+    p.add_argument(
+        "--prompt",
+        action="append",
+        default=["Hello from streaming test"],
+        help="Prompt(s) to stream; can be repeated",
+    )
     p.add_argument(
         "--timeout", type=float, default=5.0, help="overall read timeout (s)"
     )

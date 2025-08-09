@@ -18,6 +18,8 @@ import os
 import logging
 
 from .model_manager import ModelInfo
+from .breakers import get_manager as get_breaker_manager
+from codeconductor.telemetry import get_logger
 
 
 logger = logging.getLogger(__name__)
@@ -89,7 +91,17 @@ class ModelSelector:
         }.get(policy, self._score_latency)
 
         scores: Dict[str, float] = {}
+        breaker = get_breaker_manager()
+        tlog = get_logger()
         for m in sin.models:
+            st = breaker.get_state(m.id)
+            if st.state == "Open" and not breaker.shadow:
+                # Skip open models
+                tlog.log(
+                    "selector_skip_open",
+                    {"model": m.id, "reason": st.reason, "state": st.state},
+                )
+                continue
             scores[m.id] = scoring_func(m, sin)
 
         # Order by score desc

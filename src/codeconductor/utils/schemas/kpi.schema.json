@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://codeconductor.ai/schema/kpi.schema.json",
+  "title": "CodeConductor KPI",
+  "type": "object",
+  "required": [
+    "kpi_schema_version",
+    "run_id",
+    "ts",
+    "artifacts_dir",
+    "ttft_ms",
+    "t_start",
+    "t_first_green",
+    "first_prompt_success",
+    "tests_before",
+    "tests_after",
+    "pass_rate_before",
+    "pass_rate_after",
+    "winner_model",
+    "winner_score",
+    "consensus_method",
+    "codebleu_weights",
+    "codebleu_lang",
+    "sampling",
+    "config_digest",
+    "exit_status"
+  ],
+  "properties": {
+    "kpi_schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "run_id": { "type": "string" },
+    "ts": { "type": "string", "format": "date-time", "description": "UTC ISO8601" },
+
+    "artifacts_dir": { "type": "string" },
+
+    "ttft_ms": { "type": "integer", "minimum": 0, "description": "Measured with a monotonic clock; persisted as milliseconds." },
+    "t_start": { "type": "string", "format": "date-time", "description": "UTC ISO8601 wall-clock at prompt-in." },
+    "t_first_green": { "type": "string", "format": "date-time", "description": "UTC ISO8601 of first fully green test summary." },
+
+    "first_prompt_success": { "type": "boolean" },
+
+    "tests_before": {
+      "type": "object",
+      "required": ["total", "passed", "failed", "skipped", "suite_name"],
+      "properties": {
+        "suite_name": { "type": "string" },
+        "total": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "tests_after": {
+      "type": "object",
+      "required": ["total", "passed", "failed", "skipped", "suite_name"],
+      "properties": {
+        "suite_name": { "type": "string" },
+        "total": { "type": "integer", "minimum": 0 },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+
+    "pass_rate_before": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "pass_rate_after":  { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+
+    "winner_model": { "type": "string" },
+    "winner_score": { "type": "number" },
+    "consensus_method": { "type": "string", "description": "e.g., codebleu+heuristic, majority-vote, pairwise-elim" },
+
+    "codebleu_weights": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3, "maxItems": 3,
+      "description": "[ngram, AST, token]"
+    },
+    "codebleu_lang": { "type": "string", "description": "Target language for CodeBLEU scoring, e.g., 'python'." },
+
+    "sampling": {
+      "type": "object",
+      "required": ["temperature", "top_p"],
+      "properties": {
+        "temperature": { "type": "number", "minimum": 0 },
+        "top_p": { "type": "number", "minimum": 0, "maximum": 1 },
+        "top_k": { "type": ["integer", "null"], "minimum": 0 },
+        "max_tokens": { "type": ["integer", "null"], "minimum": 1 },
+        "presence_penalty": { "type": ["number", "null"] },
+        "frequency_penalty": { "type": ["number", "null"] }
+      },
+      "additionalProperties": false
+    },
+
+    "agent_config": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "role"],
+        "properties": {
+          "name": { "type": "string" },
+          "role": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "models": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "source", "quant", "context_length"],
+        "properties": {
+          "name": { "type": "string" },
+          "source": { "type": "string", "description": "registry/URL/ref; include version/sha if available" },
+          "quant": { "type": ["string", "null"], "description": "e.g., Q4_K_M, AWQ, bf16" },
+          "context_length": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "engine": {
+      "type": "object",
+      "required": ["backend", "version"],
+      "properties": {
+        "backend": { "type": "string", "enum": ["ollama", "lmstudio", "vllm", "other"] },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "hardware": {
+      "type": "object",
+      "properties": {
+        "gpu_name": { "type": "string" },
+        "vram_gb": { "type": "number" },
+        "driver": { "type": "string" },
+        "cuda_version": { "type": "string" },
+        "cpu_model": { "type": "string" },
+        "ram_gb": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+
+    "latency_ms": {
+      "type": "object",
+      "properties": {
+        "planning": { "type": ["integer", "null"], "minimum": 0 },
+        "debate": { "type": ["integer", "null"], "minimum": 0 },
+        "selection": { "type": ["integer", "null"], "minimum": 0 },
+        "generation": { "type": ["integer", "null"], "minimum": 0 },
+        "patch_apply": { "type": ["integer", "null"], "minimum": 0 },
+        "tests": { "type": ["integer", "null"], "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+
+    "token_usage": {
+      "type": ["object", "null"],
+      "description": "Optional per-model usage map",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["prompt_tokens", "completion_tokens"],
+        "properties": {
+          "prompt_tokens": { "type": "integer", "minimum": 0 },
+          "completion_tokens": { "type": "integer", "minimum": 0 }
+        },
+        "additionalProperties": false
+      }
+    },
+
+    "safety": {
+      "type": "object",
+      "properties": {
+        "allow_net": { "type": "boolean" },
+        "sandbox_mode": { "type": "string" },
+        "fs_scope": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+
+    "config_digest": { "type": "string", "description": "Hash of key env/config (ENGINE_BACKENDS, ALLOW_NET, CODEBLEU_*)" },
+
+    "dataset_tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+
+    "exit_status": {
+      "type": "object",
+      "required": ["patched", "tests_passed", "tests_missing"],
+      "properties": {
+        "patched": { "type": "boolean" },
+        "tests_passed": { "type": "boolean" },
+        "tests_missing": { "type": "boolean" },
+        "error": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
+
+

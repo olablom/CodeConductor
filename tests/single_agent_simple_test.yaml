@@ -1,0 +1,3 @@
+agent: PortfolioBuilder
+prompt: What should my next AI project be for my AI1 course?
+response: '{''error'': ''timeout'', ''model'': ''meta-llama-3.1-8b-instruct''}'

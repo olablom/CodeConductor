@@ -4,6 +4,15 @@ CodeConductor - Personal AI Development Platform
 Advanced ensemble consensus algorithms, RTX 5090 optimization, and enterprise-grade AI patterns.
 """
 
+import os
+
+# Enforce local-first privacy: disable anonymous telemetry where supported
+os.environ.setdefault("ANONYMIZED_TELEMETRY", "false")  # Chroma
+os.environ.setdefault("POSTHOG_DISABLED", "1")  # PostHog client
+os.environ.setdefault("LANGCHAIN_ENDPOINT", "")  # LangSmith off by default
+os.environ.setdefault("LANGSMITH_TRACING", "false")
+os.environ.setdefault("OPENAI_API_KEY", "")  # prevent accidental usage
+
 __version__ = "0.1.0"
 __author__ = "Ola Blom"
 __email__ = "olablom@github.com"
@@ -12,9 +21,6 @@ __email__ = "olablom@github.com"
 from .app import CodeConductorApp
 from .dashboard import ValidationDashboard
 from .logger import ValidationLogger
-
-# vLLM Integration
-from .vllm_integration import VLLMEngine, create_vllm_engine
 
 # Ensemble imports
 from .ensemble import (
@@ -72,34 +78,25 @@ __all__ = [
     "CodeConductorApp",
     "ValidationDashboard",
     "ValidationLogger",
-    
-    # vLLM Integration
-    "VLLMEngine",
-    "create_vllm_engine",
-    
     # Ensemble
     "ModelManager",
     "QueryDispatcher",
     "ConsensusCalculator",
     "HybridEnsemble",
     "EnsembleEngine",
-    
     # Analysis
     "PlannerAgent",
     "ProjectAnalyzer",
     "TreeSitterAnalyzer",
-    
     # Feedback
     "LearningSystem",
     "RLHFAgent",
     "validate_cursor_output",
     "CodeValidator",
     "ValidationResult",
-    
     # Generators
     "PromptGenerator",
     "SimplePromptGenerator",
-    
     # Integrations
     "ClipboardMonitor",
     "CloudEscalator",
@@ -111,10 +108,8 @@ __all__ = [
     "stop_global_hotkeys",
     "notify_success",
     "notify_error",
-    
     # Context
     "RAGSystem",
-    
     # Runners
     "TestRunner",
-] 
+]

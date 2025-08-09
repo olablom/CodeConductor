@@ -4,10 +4,7 @@
 
 **🩹 Fix bugs in 30s – privately**
 
-[![Tests](https://img.shields.io/badge/tests-100%25%20success-brightgreen)](https://github.com/your-repo)
-[![Local](https://img.shields.io/badge/local-100%25%20private-blue)](https://github.com/your-repo)
-[![Cost](https://img.shields.io/badge/cost-$0%20API%20fees-green)](https://github.com/your-repo)
-[![Quick CI](https://github.com/your-repo/CodeConductor/actions/workflows/ci.yml/badge.svg)](https://github.com/your-repo/CodeConductor/actions/workflows/ci.yml)
+[// badges intentionally trimmed for accuracy in Early Alpha ]
 [![Preflight Ready](https://img.shields.io/badge/preflight-ready-brightgreen)](#diagnose-cursor-api-windows)
 
 ## 🚀 **The Problem**
@@ -24,26 +21,67 @@
 
 **Local agents · 30s fixes · 0% data leaves laptop**
 
-## 🏆 **BREAKTHROUGH RESULTS**
+### Single‑model baseline (LM Studio) and sampling override
 
-### **Latest Test Results (2025-08-08):**
+For a stable local baseline on RTX 5090, run exactly one LM Studio model and lock selection:
 
-| Component                              | Status  | Success Rate (n/N) | # Test Cases | Median Latency | 99th Percentile |
-| -------------------------------------- | ------- | ------------------ | ------------ | -------------- | --------------- |
-| **Focused 2‑Agent (Windows defaults)** | ✅ PASS | **100% (6/6)**     | 6            | 8.4s           | 10.9s           |
-| **Single Agent**                       | ✅ PASS | **100% (3/3)**     | 3            | 5.2s           | 6.1s            |
-| **RAG Functionality**                  | ✅ PASS | **100% (5/5)**     | 5            | 0.0s           | 0.1s            |
-| **Performance Benchmarks**             | ✅ PASS | **100% (4/4)**     | 4            | 4.8s           | 12.0s           |
-| **RLHF Learning**                      | ✅ PASS | **Active**         | 2            | 0.5s           | 1.2s            |
+1. Start LM Studio REST API on :1234 and load only `meta-llama-3.1-8b-instruct` (GGUF is fine).
 
-**📊 Full benchmark suite:** `python tests/run_benchmarks.py --quick`
+2. In Windows PowerShell, set env in the same session before running benchmarks:
 
-### **Perfect Use Cases (100% Success):**
+```
+$env:ENGINE_BACKENDS='lmstudio'
+$env:LMSTUDIO_CLI_DISABLE='1'
+$env:OLLAMA_DISABLE='1'
+$env:DISCOVERY_DISABLE='1'
+$env:ENGINE_MODEL_ALLOWLIST='meta-llama-3.1-8b-instruct'
+$env:SELECTOR_POLICY='fixed'
+$env:MODEL_SELECTOR_STRICT='1'
+$env:FORCE_MODEL='meta-llama-3.1-8b-instruct'
+$env:WINNER_MODEL='meta-llama-3.1-8b-instruct'
+$env:MAX_PARALLEL_MODELS='1'
+$env:RLHF_DISABLE='1'
 
-- ✅ **Fibonacci Functions** - 100% success rate
-- ✅ **Binary Search** - 100% success rate
-- ✅ **REST APIs** - 100% success rate
-- ✅ **Self-Reflection Loop** - 100% success rate
+# Sampling override (applies to payload)
+$env:CC_TEMP='0.1'
+$env:CC_TOP_P='0.9'
+$env:MAX_TOKENS='192'
+$env:PYTHONIOENCODING='utf-8'
+```
+
+The dispatcher now honors `CC_TEMP`/`CC_TOP_P`/`MAX_TOKENS` and applies them to request payloads.
+
+3. Run benchmarks:
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_benchmark_10.ps1 -Runs 10
+```
+
+Expected warm baseline: TTFT p50 ≈ 2.5–3.0 s (after warmup), CodeBLEU ≈ 0.73 for generic prompts. `first_prompt_success` stays 0 if the prompt has no tests.
+
+## 📌 **Current Status (Early Alpha)**
+
+- Local‑first, multi‑agent + ensemble engine working on Windows (RTX 5090).
+- Selector runs in latency mode; artifacts saved per run under `artifacts/runs/<ts>/`.
+- Recent consensus run (CodeBLEU+heuristic) scored ~0.7352; target is ≥0.8 with light calibration.
+- External adapters are opt‑in and disabled by default (privacy‑first).
+
+Run quick benchmarks locally:
+
+```bash
+python tests/run_benchmarks.py --quick
+```
+
+### Consensus calibration (CodeBLEU)
+
+```powershell
+$env:CODEBLEU_WEIGHTS = '0.2,0.6,0.2'   # ngram, AST, token
+$env:CODEBLEU_NORMALIZE='1'
+$env:CODEBLEU_STRIP_COMMENTS='1'
+$env:CODEBLEU_STRIP_DOCSTRINGS='1'
+$env:TEMP='0.1'  # reduce stylistic drift for short prompts
+python scripts\generate_ensemble_run.py --prompt "Create a Python Fibonacci function (iterative)"
+```
 
 ## 🎯 **What is CodeConductor?**
 
@@ -61,7 +99,7 @@ CodeConductor is a **local-first AI development assistant** that uses multiple A
 ### **Prerequisites:**
 
 - Python 3.11+
-- LM Studio (for local models)
+- LM Studio and/or Ollama (local models)
 - 16GB+ RAM (for model loading)
 
 ### **Installation:**
@@ -75,23 +113,17 @@ pip install -r requirements.txt
 ### **Quick Start:**
 
 ```bash
-# Initialize configuration
-codeconductor init
+# Install deps
+pip install -r requirements.txt
 
-# Run the master test
-python test_master_simple.py --self_reflection
-
-# Quick benchmark
+# Smoke tests / benchmark (quick)
 python tests/run_benchmarks.py --quick
 
-# Or use CLI (Windows-friendly defaults)
-codeconductor test --rounds 1 --timeout-per-turn 60
-
-# Tip (Windows console encoding): set UTF-8 for clean logs
-PYTHONIOENCODING=utf-8 codeconductor test --rounds 1 --timeout-per-turn 60
+# CLI (module path friendly)
+PYTHONPATH=src python src/codeconductor/cli.py test --rounds 1 --timeout-per-turn 60
 
 # Diagnostics
-codeconductor doctor
+PYTHONPATH=src python src/codeconductor/cli.py doctor
 ```
 
 See `docs/CURSOR_TROUBLESHOOTING.md` for Cursor integration issues and local-first workarounds.
@@ -149,7 +181,70 @@ Extended roles available in `agents/personas.yaml` (e.g., `bug_hunter`, `perf_tw
 
 ### External APIs (opt‑in)
 
-Adapters (e.g., GitHub Code Search) are disabled by default; set `ALLOW_NET=1` to enable.
+- Default is private: `ALLOW_NET=0` (no external fetches)
+- Enable adapters by setting `ALLOW_NET=1` (Stack Overflow / GitHub Code Search)
+- Model backend gating:
+  - `ENGINE_BACKENDS=ollama` (disable LM Studio HTTP entirely)
+  - `LMSTUDIO_DISABLE=1` and/or `LMSTUDIO_CLI_DISABLE=1` (never touch port 1234 or `lms` CLI)
+
+Env examples (optional, improves quotas and caching):
+
+```powershell
+# Enable external adapters for this session
+$env:ALLOW_NET='1'
+
+# Stack Exchange key (optional, boosts quota)
+$env:STACKEXCHANGE_KEY='<your_key>'
+
+# GitHub token (optional; read-only scopes e.g. public_repo)
+$env:GITHUB_TOKEN='<your_token>'
+
+# Net behavior tuning
+$env:NET_TIMEOUT_S='10'
+$env:NET_MAX_RETRIES='2'
+$env:NET_CACHE_TTL_SECONDS='3600'  # 1 hour
+$env:NET_CACHE_DIR='artifacts/net_cache'
+
+# Adapter page sizes
+$env:SO_PAGESIZE='5'
+$env:GH_PER_PAGE='5'
+```
+
+Notes:
+
+- Keys/tokens are optional; leave unset for anonymous mode.
+- Cached responses are stored under `artifacts/net_cache` with TTL control.
+- No repo code is uploaded; only query terms are used to fetch public info.
+
+## 📦 Case bundle schema & KPI
+
+This project defines JSON schemas for exported case bundles and KPIs to enable deterministic, privacy‑aware sharing of results.
+
+- Schemas:
+  - `src/codeconductor/utils/schemas/kpi.schema.json`
+  - `src/codeconductor/utils/schemas/manifest.schema.json`
+
+Bundle layout (public_safe):
+
+```
+artifacts/exports/codeconductor_case_<run_id>.zip
+└─ manifest.json
+└─ kpi.json
+└─ consensus.json
+└─ selector_decision.json
+└─ diffs/
+└─ before/
+└─ after/
+└─ tests/
+└─ logs/
+└─ README_case.md
+```
+
+KPI highlights:
+
+- `ttft_ms` (monotonic), `first_prompt_success`, `pass_rate_*`
+- winner model/score, `consensus_method`, `codebleu_*`, `sampling`
+- `config_digest` over key env (`ENGINE_BACKENDS`, `ALLOW_NET`, `CODEBLEU_*`, `SELECTOR_POLICY`, `EXPORT_*`)
 
 ### Example commands
 
@@ -166,6 +261,17 @@ codeconductor run --personas agents/personas.yaml \
 # Focused suite (real)
 PYTHONIOENCODING=utf-8 python tests/test_codeconductor_2agents_focused.py
 ```
+
+## 📦 Export case bundle (v1)
+
+```bash
+# Exportera senaste run som public_safe bundle
+python scripts/export_latest.py
+```
+
+- Skapar zip under `artifacts/exports/` med namn `codeconductor_case_<run_id>.zip`.
+- Innehåller `kpi.json`, `manifest.json`, `README_case.md`, tester och diff/after (genererat från consensus‑kod om möjligt).
+- Valideras mot schema om `jsonschema` finns installerat.
 
 > CI note: GitHub Actions runs a deterministic mock smoke (`CC_QUICK_CI=1`) that never calls LM Studio. Full GPU tests are intended to run locally.
 
@@ -195,39 +301,15 @@ When you hit a problem, create a local bug report bundle from the UI to share re
 - Only the latest 20 exports are kept.
 - Click “Clear exports” in the UI to remove all.
 
-## 📊 **Performance Benchmarks**
+## 📊 **Benchmarks (local)**
 
-### **Test Results (Latest):**
+- Run the suite locally and inspect artifacts under `artifacts/`.
+- Example:
 
+```bash
+python -m pytest -q tests/
+python tests/run_benchmarks.py --quick
 ```
-🧪 Running test: rest_api (2 agents)
-✅ Test completed in 30.2s
-📊 Success: True
-📝 Code extracted: 3896 characters
-
-🧪 Running test: react_hook (2 agents)
-✅ Test completed in 27.3s
-📊 Success: True
-📝 Code extracted: 733 characters
-
-🧪 Running test: sql_query (2 agents)
-✅ Test completed in 22.8s
-📊 Success: True
-📝 Code extracted: 3896 characters
-
-🧪 Running test: bug_fix (2 agents)
-✅ Test completed in 21.8s
-📊 Success: True
-📝 Code extracted: 5027 characters
-```
-
-### **Success Rate by Use Case:**
-
-- **REST APIs**: 100% (1/1 tests)
-- **React Components**: 100% (1/1 tests)
-- **SQL Queries**: 100% (1/1 tests)
-- **Bug Fixes**: 100% (1/1 tests)
-- **Simple Functions**: 66% (2/3 tests)
 
 ## 🎼 **System Architecture**
 
@@ -266,7 +348,70 @@ sequenceDiagram
 - **Tester** - Quality assurance and validation
 - **Reviewer** - Code review and best practices
 
+## 🧪 RLHF & Learning
+
+- Method: Proximal Policy Optimization (PPO)
+- Runtime: Loads a local policy from `ppo_codeconductor.zip` if present; otherwise RLHF is auto‑disabled and the system falls back gracefully.
+- Signal: Combines unit‑test results and simple heuristics into a reward used to recommend model selection and sampling parameters.
+- Scope: Lightweight policy influences selector/sampling; it does not rewrite business logic.
+- Manage:
+  - To refresh/disable quickly: temporarily move/rename `ppo_codeconductor.zip` (RLHF will log “disabled”).
+  - Training jobs and nightly self‑play are planned; current repo includes scaffolding for resets (`reset_rlhf_weights.py`).
+
+Target: Stable, measurable gains under the local test suite without regressing latency.
+
 ## 🔧 **Configuration**
+
+## 📡 Monitoring (Grafana/Prometheus)
+
+- Memory watchdog runs by default and logs VRAM/cleanup events to app logs and `artifacts/`.
+- Dashboards: JSONs under `monitoring/grafana/dashboards/` (import into Grafana).
+- Prometheus: starter config under `monitoring/prometheus/` (bring your own Prometheus and point to your exporters; full OpenTelemetry pack is planned).
+
+Quick Grafana (optional):
+
+```bash
+# If you have Docker locally
+docker run -d --name grafana -p 3000:3000 grafana/grafana
+# Open http://localhost:3000, add Prometheus datasource, import dashboards from monitoring/grafana/dashboards/
+```
+
+Note: `scripts/diagnose_cursor.ps1` includes a port check for 3000 when requested.
+
+### Grafana – import/export quick guide
+
+1. Start Grafana (e.g., Docker snippet above) and sign in (admin/admin by default on a fresh container).
+2. Add datasource: Settings → Data sources → Prometheus → URL `http://localhost:9090` → Save & test.
+3. Import dashboards: Dashboards → New → Import → Upload JSON → pick JSON from `monitoring/grafana/dashboards/` (when available) or paste a JSON export.
+4. Optional export: Open a dashboard → Share → Export → Save to JSON (commit under `monitoring/grafana/dashboards/`).
+
+### Prometheus – minimal scrape config
+
+CodeConductor does not expose a Prometheus `/metrics` endpoint by default. Use exporters (e.g., node_exporter) and/or add FastAPI instrumentation (e.g., `prometheus-fastapi-instrumentator`) if you want `localhost:8000/metrics`.
+
+Example `prometheus.yml` (minimal):
+
+```yaml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "codeconductor_local"
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - "localhost:8000" # FastAPI metrics if instrumented
+          - "localhost:9100" # node_exporter (optional)
+```
+
+Tips:
+
+- To instrument FastAPI quickly: add `prometheus-fastapi-instrumentator` and mount it in `src/codeconductor/api/server.py`.
+- Keep exporters local to preserve privacy; don’t publish metrics externally.
 
 ### **Model Setup:**
 
@@ -288,13 +433,13 @@ FALLBACK_CONFIG = {
 }
 ```
 
-### **Supported Models:**
+### **Supported Models (local):**
 
-- **Codestral 22B** - Best overall performance (requires 24GB+ VRAM)
-- **Gemma 3 12B** - Balanced performance (requires 20GB+ VRAM)
-- **Phi-3 Mini** - Fast and efficient (requires 8GB+ VRAM)
-- **Llama 3.1 8B** - Fallback for smaller GPUs (requires 12GB+ VRAM)
-- **Mistral 7B** - Reliable baseline (requires 10GB+ VRAM)
+- **meta-llama-3.1-8b-instruct** (LM Studio)
+- **google/gemma-3-12b** (LM Studio)
+- **mistral-7b-instruct-v0.1** (LM Studio)
+- **mistral:latest** (Ollama)
+- **phi3:mini** (Ollama)
 
 ## 🎯 **Use Cases**
 
@@ -314,10 +459,9 @@ FALLBACK_CONFIG = {
 
 ## 🔒 **Privacy & Security**
 
-- **100% Local** - No data sent to cloud
-- **No API Keys** - Uses local models only
-- **Private** - Your code never leaves your machine
-- **Free** - $0 API costs
+- **Local-first by default**: `ALLOW_NET=0` disables external adapters.
+- **Backend gating**: `ENGINE_BACKENDS`, `LMSTUDIO_DISABLE`, `LMSTUDIO_CLI_DISABLE` strictly enforced.
+- **No API keys required** for local flow; cloud adapters are opt‑in.
 
 ### **Threat Model:**
 
@@ -328,12 +472,9 @@ CodeConductor runs in a sandboxed environment that prevents malicious code from 
 - **Resource Limits** - CPU, memory, and time constraints
 - **File System Isolation** - Read-only access to project files only
 
-### **Supply Chain Security:**
+### **Supply Chain Notes:**
 
-- **Docker images** built with `--no-cache` and scanned for CVEs with Trivy in CI
-- **Dependencies** pinned to exact versions to prevent supply chain attacks
-- **SBOM** generated automatically for audit trails
-- **Telemetry**: Chroma anonymized telemetry is disabled by default (`ANONYMIZED_TELEMETRY=false`).
+- Dependencies pinned where practical; anonymized telemetry disabled by default.
 
 ## 📋 **Requirements**
 
@@ -363,21 +504,38 @@ CodeConductor runs in a sandboxed environment that prevents malicious code from 
 | **Enterprise features**  | 🧭 Planned    | Q2 2026 | Multi-user, RBAC           | -      |
 | **IDE plugins**          | 🧭 Planned    | Q2 2026 | VSCode, Cursor integration | -      |
 
-## 📈 **Business Case**
+[// marketing claims trimmed for Early Alpha accuracy]
 
-### **Value Proposition:**
+## ❗ ECONNRESET – Quick Fix (Cursor Local API)
 
-- **6x more code** than single model
-- **25% better success rate**
-- **100% private and local**
-- **$0 API costs**
+Symptoms: ConnectError/ECONNRESET when Cursor’s local API isn’t listening or env is corrupt.
 
-### **Target Market:**
+```powershell
+# 1) Clear proxy/DNS
+netsh winhttp reset proxy
+[Environment]::SetEnvironmentVariable('CURSOR_DISABLE_PROXY','1','User')
+ipconfig /flushdns
 
-- **API Developers** (100% success rate)
-- **React Developers** (100% success rate)
-- **Backend Developers** (SQL 100% success)
-- **QA Teams** (Bug fixes 100% success)
+# 2) Reset Cursor env
+[Environment]::SetEnvironmentVariable('CURSOR_MODE','manual','User')
+[Environment]::SetEnvironmentVariable('CURSOR_API_BASE','','User')
+
+# 3) Fully restart Cursor (quit from tray)
+
+# Quick checks
+Get-NetTCPConnection -State Listen | Where-Object LocalPort -eq 1234
+curl.exe -s http://127.0.0.1:1234/v1/models
+```
+
+## 🔜 Later development – Privacy export hardening
+
+- Privacy levels: `public_safe` (default), `team_safe` (masked paths + selected diffs/logs), `full_internal` (raw outputs allowed).
+- RAW toggle: `EXPORT_INCLUDE_RAW=1` to include raw model outputs where allowed.
+- Redactions: always mask absolute paths and usernames in `team_safe`; normalize to relative POSIX paths and replace home with `~`.
+- Determinism: normalize line endings to `\n`, sort `files[]` lexicographically, set zip comment (run_id, privacy, schema versions).
+- Truncation: per‑file size cap with byte‑exact streaming; write `*_TRUNCATED.txt`; set `bundle_truncated=true` and list categories in `manifest.redactions` and README_case.
+- Concurrency: simple lock around export per `run_id` to avoid collisions.
+- Policy precedence: CLI > env > defaults; unknown privacy level falls back to `public_safe` and records a manifest warning.
 
 ## 🤝 **Contributing**
 

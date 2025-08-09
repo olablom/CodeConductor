@@ -252,17 +252,22 @@ class ValidationDashboard:
                 runs_dir = Path("artifacts/runs")
                 latest = None
                 if runs_dir.exists():
-                    run_dirs = sorted(runs_dir.glob("*"), key=lambda p: p.name, reverse=True)
+                    run_dirs = sorted(
+                        runs_dir.glob("*"), key=lambda p: p.name, reverse=True
+                    )
                     latest = run_dirs[0] if run_dirs else None
                 decision = None
                 if latest:
                     sel_file = latest / "selector_decision.json"
                     if sel_file.exists():
                         import json as _json
+
                         decision = _json.loads(sel_file.read_text(encoding="utf-8"))
 
                 if decision:
-                    pol = decision.get("policy", os.environ.get("SELECTOR_POLICY", "latency"))
+                    pol = decision.get(
+                        "policy", os.environ.get("SELECTOR_POLICY", "latency")
+                    )
                     chosen = decision.get("chosen") or decision.get("selected_model")
                     sampling = decision.get("sampling", {})
                     st.caption(f"Policy: {pol}")
@@ -271,7 +276,9 @@ class ValidationDashboard:
                         st.code(_json.dumps(sampling, ensure_ascii=False, indent=2))
                     scores = decision.get("scores", {})
                     if scores:
-                        top3 = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)[:3]
+                        top3 = sorted(
+                            scores.items(), key=lambda kv: kv[1], reverse=True
+                        )[:3]
                         st.write("Top candidates:")
                         for mid, sc in top3:
                             st.write(f"- {mid}: {sc:.3f}")
@@ -283,6 +290,23 @@ class ValidationDashboard:
                             pass
                 else:
                     st.info("No recent decision. Run a task to populate artifacts.")
+
+                # Consensus mini row (latest)
+                try:
+                    if latest:
+                        cons_file = latest / "consensus.json"
+                        if cons_file.exists():
+                            cons = _json.loads(cons_file.read_text(encoding="utf-8"))
+                            winner = cons.get("winner", {})
+                            sc = winner.get("score")
+                            model = winner.get("model")
+                            if sc is not None:
+                                st.caption(
+                                    f"Consensus {float(sc):.2f} — {model or 'N/A'}",
+                                    help="fast CodeBLEU + heuristik",
+                                )
+                except Exception:
+                    pass
             except Exception as e:
                 st.warning(f"Selector decision unavailable: {e}")
 

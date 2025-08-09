@@ -169,6 +169,10 @@ ppo_codeconductor.zip
 .DS_Store
 Thumbs.db
 
+# Windows reserved filenames (avoid git index errors)
+NUL
+nul
+
 # Logs
 *.log
 logs/

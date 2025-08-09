@@ -266,8 +266,25 @@ Please provide a complete, working implementation that meets all requirements.
         if context is None:
             context = PromptContext()
 
-        # Prepare template data
+        # Prepare template data + optional repo context
         template_data = {"consensus": consensus, "context": context}
+
+        # Try to enrich with repo map context if available
+        try:
+            from codeconductor.context.repo_map import (
+                build_repo_map,
+                build_prompt_context,
+            )
+
+            repo_root = Path.cwd()
+            repo_map = build_repo_map(str(repo_root))
+            context_block = build_prompt_context(repo_map, consensus.get("task", ""))
+            if context.project_structure:
+                context.project_structure += "\n\n" + context_block
+            else:
+                context.project_structure = context_block
+        except Exception as e:
+            logger.info(f"Repo-map enrichment skipped: {e}")
 
         try:
             # Choose template based on model

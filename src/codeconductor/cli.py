@@ -587,16 +587,21 @@ Examples:
         # Write simple manifest with runtime info (timestamp)
         try:
             from datetime import datetime as _dt
+
             man_dir = Path("artifacts/diagnostics")
             man_dir.mkdir(parents=True, exist_ok=True)
             (man_dir / "preflight_manifest.json").write_text(
-                json.dumps({
-                    "ts": _dt.utcnow().isoformat() + "Z",
-                    "cursor_mode": result.get("cursor_mode"),
-                    "cursor_api_status": result.get("cursor_api_status"),
-                    "ollama_status": result.get("ollama_status"),
-                    "detected_port": result.get("detected_port"),
-                }, ensure_ascii=False, indent=2),
+                json.dumps(
+                    {
+                        "ts": _dt.utcnow().isoformat() + "Z",
+                        "cursor_mode": result.get("cursor_mode"),
+                        "cursor_api_status": result.get("cursor_api_status"),
+                        "ollama_status": result.get("ollama_status"),
+                        "detected_port": result.get("detected_port"),
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                ),
                 encoding="utf-8",
             )
         except Exception:

@@ -41,12 +41,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Feature flag to mute verbose Cursor logs in manual mode
-_CURSOR_MODE = (os.getenv("CURSOR_MODE") or "").lower() if 'os' in globals() else ""
-_MUTE_CURSOR_LOGS = (_CURSOR_MODE == "manual")
+_CURSOR_MODE = (os.getenv("CURSOR_MODE") or "").lower() if "os" in globals() else ""
+_MUTE_CURSOR_LOGS = _CURSOR_MODE == "manual"
+
 
 def _log_info(msg: str) -> None:
     if not _MUTE_CURSOR_LOGS:
         logger.info(msg)
+
 
 def _log_warning(msg: str) -> None:
     if not _MUTE_CURSOR_LOGS:

@@ -10,6 +10,8 @@ import logging
 from typing import Dict, Any, List, Tuple, Optional
 from aiohttp import ClientSession, ClientError, ClientTimeout
 from .model_manager import ModelManager, ModelInfo
+from .breakers import get_manager as get_breaker_manager
+from codeconductor.telemetry import get_logger
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -81,6 +83,42 @@ DEFAULT_CONFIG = {
 }
 
 
+def _env_number(name: str) -> Optional[float]:
+    import os as _os
+
+    val = (_os.getenv(name) or "").strip()
+    if not val:
+        return None
+    try:
+        return float(val)
+    except Exception:
+        return None
+
+
+def _apply_sampling_overrides(config: dict) -> dict:
+    """Apply env-based sampling overrides onto a copy of the config.
+
+    Env variables honored:
+      - CC_TEMP or TEMP (float)
+      - CC_TOP_P or TOP_P (float)
+      - MAX_TOKENS (int/float)
+    """
+    new_cfg = dict(config)
+    temp = _env_number("CC_TEMP") or _env_number("TEMP")
+    top_p = _env_number("CC_TOP_P") or _env_number("TOP_P")
+    max_tokens = _env_number("MAX_TOKENS")
+    if temp is not None:
+        new_cfg["temperature"] = float(temp)
+    if top_p is not None:
+        new_cfg["top_p"] = float(top_p)
+    if max_tokens is not None and max_tokens > 0:
+        try:
+            new_cfg["max_tokens"] = int(max_tokens)
+        except Exception:
+            new_cfg["max_tokens"] = int(float(max_tokens))
+    return new_cfg
+
+
 def get_model_config(model_id: str) -> dict:
     """
     Dynamically match model ID to base configuration using pattern matching.
@@ -128,7 +166,8 @@ class QueryDispatcher:
         url = f"{model_info.endpoint}/chat/completions"
 
         # Get model-specific configuration
-        config = get_model_config(model_info.id)
+        base_cfg = get_model_config(model_info.id)
+        config = _apply_sampling_overrides(base_cfg)
 
         payload = {
             "model": model_info.id,
@@ -182,6 +221,19 @@ class QueryDispatcher:
                     return model_info.id, data
         except asyncio.TimeoutError:
             logger.warning(f"⏰ Timeout for {model_info.id} after {timeout}s")
+            # Check if we actually got a response despite timeout
+            try:
+                async with session.post(
+                    url, json=payload, timeout=ClientTimeout(total=30)
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        logger.info(
+                            f"✅ Got response from {model_info.id} despite timeout"
+                        )
+                        return model_info.id, data
+            except:
+                pass
             return model_info.id, {"error": "timeout", "model": model_info.id}
         except ClientError as e:
             logger.error(f"❌ HTTP error for {model_info.id}: {e}")
@@ -199,7 +251,8 @@ class QueryDispatcher:
         url = f"{model_info.endpoint}/api/generate"
 
         # Get model-specific configuration
-        config = get_model_config(model_info.id)
+        base_cfg = get_model_config(model_info.id)
+        config = _apply_sampling_overrides(base_cfg)
 
         payload = {
             "model": model_info.id,
@@ -210,9 +263,7 @@ class QueryDispatcher:
                 "top_p": config["top_p"],
                 "frequency_penalty": config["frequency_penalty"],
                 "presence_penalty": config["presence_penalty"],
-                "num_predict": config[
-                    "max_tokens"
-                ],  # Ollama uses num_predict instead of max_tokens
+                "num_predict": config["max_tokens"],
             },
         }
 
@@ -245,16 +296,111 @@ class QueryDispatcher:
         """
         Send prompt to a single model based on its provider.
         """
-        if model_info.provider == "lm_studio":
-            return await self._query_lm_studio_model(session, model_info, prompt)
-        elif model_info.provider == "ollama":
-            return await self._query_ollama_model(session, model_info, prompt)
-        else:
-            logger.error(f"❌ Unknown provider: {model_info.provider}")
-            return model_info.id, {
-                "error": f"Unknown provider: {model_info.provider}",
-                "model": model_info.id,
+        # Circuit breaker guard
+        breaker = get_breaker_manager()
+        tlog = get_logger()
+        if not breaker.should_allow(model_info.id):
+            tlog.log(
+                "breaker_block",
+                {
+                    "model": model_info.id,
+                    "state": breaker.get_state(model_info.id).state,
+                },
+            )
+            return model_info.id, {"error": "breaker_open", "model": model_info.id}
+        # Failure injection for tests (shadow-friendly)
+        import os as _os
+
+        inj_match = (_os.getenv("CC_MOCK_FAIL_MODEL") or "").strip().lower()
+        inj_mode = (_os.getenv("CC_MOCK_FAIL_MODE") or "").strip().lower()
+        if inj_match and inj_match in model_info.id.lower() and inj_mode:
+            err_map = {
+                "timeout": "timeout",
+                "5xx": "HTTP 503",
+                "reset": "ConnectionResetError",
             }
+            err = err_map.get(inj_mode, "mock_error")
+            start = asyncio.get_event_loop().time()
+            total_ms = (asyncio.get_event_loop().time() - start) * 1000.0
+            cls = (
+                "timeout" if err == "timeout" else ("5xx" if "HTTP" in err else "reset")
+            )
+            breaker.update(
+                model_info.id,
+                success=False,
+                total_ms=total_ms,
+                ttft_ms=None,
+                error_class=cls,
+            )
+            tlog.log(
+                "dispatch",
+                {
+                    "model": model_info.id,
+                    "success": False,
+                    "total_ms": round(total_ms, 1),
+                    "ttft_ms": None,
+                    "error_class": cls,
+                },
+            )
+            return model_info.id, {"error": err, "model": model_info.id}
+        start = asyncio.get_event_loop().time()
+        err_class: str | None = None
+        try:
+            if model_info.provider == "lm_studio":
+                mid, data = await self._query_lm_studio_model(
+                    session, model_info, prompt
+                )
+            elif model_info.provider == "ollama":
+                mid, data = await self._query_ollama_model(session, model_info, prompt)
+            else:
+                logger.error(f"❌ Unknown provider: {model_info.provider}")
+                mid, data = (
+                    model_info.id,
+                    {
+                        "error": f"Unknown provider: {model_info.provider}",
+                        "model": model_info.id,
+                    },
+                )
+        finally:
+            total_ms = (asyncio.get_event_loop().time() - start) * 1000.0
+            success = isinstance(
+                locals().get("data", {}), dict
+            ) and "error" not in locals().get("data", {})
+            if not success:
+                # classify error
+                err = (
+                    locals().get("data", {}).get("error")
+                    if isinstance(locals().get("data", {}), dict)
+                    else None
+                )
+                if isinstance(err, str):
+                    if "timeout" in err:
+                        err_class = "timeout"
+                    elif "breaker_open" in err:
+                        err_class = "breaker_open"
+                    elif "HTTP" in err or "5" in err:
+                        err_class = "5xx"
+                    else:
+                        err_class = "other"
+            # No TTFT available here without SSE stream; record None
+            breaker.update(
+                model_info.id,
+                success=bool(success),
+                total_ms=total_ms,
+                ttft_ms=None,
+                error_class=err_class,
+            )
+            tlog.log(
+                "dispatch",
+                {
+                    "model": model_info.id,
+                    "success": bool(success),
+                    "total_ms": round(total_ms, 1),
+                    "ttft_ms": None,
+                    "error_class": err_class,
+                },
+            )
+        return mid, data
 
     async def dispatch(
         self, prompt: str, max_models: Optional[int] = None
@@ -464,75 +610,91 @@ class QueryDispatcher:
         prompt: str,
         context: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """
-        Dispatch prompts to multiple models in parallel - interface expected by ensemble engine.
-
-        Args:
-            models: List ofModelInfo objects to query
-            prompt: The prompt to send to all models
-            context: Optional context information (not used in current implementation)
-
-        Returns:
-            Dict mapping model IDs to their responses
-        """
+        """Dispatch a prompt to multiple models in parallel."""
         logger.info(f"🚀 Dispatching parallel to {len(models)} models...")
-        logger.info(f"🔍 Models: {[m.id for m in models]}")
-        logger.info(f"🔍 Session available: {self.session is not None}")
+        logger.info(f"🔍 Models: {[model.id for model in models]}")
 
-        # Query all models in parallel (session is already managed by caller)
-        if not self.session:
-            logger.error("❌ No session available for dispatch_parallel")
-            return {}
+        if not models:
+            return {"success": False, "error": "No models provided"}
+
+        # Create tasks for each model
+        tasks = []
+        for model in models:
+            task = self._query_model(self.session, model, prompt)
+            tasks.append(task)
+
+        logger.info(f"🔍 Created {len(tasks)} tasks")
 
         try:
-            tasks = [self._query_model(self.session, model, prompt) for model in models]
-            logger.info(f"🔍 Created {len(tasks)} tasks")
-
-            # Add timeout protection to prevent hanging
-            # Use the maximum timeout from the models (SLOW_TIMEOUT = 120s)
-            timeout_seconds = (
-                SLOW_TIMEOUT
-                if self.timeout is None
-                else max(self.timeout, SLOW_TIMEOUT)
-            )
-
-            responses = await asyncio.wait_for(
-                asyncio.gather(*tasks, return_exceptions=True), timeout=timeout_seconds
-            )
-            logger.info(f"🔍 Got {len(responses)} responses")
+            # Wait for all tasks to complete
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            logger.info(f"🔍 All tasks completed")
 
             # Process results
-            results = {}
-            for i, response in enumerate(responses):
-                if isinstance(response, Exception):
-                    model_id = models[i].id if i < len(models) else f"unknown_{i}"
-                    logger.error(f"❌ Exception for {model_id}: {response}")
-                    results[model_id] = {"error": str(response), "model": model_id}
+            successful_results = {}
+            failed_results = {}
+
+            for i, result in enumerate(results):
+                model_id = models[i].id
+                if isinstance(result, Exception):
+                    failed_results[model_id] = str(result)
+                    logger.error(f"❌ {model_id} failed: {result}")
                 else:
-                    model_id, data = response
-                    results[model_id] = data
-                    logger.info(f"🔍 Processed response for {model_id}")
+                    model_id, response_data = result
+                    successful_results[model_id] = response_data
+                    logger.info(f"✅ {model_id} succeeded")
 
-            # Log summary
-            success_count = sum(1 for r in results.values() if "error" not in r)
-            error_count = len(results) - success_count
-            logger.info(
-                f"📊 Parallel dispatch complete: {success_count} success, {error_count} errors"
-            )
-            logger.info(f"🔍 Returning results: {results}")
+            return {
+                "success": len(successful_results) > 0,
+                "successful": successful_results,
+                "failed": failed_results,
+                "total_models": len(models),
+                "successful_count": len(successful_results),
+                "failed_count": len(failed_results),
+            }
 
-            return results
-
-        except asyncio.TimeoutError:
-            logger.error(f"⏰ dispatch_parallel timed out after {timeout_seconds}s")
-            # Return timeout errors for all models
-            results = {}
-            for model in models:
-                results[model.id] = {"error": "timeout", "model": model.id}
-            return results
         except Exception as e:
-            logger.error(f"❌ Exception in dispatch_parallel: {e}")
-            return {}
+            logger.error(f"❌ Parallel dispatch failed: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def dispatch_single(
+        self,
+        model: ModelInfo,
+        prompt: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Dispatch a prompt to a single model."""
+        logger.info(f"🎯 Dispatching to single model: {model.id}")
+
+        try:
+            # Query the single model
+            result = await self._query_model(self.session, model, prompt)
+
+            if result:
+                model_id, response_data = result
+                logger.info(f"✅ Single model request succeeded: {model_id}")
+
+                return {
+                    "success": True,
+                    "model": model_id,
+                    "response": response_data,
+                    "execution_time": 0.0,  # Could be calculated if needed
+                }
+            else:
+                logger.error(f"❌ Single model request failed: {model.id}")
+                return {
+                    "success": False,
+                    "error": f"Model {model.id} returned no response",
+                    "model": model.id,
+                }
+
+        except Exception as e:
+            logger.error(f"❌ Single model dispatch failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "model": model.id,
+            }
 
 
 # Convenience functions
