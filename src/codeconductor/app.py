@@ -432,6 +432,96 @@ class CodeConductorApp:
                             except Exception as e:
                                 st.error(f"❌ Smart cleanup failed: {e}")
 
+                        # Analyze / Rules / Propose (no inference required)
+                        st.markdown("\n### Project Conductor")
+                        col_a, col_b, col_c = st.columns(3)
+                        with col_a:
+                            if st.button("🔎 Analyze", key="cc_analyze_btn"):
+                                from codeconductor.analysis.quick_analyze import (
+                                    write_repo_map,
+                                    write_state_md,
+                                )
+
+                                try:
+                                    with st.spinner("Analyzing repository..."):
+                                        root = Path(".")
+                                        out = Path("artifacts")
+                                        data = write_repo_map(
+                                            root, out / "repo_map.json"
+                                        )
+                                        write_state_md(data, out / "state.md")
+                                    st.success(
+                                        "✅ Wrote artifacts/repo_map.json and artifacts/state.md"
+                                    )
+                                except Exception as e:
+                                    st.error(f"❌ Analyze failed: {e}")
+                        with col_b:
+                            if st.button("📝 .cursorrules", key="cc_rules_btn"):
+                                from codeconductor.analysis.quick_analyze import (
+                                    generate_cursorrules,
+                                )
+
+                                try:
+                                    data = json.loads(
+                                        (Path("artifacts/repo_map.json")).read_text(
+                                            encoding="utf-8"
+                                        )
+                                    )
+                                    rules = generate_cursorrules(data)
+                                    Path(".cursorrules").write_text(
+                                        rules, encoding="utf-8"
+                                    )
+                                    st.success("✅ Wrote .cursorrules")
+                                except Exception as e:
+                                    st.error(f"❌ .cursorrules failed: {e}")
+                        with col_c:
+                            if st.button("💡 Propose", key="cc_propose_btn"):
+                                from codeconductor.analysis.quick_analyze import (
+                                    propose_next_feature,
+                                )
+
+                                try:
+                                    repo = json.loads(
+                                        (Path("artifacts/repo_map.json")).read_text(
+                                            encoding="utf-8"
+                                        )
+                                    )
+                                    outp = Path("artifacts/prompts/next_feature.md")
+                                    outp.parent.mkdir(parents=True, exist_ok=True)
+                                    prompt = propose_next_feature(
+                                        repo, Path("artifacts/state.md")
+                                    )
+                                    outp.write_text(prompt, encoding="utf-8")
+                                    st.success(
+                                        "✅ Wrote artifacts/prompts/next_feature.md"
+                                    )
+                                except Exception as e:
+                                    st.error(f"❌ Propose failed: {e}")
+
+                        # Quick previews
+                        with st.expander(
+                            "Preview: state.md / .cursorrules / next_feature.md",
+                            expanded=False,
+                        ):
+
+                            def _preview(path: str, title: str):
+                                p = Path(path)
+                                if p.exists():
+                                    st.markdown(f"**{title}** – {p.as_posix()}")
+                                    txt = p.read_text(encoding="utf-8", errors="ignore")
+                                    st.code(
+                                        txt[:1500]
+                                        + ("\n..." if len(txt) > 1500 else "")
+                                    )
+                                else:
+                                    st.info(f"{title}: not found")
+
+                            _preview("artifacts/state.md", "state.md")
+                            _preview(".cursorrules", ".cursorrules")
+                            _preview(
+                                "artifacts/prompts/next_feature.md", "next_feature.md"
+                            )
+
                         # Check and cleanup memory
                         if st.button("🔍 Check & Cleanup Memory", key="check_cleanup"):
                             try:

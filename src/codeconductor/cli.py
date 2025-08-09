@@ -15,6 +15,12 @@ import re
 
 import yaml
 from codeconductor.ensemble.model_manager import ModelManager
+from codeconductor.analysis.quick_analyze import (
+    write_repo_map,
+    write_state_md,
+    generate_cursorrules,
+    propose_next_feature,
+)
 
 
 def create_default_config() -> Dict[str, Any]:
@@ -704,6 +710,69 @@ Examples:
         "--timeout-per-turn", type=int, default=60, help="Seconds per agent turn"
     )
     run_parser.set_defaults(func=run_command)
+
+    # Analyze / cursorrules / propose
+    def analyze_command(args: argparse.Namespace) -> int:
+        root = Path(args.path).resolve()
+        out_dir = Path(args.out).resolve()
+        out_dir.mkdir(parents=True, exist_ok=True)
+        repo_map_path = out_dir / "repo_map.json"
+        state_md_path = out_dir / "state.md"
+        data = write_repo_map(root, repo_map_path)
+        write_state_md(data, state_md_path)
+        print(f"✅ repo_map.json -> {repo_map_path}")
+        print(f"✅ state.md      -> {state_md_path}")
+        return 0
+
+    def cursorrules_command(args: argparse.Namespace) -> int:
+        repo_map_path = Path(args.input).resolve()
+        if not repo_map_path.exists():
+            print("❌ repo_map.json not found; run 'codeconductor analyze' first")
+            return 1
+        data = json.loads(repo_map_path.read_text(encoding="utf-8"))
+        rules = generate_cursorrules(data)
+        out_path = Path(args.out).resolve()
+        out_path.write_text(rules, encoding="utf-8")
+        print(f"✅ .cursorrules -> {out_path}")
+        return 0
+
+    def propose_command(args: argparse.Namespace) -> int:
+        repo_map_path = Path(args.input).resolve()
+        state_md_path = Path(args.state).resolve()
+        if not repo_map_path.exists() or not state_md_path.exists():
+            print("❌ Missing inputs; run 'analyze' first")
+            return 1
+        data = json.loads(repo_map_path.read_text(encoding="utf-8"))
+        prompt = propose_next_feature(data, state_md_path)
+        out_path = Path(args.out).resolve()
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(prompt, encoding="utf-8")
+        print(f"✅ next_feature.md -> {out_path}")
+        return 0
+
+    analyze_parser = subparsers.add_parser(
+        "analyze", help="Analyze repository and write repo_map.json/state.md"
+    )
+    analyze_parser.add_argument("--path", type=str, default=".")
+    analyze_parser.add_argument("--out", type=str, default="artifacts")
+    analyze_parser.set_defaults(func=analyze_command)
+
+    rules_parser = subparsers.add_parser(
+        "cursorrules", help="Generate .cursorrules from repo_map.json"
+    )
+    rules_parser.add_argument("--input", type=str, default="artifacts/repo_map.json")
+    rules_parser.add_argument("--out", type=str, default=".cursorrules")
+    rules_parser.set_defaults(func=cursorrules_command)
+
+    propose_parser = subparsers.add_parser(
+        "propose", help="Propose next feature prompt from analysis"
+    )
+    propose_parser.add_argument("--input", type=str, default="artifacts/repo_map.json")
+    propose_parser.add_argument("--state", type=str, default="artifacts/state.md")
+    propose_parser.add_argument(
+        "--out", type=str, default="artifacts/prompts/next_feature.md"
+    )
+    propose_parser.set_defaults(func=propose_command)
 
     args = parser.parse_args()
 

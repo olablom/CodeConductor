@@ -21,6 +21,32 @@
 
 **Local agents · 30s fixes · 0% data leaves laptop**
 
+### Project Conductor (analyze → .cursorrules → propose)
+
+Run a local project analysis and auto‑prepare your workspace before any inference:
+
+CLI:
+
+```
+# 1) Analyze repository → writes artifacts/repo_map.json and artifacts/state.md
+python -m codeconductor.cli analyze --path . --out artifacts
+
+# 2) Generate rules → writes .cursorrules from analysis
+python -m codeconductor.cli cursorrules --input artifacts/repo_map.json --out .cursorrules
+
+# 3) Propose next feature prompt → writes artifacts/prompts/next_feature.md
+python -m codeconductor.cli propose --input artifacts/repo_map.json --state artifacts/state.md --out artifacts/prompts/next_feature.md
+```
+
+Streamlit (sidebar → Project Conductor):
+- Buttons: Analyze / .cursorrules / Propose
+- Preview of generated files (first lines) with file paths
+
+Purpose:
+- Local, zero‑upload project understanding
+- Automatic `.cursorrules` for cleaner context
+- Short, structured “next feature” prompt with constraints and test command
+
 ### Single‑model baseline (LM Studio) and sampling override
 
 For a stable local baseline on RTX 5090, run exactly one LM Studio model and lock selection:
