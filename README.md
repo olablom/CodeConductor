@@ -39,10 +39,12 @@ python -m codeconductor.cli propose --input artifacts/repo_map.json --state arti
 ```
 
 Streamlit (sidebar → Project Conductor):
+
 - Buttons: Analyze / .cursorrules / Propose
 - Preview of generated files (first lines) with file paths
 
 Purpose:
+
 - Local, zero‑upload project understanding
 - Automatic `.cursorrules` for cleaner context
 - Short, structured “next feature” prompt with constraints and test command
@@ -154,47 +156,43 @@ PYTHONPATH=src python src/codeconductor/cli.py doctor
 
 See `docs/CURSOR_TROUBLESHOOTING.md` for Cursor integration issues and local-first workarounds.
 
-### Diagnose Cursor API (Windows)
+### Cursor integration (manual mode by default)
 
-Use the PowerShell diagnostics script to check local ports and auto-detect a Cursor Local API port.
+By default, Cursor Local API is disabled in this project. Use manual clipboard flow.
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/diagnose_cursor.ps1 -Ports 11434 3000
-```
+- Set for current session:
+  ```powershell
+  Remove-Item Env:CURSOR_API_BASE -ErrorAction SilentlyContinue
+  $env:CURSOR_MODE='manual'
+  ```
+- Persist for new sessions:
+  ```powershell
+  setx CURSOR_MODE manual
+  setx CURSOR_API_BASE ""
+  ```
 
-- The script writes `artifacts/diagnostics/diagnose_latest.txt`.
-- If a Cursor API port is detected, the log will include a line like:
-  - `- Detected Cursor API port: 5123`
-- Ollama `11434` health endpoint returning `404` is OK (port alive, no route).
+You can re-enable later by setting `CURSOR_MODE=auto` and `CURSOR_API_BASE` to your Cursor Local API URL, then restarting your shell.
 
-Set env vars when a port is detected (persist for new sessions):
+Diagnostics commands referencing the Cursor API are disabled by default.
 
-```powershell
-[Environment]::SetEnvironmentVariable('CURSOR_API_BASE','http://127.0.0.1:<detected>','User')
-[Environment]::SetEnvironmentVariable('CURSOR_MODE','auto','User')
-```
+### Auto‑prune (exports & runs)
 
-Open a new PowerShell and verify:
+On startup (CLI and Streamlit), CodeConductor automatically prunes old artifacts by default.
 
-```powershell
-curl.exe -vk "http://127.0.0.1:<detected>/api/health"
-```
-
-If no port is detected yet, run in manual mode until Cursor Local API is listening:
-
-```powershell
-[Environment]::SetEnvironmentVariable('CURSOR_MODE','manual','User')
-```
-
-Git Bash tip: run the script with `-File` and avoid inline `-Command` with double quotes to prevent `$...` expansion issues.
-
-#### Preflight
-
-- Quick check (CLI):
-  - `codeconductor diag cursor --run`
-- Makefile/Tasks (shortcuts):
-  - `make diag-cursor` (Unix)
-  - `scripts/tasks.ps1 -Task diag-cursor` (Windows)
+- Defaults:
+  - Exports: keep 20 latest full bundles; delete minimal/incomplete
+  - Runs: keep 50 latest or 7 days (whichever retains more)
+- Disable in current session:
+  ```powershell
+  $env:AUTO_PRUNE='0'
+  ```
+- Adjust thresholds:
+  ```powershell
+  $env:EXPORT_KEEP_FULL='30'
+  $env:EXPORT_DELETE_MINIMAL='1'
+  $env:RUNS_KEEP_DAYS='14'
+  $env:RUNS_KEEP='80'
+  ```
 
 ### Mock vs Real
 

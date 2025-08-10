@@ -12,14 +12,19 @@ from pathlib import Path
 import sys
 import time
 
-# Add project root to path
-sys.path.append(str(Path(__file__).parent.parent))
+# Ensure absolute imports resolve when executed in different contexts
+root_src = Path(__file__).resolve().parents[1]
+if str(root_src) not in sys.path:
+    sys.path.insert(0, str(root_src))
 
-from ensemble.complexity_analyzer import ComplexityAnalyzer, ComplexityResult
-from ensemble.model_manager import ModelManager
-from ensemble.query_dispatcher import QueryDispatcher
-from ensemble.consensus_calculator import ConsensusCalculator
-from integrations.cloud_escalator import CloudEscalator, CloudResponse
+from codeconductor.ensemble.complexity_analyzer import (
+    ComplexityAnalyzer,
+    ComplexityResult,
+)
+from codeconductor.ensemble.model_manager import ModelManager
+from codeconductor.ensemble.query_dispatcher import QueryDispatcher
+from codeconductor.ensemble.consensus_calculator import ConsensusCalculator
+from codeconductor.integrations.cloud_escalator import CloudEscalator, CloudResponse
 
 logger = logging.getLogger(__name__)
 

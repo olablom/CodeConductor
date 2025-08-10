@@ -26,11 +26,44 @@ from codeconductor.ensemble.ensemble_engine import EnsembleEngine, EnsembleReque
 
 
 async def run_once(prompt: str, timeout: float) -> dict:
-    eng = EnsembleEngine()
+    # Hard-disable heavy subsystems and cap parallelism for safety
+    os.environ.setdefault("RLHF_DISABLE", "1")
+    os.environ.setdefault("DISCOVERY_DISABLE", "1")
+    os.environ.setdefault("MODEL_SELECTOR_STRICT", "1")
+    os.environ.setdefault("MAX_PARALLEL_MODELS", "1")
+    # Prefer a small single model if caller didn't force one
+    os.environ.setdefault(
+        "FORCE_MODEL", os.getenv("FORCE_MODEL", "meta-llama-3.1-8b-instruct")
+    )
+
+    eng = EnsembleEngine(use_rlhf=False)
     await eng.initialize()
     try:
         req = EnsembleRequest(task_description=prompt, timeout=timeout)
         res = await eng._process_request_internal(req)
+        # If dispatcher flagged empty content, persist a diagnostic consensus
+        try:
+            run_dir = getattr(eng, "last_artifacts_dir", None)
+            if run_dir and isinstance(res, object):
+                # Best-effort: look for a structured empty content marker in last consensus/candidates
+                # Here we just write a diagnostic file if consensus is empty
+                import json as _json
+
+                cpath = Path(run_dir) / "consensus.json"
+                if cpath.exists():
+                    data = _json.loads(cpath.read_text(encoding="utf-8"))
+                    if not data:
+                        diag = {
+                            "status": "empty_content",
+                            "model": os.getenv("FORCE_MODEL") or "unknown",
+                            "prompt_preview": (prompt or "")[:50],
+                        }
+                        cpath.write_text(
+                            _json.dumps(diag, ensure_ascii=False, indent=2),
+                            encoding="utf-8",
+                        )
+        except Exception:
+            pass
         # In quick mode, ensure consensus.json exists even if no models were dispatched
         try:
             if os.getenv("CC_QUICK_CI") == "1":

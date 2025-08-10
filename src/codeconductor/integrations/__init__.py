@@ -12,7 +12,6 @@ from .cursor_integration import (
 )
 from .clipboard_monitor import ClipboardMonitor
 from .cloud_escalator import CloudEscalator
-from .cursor_local_api import CursorLocalAPI
 from .hotkeys import (
     HotkeyManager,
     get_hotkey_manager,
@@ -34,7 +33,6 @@ __all__ = [
     "ExtractedFile",
     "ClipboardMonitor",
     "CloudEscalator",
-    "CursorLocalAPI",
     "HotkeyManager",
     "get_hotkey_manager",
     "start_global_hotkeys",

@@ -16,7 +16,7 @@ try:
     CLIPBOARD_AVAILABLE = True
 except ImportError:
     CLIPBOARD_AVAILABLE = False
-    print("⚠️ pyperclip not available. Install with: pip install pyperclip")
+    print("Warning: pyperclip not available. Install with: pip install pyperclip")
 
 warnings.filterwarnings("ignore")
 
@@ -36,6 +36,7 @@ import inspect
 import importlib
 import logging
 import webbrowser
+import subprocess
 
 # Configure logging to suppress Streamlit warnings
 logging.getLogger().setLevel(logging.ERROR)
@@ -46,26 +47,69 @@ logging.getLogger("streamlit.runtime.scriptrunner.script_run_context").setLevel(
 )
 logging.getLogger("streamlit.runtime").setLevel(logging.ERROR)
 
-# Add the project root to the path
-sys.path.append(str(Path(__file__).parent))
+# Ensure the `src` directory is on sys.path for absolute imports when run via Streamlit
+src_dir = Path(__file__).resolve().parents[1]
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
 
-from .ensemble.model_manager import ModelManager
-from .ensemble.query_dispatcher import QueryDispatcher
-from .ensemble.consensus_calculator import ConsensusCalculator
-from .ensemble.hybrid_ensemble import HybridEnsemble
-from .ensemble.ensemble_engine import EnsembleEngine
-from .generators.prompt_generator import PromptGenerator
-from .integrations.notifications import notify_success, notify_error
-from .analysis.planner_agent import PlannerAgent
-from .feedback.validation_system import validate_cursor_output
-from .feedback.learning_system import save_successful_pattern, LearningSystem
-from .context.rag_system import rag_system
-from .runners.test_runner import TestRunner, PytestRunner
+from codeconductor.ensemble.model_manager import ModelManager
+from codeconductor.ensemble.query_dispatcher import QueryDispatcher
+from codeconductor.ensemble.consensus_calculator import ConsensusCalculator
+from codeconductor.ensemble.hybrid_ensemble import HybridEnsemble
+from codeconductor.ensemble.ensemble_engine import EnsembleEngine
+from codeconductor.generators.prompt_generator import PromptGenerator
+from codeconductor.integrations.notifications import notify_success, notify_error
+from codeconductor.analysis.planner_agent import PlannerAgent
+from codeconductor.feedback.validation_system import validate_cursor_output
+from codeconductor.feedback.learning_system import (
+    save_successful_pattern,
+    LearningSystem,
+)
+from codeconductor.context.rag_system import rag_system
+from codeconductor.runners.test_runner import TestRunner, PytestRunner
+
+
+def _auto_prune_on_start() -> None:
+    """Optionally prune exports and runs on Streamlit app startup."""
+    try:
+        auto = os.getenv("AUTO_PRUNE", "1").strip()
+        if auto != "1":
+            return
+        repo_root = Path(__file__).resolve().parents[2]
+        # Exports prune
+        try:
+            keep_full = os.getenv("EXPORT_KEEP_FULL", "20").strip()
+            delete_min = os.getenv("EXPORT_DELETE_MINIMAL", "1").strip() in {
+                "1",
+                "true",
+                "yes",
+            }
+            script = str(repo_root / "scripts" / "prune_exports.py")
+            cmd = [sys.executable, script, "--keep-full", keep_full]
+            if delete_min:
+                cmd.append("--delete-minimal")
+            subprocess.run(cmd, cwd=str(repo_root), check=False)
+        except Exception:
+            pass
+        # Runs prune
+        try:
+            days = os.getenv("RUNS_KEEP_DAYS", "7").strip()
+            keep = os.getenv("RUNS_KEEP", "50").strip()
+            script = str(repo_root / "scripts" / "cleanup_runs.py")
+            cmd = [sys.executable, script, "--days", days, "--keep", keep]
+            subprocess.run(cmd, cwd=str(repo_root), check=False)
+        except Exception:
+            pass
+    except Exception:
+        pass
+
 
 # Page configuration
+_auto_prune_on_start()
+
 st.set_page_config(
     page_title="CodeConductor MVP",
-    page_icon="🎼",
+    page_icon="CC",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -282,7 +326,7 @@ class CodeConductorApp:
 
         # Initialize RAG system
         try:
-            from context.rag_system import RAGSystem
+            from codeconductor.context.rag_system import RAGSystem
 
             self.rag_system = RAGSystem()
         except Exception as e:

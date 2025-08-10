@@ -12,14 +12,14 @@ import subprocess
 import re
 from typing import List, Dict, Any, Optional
 from stable_baselines3 import PPO
-from context.rag_system import RAGSystem
+from codeconductor.context.rag_system import RAGSystem
 
 logger = logging.getLogger(__name__)
 
 # Try to import pylint for code quality assessment
 try:
     # Test if pylint is available
-    result = subprocess.run(['pylint', '--version'], capture_output=True, text=True)
+    result = subprocess.run(["pylint", "--version"], capture_output=True, text=True)
     PYLINT_AVAILABLE = result.returncode == 0
     if PYLINT_AVAILABLE:
         logger.info("✅ pylint is available")
@@ -169,24 +169,33 @@ class CodeReviewer:
         # Use pylint for accurate code quality assessment
         if PYLINT_AVAILABLE:
             try:
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as temp_file:
+                with tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".py", delete=False
+                ) as temp_file:
                     temp_file.write(code)
                     temp_file_path = temp_file.name
 
                 # Run pylint via subprocess
-                result = subprocess.run([
-                    'pylint',
-                    temp_file_path,
-                    '--disable=missing-module-docstring,missing-class-docstring,missing-function-docstring',
-                    '--score=yes',
-                    '--output-format=text'
-                ], capture_output=True, text=True, timeout=30)
-                
+                result = subprocess.run(
+                    [
+                        "pylint",
+                        temp_file_path,
+                        "--disable=missing-module-docstring,missing-class-docstring,missing-function-docstring",
+                        "--score=yes",
+                        "--output-format=text",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+
                 # Clean up temporary file
                 os.unlink(temp_file_path)
-                
+
                 # Extract score from output
-                score_match = re.search(r'Your code has been rated at ([0-9.]+)/10', result.stdout)
+                score_match = re.search(
+                    r"Your code has been rated at ([0-9.]+)/10", result.stdout
+                )
                 if score_match:
                     score = float(score_match.group(1)) / 10.0
                     logger.info(f"📊 Pylint score: {score:.2f}/1.0")
@@ -194,7 +203,7 @@ class CodeReviewer:
                 else:
                     logger.warning("⚠️ Could not extract score from pylint output")
                     return self._fallback_code_quality(code)
-                
+
             except subprocess.TimeoutExpired:
                 logger.warning("⏰ Pylint timed out, using fallback")
                 return self._fallback_code_quality(code)

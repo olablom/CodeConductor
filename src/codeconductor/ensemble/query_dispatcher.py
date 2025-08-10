@@ -208,6 +208,18 @@ class QueryDispatcher:
                             logger.info(
                                 f"🐛 DEBUG: Content preview: {content[:200]}..."
                             )
+                            # If LM Studio returns an empty message content, mark explicitly
+                            if not content:
+                                logger.warning(
+                                    f"🐛 DEBUG: Empty content from model {model_info.id}"
+                                )
+                                # Return a structured marker so upstream can save a diagnostic artifact
+                                return model_info.id, {
+                                    "empty_content": True,
+                                    "model": model_info.id,
+                                    "prompt_preview": (prompt or "")[:50],
+                                    "raw": data,
+                                }
                         else:
                             logger.warning("🐛 DEBUG: No choices in response")
                     else:

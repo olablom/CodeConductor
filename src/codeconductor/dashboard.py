@@ -100,51 +100,30 @@ class ValidationDashboard:
     def render_preflight_sidebar(self):
         """Render a small preflight panel in the sidebar for Cursor/Ollama status."""
         with st.sidebar:
-            cursor_mode = os.environ.get("CURSOR_MODE", "(not set)")
-            badge = "[Auto]" if cursor_mode.lower() == "auto" else "[Manual]"
+            cursor_mode = os.environ.get("CURSOR_MODE", "manual")
+            badge = "[Manual]" if cursor_mode.lower() != "auto" else "[Auto]"
             st.subheader(f"🔎 Preflight {badge}")
 
-            cursor_api_base = os.environ.get("CURSOR_API_BASE", "(not set)")
-            st.caption("Environment")
-            st.code(f"CURSOR_MODE={cursor_mode}\nCURSOR_API_BASE={cursor_api_base}")
+            st.caption("Environment (Cursor API disabled by default)")
+            st.code(f"CURSOR_MODE={cursor_mode}")
             # Tooltips for modes
-            if cursor_mode.lower() == "manual":
-                st.caption(
-                    "Manual mode: Cursor-integration muted. Use clipboard flow. Set CURSOR_MODE=auto when Cursor API listens."
-                )
-            elif cursor_mode.lower() == "auto":
-                st.caption(
-                    "Auto mode: Tries Cursor API first, falls back on failure. Base URL via CURSOR_API_BASE."
-                )
+            st.caption(
+                "Manual mode: Cursor API skipped; use clipboard flow. Set CURSOR_MODE=auto only if you enable Cursor Local API."
+            )
 
+            # Keep only Ollama quick check; drop Cursor API checks in manual mode
             latest_path = Path("artifacts/diagnostics/diagnose_latest.txt")
             ollama_up = None
-            cursor_api_up = None
-            detected_port = None
             diagnostics_ts = None
-            parse_error: str | None = None
             if latest_path.exists():
                 try:
                     text = latest_path.read_text(encoding="utf-8", errors="ignore")
                     ollama_up = "Port 11434 -> TcpTestSucceeded=True" in text
-                    # Timestamp line (=== ... ===)
                     m_ts = re.search(r"^===\s*(.+?)\s*===\s*$", text, re.MULTILINE)
                     if m_ts:
                         diagnostics_ts = m_ts.group(1)
-                    m = re.search(r"Detected Cursor API port:\s*(\d+)", text)
-                    if m:
-                        detected_port = m.group(1)
-                    # Treat any non-Ollama health hit as up
-                    for line in text.splitlines():
-                        if (
-                            "GET /api/health" in line or "GET /health" in line
-                        ) and "11434" not in line:
-                            cursor_api_up = True
-                            break
-                    if cursor_api_up is None:
-                        cursor_api_up = False
-                except Exception as e:
-                    parse_error = str(e)
+                except Exception:
+                    pass
             else:
                 st.info("diagnose_latest.txt not found. Run the diagnostics script.")
 
@@ -161,35 +140,10 @@ class ValidationDashboard:
                 else:
                     st.warning("Ollama 11434: N/A")
             with col2:
-                if cursor_api_up is True:
-                    st.success("Cursor API: OK")
-                elif cursor_api_up is False:
-                    st.error(
-                        "Cursor API: NOT LISTENING",
-                        help="No process is listening. Start/enable Local API or point CURSOR_API_BASE to the correct port.",
-                    )
-                else:
-                    st.warning("Cursor API: N/A")
-
-            if parse_error:
-                st.warning("Cursor API: ERROR (parse/access)")
+                st.info("Cursor API: disabled (manual mode)")
 
             if diagnostics_ts:
                 st.caption(f"Last run: {diagnostics_ts}")
-
-            if detected_port:
-                st.write(f"Detected Cursor API port: {detected_port}")
-                setx_block = """
-[Environment]::SetEnvironmentVariable('CURSOR_API_BASE','http://127.0.0.1:{port}','User')
-[Environment]::SetEnvironmentVariable('CURSOR_MODE','auto','User')
-                    """.strip().format(port=detected_port)
-                st.code(setx_block)
-                if st.button("Copy setx commands"):
-                    try:
-                        st.session_state["_setx_clipboard"] = setx_block
-                        st.success("Commands copied to clipboard (or ready to copy)")
-                    except Exception:
-                        pass
 
             # Actions
             st.markdown("---")

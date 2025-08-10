@@ -124,6 +124,12 @@ Examples:
         """,
     )
 
+    parser.add_argument(
+        "--auto-prune",
+        action="store_true",
+        help="Run exports/runs pruning on startup (overrides env)",
+    )
+
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Init command
@@ -619,18 +625,21 @@ Examples:
     diag_subparsers = diag_parser.add_subparsers(
         dest="diag_cmd", help="Diagnostics commands"
     )
+    # NOTE: Cursor API diagnostics disabled by default (manual mode)
+    # Keeping the parser for backwards compatibility but no-op by default
     diag_cursor_parser = diag_subparsers.add_parser(
-        "cursor", help="Show Cursor env and latest diagnostics summary"
+        "cursor", help="(disabled) Cursor diagnostics (manual mode)"
     )
-    diag_cursor_parser.add_argument(
-        "--json", action="store_true", help="Print JSON summary for scripts/CI"
-    )
-    diag_cursor_parser.add_argument(
-        "--run",
-        action="store_true",
-        help="Run PowerShell diagnostics before reading summary (Windows only)",
-    )
-    diag_cursor_parser.set_defaults(func=diag_cursor_command)
+    diag_cursor_parser.add_argument("--json", action="store_true", help="(no-op)")
+    diag_cursor_parser.add_argument("--run", action="store_true", help="(no-op)")
+
+    def _noop_diag(args: argparse.Namespace) -> int:
+        print(
+            "Cursor diagnostics are disabled (manual mode). Set CURSOR_MODE=auto to enable."
+        )
+        return 0
+
+    diag_cursor_parser.set_defaults(func=_noop_diag)
 
     # Run command (quick debate entry-point with personas)
     def run_command(args: argparse.Namespace) -> int:
@@ -775,6 +784,38 @@ Examples:
     propose_parser.set_defaults(func=propose_command)
 
     args = parser.parse_args()
+
+    # Optional automatic pruning on CLI startup
+    try:
+        should_prune = args.auto_prune or (os.getenv("AUTO_PRUNE", "1").strip() == "1")
+        if should_prune:
+            repo_root = Path(__file__).resolve().parents[2]
+            # Exports prune
+            try:
+                keep_full = os.getenv("EXPORT_KEEP_FULL", "20").strip()
+                delete_min = os.getenv("EXPORT_DELETE_MINIMAL", "1").strip() in {
+                    "1",
+                    "true",
+                    "yes",
+                }
+                script = str(repo_root / "scripts" / "prune_exports.py")
+                cmd = [sys.executable, script, "--keep-full", keep_full]
+                if delete_min:
+                    cmd.append("--delete-minimal")
+                subprocess.run(cmd, cwd=str(repo_root), check=False)
+            except Exception:
+                pass
+            # Runs prune
+            try:
+                days = os.getenv("RUNS_KEEP_DAYS", "7").strip()
+                keep = os.getenv("RUNS_KEEP", "50").strip()
+                script = str(repo_root / "scripts" / "cleanup_runs.py")
+                cmd = [sys.executable, script, "--days", days, "--keep", keep]
+                subprocess.run(cmd, cwd=str(repo_root), check=False)
+            except Exception:
+                pass
+    except Exception:
+        pass
 
     if not args.command:
         parser.print_help()

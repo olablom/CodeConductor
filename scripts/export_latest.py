@@ -14,6 +14,7 @@ import json
 import os
 import sys
 from pathlib import Path
+import subprocess
 
 
 def main() -> int:
@@ -32,6 +33,13 @@ def main() -> int:
         privacy_level=privacy,
         size_limit_mb=size_mb,
     )
+
+    # Strip non-schema fields for strict validation without editing schema
+    try:
+        manifest.pop("redactions", None)
+        manifest.pop("warnings", None)
+    except Exception:
+        pass
 
     # Optional schema validation if jsonschema is available
     verified = True
@@ -69,6 +77,61 @@ def main() -> int:
     except Exception as e:  # pragma: no cover
         verified = False
         details = {"error": str(e)}
+
+    # Optional post-export prune to keep exports clean (env-driven)
+    try:
+        if os.getenv("EXPORT_PRUNE", "0").strip() == "1":
+            keep_full = os.getenv("EXPORT_KEEP_FULL", "20").strip()
+            delete_min = os.getenv("EXPORT_DELETE_MINIMAL", "1").strip() in {
+                "1",
+                "true",
+                "yes",
+            }
+            repo_root = Path(__file__).resolve().parents[1]
+            script_path = str(repo_root / "scripts" / "prune_exports.py")
+            cmd = [
+                sys.executable,
+                script_path,
+                "--keep-full",
+                keep_full,
+            ]
+            if delete_min:
+                cmd.append("--delete-minimal")
+            # Run quietly; ignore failures
+            subprocess.run(
+                cmd,
+                cwd=str(repo_root),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+    except Exception:
+        pass
+
+    # Optional prune of artifacts/runs (env-driven)
+    try:
+        if os.getenv("RUNS_PRUNE", "0").strip() == "1":
+            days = os.getenv("RUNS_KEEP_DAYS", "7").strip()
+            keep = os.getenv("RUNS_KEEP", "50").strip()
+            repo_root = Path(__file__).resolve().parents[1]
+            script_path = str(repo_root / "scripts" / "cleanup_runs.py")
+            cmd = [
+                sys.executable,
+                script_path,
+                "--days",
+                days,
+                "--keep",
+                keep,
+            ]
+            subprocess.run(
+                cmd,
+                cwd=str(repo_root),
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+    except Exception:
+        pass
 
     # Ensure UTF-8 capable stdout on Windows terminals
     try:

@@ -176,7 +176,10 @@ nul
 # Logs
 *.log
 logs/
+# Artifacts root (keep zip exports, ignore everything else by default)
 artifacts/
+!artifacts/exports/
+!artifacts/exports/*.zip
 .tmp/
 **/__pycache__/
 configs/*.json

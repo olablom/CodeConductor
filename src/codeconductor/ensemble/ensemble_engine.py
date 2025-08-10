@@ -41,12 +41,12 @@ except ImportError:
 
 # Try to import RAG components
 try:
-    from context.rag_system import RAGSystem
+    from codeconductor.context.rag_system import RAGSystem
 
     RAG_AVAILABLE = True
 except ImportError:
     RAG_AVAILABLE = False
-    print("⚠️ RAG not available. Install with: pip install langchain chromadb")
+    print("Warning: RAG not available. Install with: pip install langchain chromadb")
 
 # Try to import CodeReviewer components
 try:
@@ -109,7 +109,9 @@ class EnsembleEngine:
         except Exception:  # pragma: no cover
             self.response_cache = None
         self.min_confidence = min_confidence
-        self.use_rlhf = use_rlhf and RLHF_AVAILABLE
+        # Allow disabling RLHF via environment (RLHF_DISABLE=1)
+        rlhf_disabled_env = os.getenv("RLHF_DISABLE", "0").strip() == "1"
+        self.use_rlhf = (use_rlhf and RLHF_AVAILABLE) and (not rlhf_disabled_env)
         # Respect ALLOW_NET: when set to '0', disable RAG completely
         self.use_rag = (
             use_rag and RAG_AVAILABLE and (os.getenv("ALLOW_NET", "0") != "0")
@@ -1125,6 +1127,13 @@ class EnsembleEngine:
                 success = isinstance(response_data, dict) and (
                     "error" not in response_data
                 )
+                # Explicitly mark empty content cases from dispatcher
+                if (
+                    isinstance(response_data, dict)
+                    and response_data.get("empty_content") is True
+                ):
+                    success = False
+                    content = ""
                 result_dict = {
                     "model": model_id,
                     "success": success,
