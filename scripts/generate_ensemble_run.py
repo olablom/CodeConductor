@@ -265,6 +265,50 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                             pass
                         except Exception:
                             pass
+
+                        # Validator + self-repair loop (max 2 iterations)
+                        try:
+                            from codeconductor.utils.validator import (
+                                validate_python_code,
+                                run_doctest_on_file,
+                                build_repair_prompt,
+                            )
+                            from codeconductor.utils.extract import extract_code, normalize_python
+                            report = validate_python_code((after_dir / "generated.py").read_text(encoding="utf-8"))
+                            iter_count = 0
+                            while (
+                                (not report.syntax_ok or not report.docstring_closed or not report.has_doctest_markers)
+                                and iter_count < 2
+                            ):
+                                ok_dt, dt_out = run_doctest_on_file(after_dir / "generated.py")
+                                repair_prompt = build_repair_prompt(
+                                    (after_dir / "generated.py").read_text(encoding="utf-8"),
+                                    report,
+                                    dt_out if not ok_dt else None,
+                                )
+                                # Ask ensemble engine for a minimal single-model repair via process_request
+                                try:
+                                    fix_req = EnsembleRequest(task_description=f"Return ONLY a single fenced python code block that fixes the module.\n{repair_prompt}")
+                                    fix_res = await eng._process_request_internal(fix_req)
+                                    # Extract best-effort consensus
+                                    fixed_raw = ""
+                                    try:
+                                        cpath = Path(run_dir) / "consensus.json"
+                                        data_fix = json.loads(cpath.read_text(encoding="utf-8")) if cpath.exists() else {}
+                                        fixed_raw = data_fix.get("consensus") or ""
+                                    except Exception:
+                                        pass
+                                    if not fixed_raw:
+                                        fixed_raw = str(getattr(fix_res, "consensus", ""))
+                                    fixed_code = normalize_python(extract_code(fixed_raw, lang_hint="python"))
+                                    (after_dir / "generated.py").write_text(fixed_code + "\n", encoding="utf-8")
+                                except Exception:
+                                    break
+                                # Re-validate
+                                report = validate_python_code((after_dir / "generated.py").read_text(encoding="utf-8"))
+                                iter_count += 1
+                        except Exception:
+                            pass
         except Exception:
             pass
         # In quick mode, ensure consensus.json exists even if no models were dispatched

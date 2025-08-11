@@ -1708,11 +1708,56 @@ class CodeConductorApp:
 
             # Materialize code even if mixed with prose; use same safeguards as CLI
             materialize_status = None
+            repaired_code = None
             if generated_code and generated_code.strip():
                 try:
                     materialize_status = _materialize_generated_code(generated_code)
                 except Exception as e:
                     materialize_status = {"ok": False, "error": str(e)}
+
+                # Validator + self-repair loop (max 2 iterations)
+                try:
+                    from codeconductor.utils.validator import (
+                        validate_python_code,
+                        run_doctest_on_file,
+                        build_repair_prompt,
+                    )
+                    from codeconductor.utils.extract import extract_code, normalize_python
+                    after_path = None
+                    if materialize_status and materialize_status.get("ok"):
+                        after_path = Path(materialize_status["path"]) if materialize_status.get("path") else None
+                    else:
+                        # Best-effort resolve GUI run dir
+                        run_dir = Path("artifacts") / "runs"
+                        latest = sorted(run_dir.glob("*_gui"))[-1] if run_dir.exists() else None
+                        if latest:
+                            after_path = latest / "after" / "generated.py"
+                    if after_path and after_path.exists():
+                        code_txt = after_path.read_text(encoding="utf-8")
+                        report = validate_python_code(code_txt)
+                        iter_count = 0
+                        while (
+                            (not report.syntax_ok or not report.docstring_closed or not report.has_doctest_markers)
+                            and iter_count < 2
+                        ):
+                            # Try doctest to capture concrete failures
+                            ok_dt, dt_out = run_doctest_on_file(after_path)
+                            repair_prompt = build_repair_prompt(code_txt, report, dt_out if not ok_dt else None)
+
+                            # Ask the ensemble for a repair (single-turn, minimal)
+                            fix_task = f"Return ONLY a single fenced python code block that fixes the module.\n{repair_prompt}"
+                            fix_result = await self.hybrid_ensemble.process_task(fix_task)
+                            # Extract and normalize code
+                            fixed_raw = getattr(fix_result.final_consensus, "consensus", None) or str(fix_result.final_consensus)
+                            fixed_code = normalize_python(extract_code(fixed_raw, lang_hint="python"))
+                            after_path.write_text(fixed_code + "\n", encoding="utf-8")
+                            repaired_code = fixed_code
+                            # Re-validate
+                            code_txt = fixed_code
+                            report = validate_python_code(code_txt)
+                            iter_count += 1
+                except Exception:
+                    pass
 
             # Run automated tests if we have generated code
             test_results = None
@@ -1729,7 +1774,7 @@ class CodeConductorApp:
                 + len(hybrid_result.cloud_responses),
                 "consensus": hybrid_result.final_consensus,
                 "prompt": prompt,
-                "generated_code": generated_code,
+                "generated_code": repaired_code or generated_code,
                 "test_results": test_results,
                 "materialize": materialize_status,
                 "status": "success",
