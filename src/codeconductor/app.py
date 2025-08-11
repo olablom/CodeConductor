@@ -104,6 +104,152 @@ def _auto_prune_on_start() -> None:
         pass
 
 
+def _materialize_generated_code(consensus_text: str) -> dict:
+    """Materialize model output into artifacts/runs/<ts>_gui/after/generated.py with fixes.
+
+    Returns a dict with keys: run_dir, path, ok, error.
+    """
+    from datetime import datetime as _dt
+    from codeconductor.utils.extract import extract_code, normalize_python
+    import ast as _ast
+    import py_compile as _pyc
+
+    ts = _dt.utcnow().strftime("%Y%m%d_%H%M%S")
+    run_dir = Path("artifacts") / "runs" / f"{ts}_gui"
+    after_dir = run_dir / "after"
+    logs_dir = after_dir / "logs"
+    after_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        raw = str(consensus_text or "")
+        code = normalize_python(extract_code(raw, lang_hint="python"))
+        # Trim to last code-like line
+        symbols = "()=:_'\"[]{}"
+        lines = code.splitlines()
+        last = -1
+        for i, ln in enumerate(lines):
+            st = ln.strip()
+            if not st:
+                continue
+            if (
+                st.startswith("#")
+                or any(
+                    st.startswith(k)
+                    for k in (
+                        "def ",
+                        "class ",
+                        "if ",
+                        "for ",
+                        "while ",
+                        "import ",
+                        "from ",
+                        "print",
+                    )
+                )
+                or any(c in st for c in symbols)
+            ):
+                last = i
+        if last >= 0:
+            code = "\n".join(lines[: last + 1]).rstrip()
+
+        # Size cap
+        try:
+            cap_bytes = int(os.getenv("MATERIALIZE_MAX_BYTES", "204800"))
+        except Exception:
+            cap_bytes = 204800
+        enc = code.encode("utf-8")
+        if len(enc) > cap_bytes:
+            code = enc[:cap_bytes].decode("utf-8", errors="ignore").rstrip()
+
+        # Auto append doctest runner if doctest present
+        if os.getenv("MATERIALIZE_ENABLE_DOCTEST", "1").strip() == "1":
+            if (
+                "\n>>>" in code or code.strip().startswith(">>>")
+            ) and "doctest.testmod()" not in code:
+                code = (
+                    code.rstrip()
+                    + '\n\nif __name__ == "__main__":\n    import doctest\n    doctest.testmod()\n'
+                )
+
+        gen_path = after_dir / "generated.py"
+        gen_path.write_text(code + "\n", encoding="utf-8")
+
+        # Validate; try to autoclose triple quotes and trim trailing non-code on failure
+        strict = os.getenv("MATERIALIZE_STRICT", "1").strip() == "1"
+
+        def _ast_ok(txt: str) -> bool:
+            try:
+                _ast.parse(txt)
+                return True
+            except Exception:
+                return False
+
+        def _compile_ok(p: Path) -> bool:
+            try:
+                _pyc.compile(str(p), doraise=True)
+                return True
+            except Exception:
+                return False
+
+        ok = _ast_ok(code) and _compile_ok(gen_path)
+        if strict and not ok:
+            try:
+                txt = gen_path.read_text(encoding="utf-8")
+                tlines = txt.splitlines()
+                last_idx = -1
+                for i, ln in enumerate(tlines):
+                    st = ln.strip()
+                    if not st:
+                        continue
+                    if (
+                        st.startswith("#")
+                        or any(
+                            st.startswith(k)
+                            for k in (
+                                "def ",
+                                "class ",
+                                "if ",
+                                "for ",
+                                "while ",
+                                "import ",
+                                "from ",
+                                "print",
+                            )
+                        )
+                        or any(c in st for c in symbols)
+                    ):
+                        last_idx = i
+                if last_idx >= 0:
+                    txt = "\n".join(tlines[: last_idx + 1]).rstrip() + "\n"
+                for delim in ('"""', "'''"):
+                    if txt.count(delim) % 2 != 0:
+                        txt = txt.rstrip() + f"\n{delim}\n"
+                gen_path.write_text(txt, encoding="utf-8")
+                ok = _ast_ok(txt) and _compile_ok(gen_path)
+                if not ok:
+                    logs_dir.mkdir(parents=True, exist_ok=True)
+                    (logs_dir / "raw.txt").write_text(raw, encoding="utf-8")
+            except Exception:
+                pass
+        return {
+            "run_dir": str(run_dir),
+            "path": str(gen_path),
+            "ok": bool(ok),
+            "error": None,
+        }
+    except Exception as e:
+        try:
+            logs_dir.mkdir(parents=True, exist_ok=True)
+            (logs_dir / "error.txt").write_text(str(e), encoding="utf-8")
+        except Exception:
+            pass
+        return {
+            "run_dir": str(run_dir),
+            "path": str(after_dir / "generated.py"),
+            "ok": False,
+            "error": str(e),
+        }
+
+
 # Page configuration
 _auto_prune_on_start()
 
@@ -1560,6 +1706,14 @@ class CodeConductorApp:
             else:
                 generated_code = str(hybrid_result.final_consensus)
 
+            # Materialize code even if mixed with prose; use same safeguards as CLI
+            materialize_status = None
+            if generated_code and generated_code.strip():
+                try:
+                    materialize_status = _materialize_generated_code(generated_code)
+                except Exception as e:
+                    materialize_status = {"ok": False, "error": str(e)}
+
             # Run automated tests if we have generated code
             test_results = None
             if generated_code and generated_code.strip():
@@ -1577,6 +1731,7 @@ class CodeConductorApp:
                 "prompt": prompt,
                 "generated_code": generated_code,
                 "test_results": test_results,
+                "materialize": materialize_status,
                 "status": "success",
                 "complexity_analysis": hybrid_result.complexity_analysis,
                 "total_cost": hybrid_result.total_cost,

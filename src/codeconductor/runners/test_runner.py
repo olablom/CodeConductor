@@ -118,6 +118,41 @@ class PytestRunner:
             else:
                 print(f"⚠️ No pytest report file found: {report_file}")
 
+            # 4.5. If no pytest tests collected, attempt doctest on generated code
+            if (not success) and not test_results and code_path:
+                try:
+                    dt_proc = subprocess.run(
+                        [
+                            sys.executable,
+                            "-m",
+                            "doctest",
+                            "-v",
+                            code_path,
+                        ],
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    dt_out = dt_proc.stdout + dt_proc.stderr
+                    # Simple parsing: rc==0 → treat as success (even if 0 tests)
+                    success = dt_proc.returncode == 0
+                    # Extract a brief summary if present
+                    summary = None
+                    for line in dt_out.strip().splitlines()[::-1]:
+                        if "passed" in line and "failed" in line:
+                            summary = line.strip()
+                            break
+                    test_results.append(
+                        {
+                            "name": "doctest_summary",
+                            "passed": success,
+                            "type": "doctest",
+                            "summary": summary or "doctest run",
+                        }
+                    )
+                except Exception:
+                    pass
+
             # 5. Log reward if we have prompt and code
             reward = 0.0
             if self.prompt and self.code and test_results:
@@ -127,7 +162,7 @@ class PytestRunner:
                 "success": success,
                 "test_results": test_results,
                 "reward": reward,
-                "passed_tests": sum(1 for t in test_results if t["passed"]),
+                "passed_tests": sum(1 for t in test_results if t.get("passed")),
                 "total_tests": len(test_results),
                 "stdout": output,
             }

@@ -218,6 +218,8 @@ class EnsembleEngine:
                         "syntax_valid": bool(
                             getattr(consensus_obj, "syntax_valid", False)
                         ),
+                        # Include generated code content for downstream exporters/materialization
+                        "consensus": getattr(consensus_obj, "consensus", "") or "",
                     }
                 )
         except Exception:
