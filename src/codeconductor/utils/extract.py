@@ -76,19 +76,27 @@ def extract_code(raw_text: str, lang_hint: Optional[str] = None) -> str:
     return raw_text.strip()
 
 
-def normalize_python(code: str) -> str:
+def normalize_python(code: str, preserve_doctest: bool = True) -> str:
     """
     Make Python code ready for compile():
     - Normalize newlines
-    - Remove REPL prompts
+    - Optionally preserve doctest prompts (>>>) inside docstrings
     - Dedent
     - Trim whitespace
+
+    If preserve_doctest is True (default), we avoid stripping lines that
+    begin with '>>>' so that doctest examples remain intact. This is
+    important when the model returns examples embedded in docstrings.
     """
 
     if not code:
         return code
 
     code = code.replace("\r\n", "\n").replace("\r", "\n")
-    code = re.sub(r"^\s*>>>\s?", "", code, flags=re.M)
+    if not preserve_doctest:
+        code = re.sub(r"^\s*>>>\s?", "", code, flags=re.M)
+    # If preserving doctest, still strip interpreter output prompts '...'
+    # only when they are clearly continuation lines outside of strings would
+    # require parsing; keep it simple and leave them as-is.
     code = textwrap.dedent(code)
     return code.strip()

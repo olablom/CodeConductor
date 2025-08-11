@@ -61,22 +61,38 @@ class PytestRunner:
                     tmp.write(self.code)
                     code_path = tmp.name
 
-            # 2. Run pytest with JSON report
-            report_file = f"pytest_report_{os.getpid()}.json"
-            cmd = [
-                "pytest",
-                self.tests_dir,
-                "--maxfail=1",
-                "--disable-warnings",
-                "--json-report",
-                f"--json-report-file={report_file}",
-                "-q",  # Quiet mode for cleaner output
-                "--tb=short",  # Shorter tracebacks
-            ]
+            # Decide scope: artifact-only vs repo-wide
+            scope = os.getenv("CC_TEST_SCOPE", "artifact").strip().lower()
 
-            # Run pytest
-            process = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-            output = process.stdout + process.stderr
+            # 2. Run pytest or doctest depending on scope
+            report_file = f"pytest_report_{os.getpid()}.json"
+            output = ""
+            if scope == "artifact" and self.code:
+                # Prefer doctest directly on the provided code
+                dt_proc = subprocess.run(
+                    [sys.executable, "-m", "doctest", "-v", "-"],
+                    input=self.code,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+                output = dt_proc.stdout + dt_proc.stderr
+                # Create a minimal JSON-like result inline; we will also fall back to pytest on the temp file if needed
+            else:
+                cmd = [
+                    "pytest",
+                    self.tests_dir,
+                    "--maxfail=1",
+                    "--disable-warnings",
+                    "--json-report",
+                    f"--json-report-file={report_file}",
+                    "-q",
+                    "--tb=short",
+                ]
+                process = subprocess.run(
+                    cmd, capture_output=True, text=True, timeout=60
+                )
+                output = process.stdout + process.stderr
 
             # 3. Read JSON report
             test_results = []
@@ -118,8 +134,10 @@ class PytestRunner:
             else:
                 print(f"⚠️ No pytest report file found: {report_file}")
 
-            # 4.5. If no pytest tests collected, attempt doctest on generated code
-            if (not success) and not test_results and code_path:
+            # 4.5. If no pytest tests collected, or artifact scope, attempt doctest on generated code
+            if ((not success) and not test_results and code_path) or (
+                scope == "artifact" and self.code
+            ):
                 try:
                     dt_proc = subprocess.run(
                         [
@@ -127,15 +145,35 @@ class PytestRunner:
                             "-m",
                             "doctest",
                             "-v",
-                            code_path,
+                            code_path if code_path else "-",
                         ],
+                        input=(self.code if not code_path else None),
                         capture_output=True,
                         text=True,
                         timeout=30,
                     )
                     dt_out = dt_proc.stdout + dt_proc.stderr
-                    # Simple parsing: rc==0 → treat as success (even if 0 tests)
-                    success = dt_proc.returncode == 0
+                    # Parse doctest summary
+                    tests = 0
+                    fails = 0
+                    for line in dt_out.strip().splitlines()[::-1]:
+                        if "failed," in line and "passed" in line:
+                            # e.g., 1 items had failures: ... 1 tests in ...
+                            pass
+                        if "passed and" in line and "failed" in line:
+                            # e.g., 7 passed and 0 failed.
+                            m = re.search(
+                                r"(\d+)\s+passed\s+and\s+(\d+)\s+failed", line
+                            )
+                            if m:
+                                tests = int(m.group(1)) + int(m.group(2))
+                                fails = int(m.group(2))
+                            break
+                        if re.search(r"(\d+)\s+tests?\s+in", line):
+                            # fallback: not strictly needed
+                            pass
+                    # Success only if at least one test and no failures
+                    success = (dt_proc.returncode == 0) and (tests >= 1)
                     # Extract a brief summary if present
                     summary = None
                     for line in dt_out.strip().splitlines()[::-1]:

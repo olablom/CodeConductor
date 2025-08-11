@@ -74,7 +74,9 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                 )
 
                                 extracted = extract_code(cons, lang_hint="python")
-                                cleaned = normalize_python(extracted)
+                                cleaned = normalize_python(
+                                    extracted, preserve_doctest=True
+                                )
                                 # Heuristic trim: keep up to last code-like line
                                 lines = cleaned.splitlines()
 
@@ -279,7 +281,9 @@ async def run_once(prompt: str, timeout: float) -> dict:
                             )
 
                             report = validate_python_code(
-                                (after_dir / "generated.py").read_text(encoding="utf-8"),
+                                (after_dir / "generated.py").read_text(
+                                    encoding="utf-8"
+                                ),
                                 run_doctests=True,
                             )
                             iter_count = 0
@@ -321,7 +325,8 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                             getattr(fix_res, "consensus", "")
                                         )
                                     fixed_code = normalize_python(
-                                        extract_code(fixed_raw, lang_hint="python")
+                                        extract_code(fixed_raw, lang_hint="python"),
+                                        preserve_doctest=True,
                                     )
                                     (after_dir / "generated.py").write_text(
                                         fixed_code + "\n", encoding="utf-8"

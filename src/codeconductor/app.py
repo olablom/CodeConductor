@@ -1765,7 +1765,8 @@ class CodeConductorApp:
                                 fix_result.final_consensus, "consensus", None
                             ) or str(fix_result.final_consensus)
                             fixed_code = normalize_python(
-                                extract_code(fixed_raw, lang_hint="python")
+                                extract_code(fixed_raw, lang_hint="python"),
+                                preserve_doctest=True,
                             )
                             after_path.write_text(fixed_code + "\n", encoding="utf-8")
                             repaired_code = fixed_code
