@@ -19,6 +19,8 @@ import ast
 import re
 import subprocess
 import sys
+import types
+import doctest
 
 
 _TRIPLE_QUOTE_RE = re.compile(r"([\"]{3}|[\']{3})")
@@ -31,6 +33,10 @@ class ValidationReport:
     has_module_docstring: bool
     docstring_closed: bool
     has_doctest_markers: bool
+    doctest_tests: int
+    doctest_failures: int
+    doctest_passed: bool
+    ok: bool
     errors: List[str]
 
     def to_dict(self) -> Dict[str, object]:
@@ -39,6 +45,10 @@ class ValidationReport:
             "has_module_docstring": self.has_module_docstring,
             "docstring_closed": self.docstring_closed,
             "has_doctest_markers": self.has_doctest_markers,
+            "doctest_tests": self.doctest_tests,
+            "doctest_failures": self.doctest_failures,
+            "doctest_passed": self.doctest_passed,
+            "ok": self.ok,
             "errors": list(self.errors),
         }
 
@@ -47,7 +57,7 @@ def _has_balanced_triple_quotes(code: str) -> bool:
     if not code:
         return True
     # Count occurrences of each delimiter separately to reduce false positives
-    for delim in ("\"\"\"", "'''"):
+    for delim in ('"""', "'''"):
         if code.count(delim) % 2 != 0:
             return False
     return True
@@ -74,7 +84,25 @@ def _module_docstring_present(code: str) -> bool:
         return False
 
 
-def validate_python_code(code: str) -> ValidationReport:
+def run_doctest_on_code(code: str) -> tuple[int, int, str]:
+    """Execute doctest on code string. Returns (tests, failures, output)."""
+    try:
+        module = types.ModuleType("_cc_generated")
+        exec(compile(code, "<generated>", "exec"), module.__dict__)
+        runner = doctest.DocTestRunner(optionflags=doctest.ELLIPSIS)
+        finder = doctest.DocTestFinder(exclude_empty=False)
+        for test in finder.find(module):
+            runner.run(test)
+        results = runner.summarize(verbose=False)
+        tests_run = results.attempted
+        failures = results.failed
+        out_text = f"doctest: attempted={tests_run} failed={failures}"
+        return tests_run, failures, out_text
+    except Exception as e:
+        return 0, 1, f"doctest error: {e}"
+
+
+def validate_python_code(code: str, run_doctests: bool = True) -> ValidationReport:
     errors: List[str] = []
 
     # Syntax
@@ -96,14 +124,41 @@ def validate_python_code(code: str) -> ValidationReport:
 
     # Doctest markers
     has_doctest_markers = bool(_DOCTEST_MARKER_RE.search(code or ""))
+    doctest_tests = 0
+    doctest_failures = 0
+    doctest_passed = False
     if not has_doctest_markers:
         errors.append("no doctest markers (>>> not found)")
+
+    if run_doctests and syntax_ok:
+        tests, fails, _ = run_doctest_on_code(code or "")
+        doctest_tests, doctest_failures = tests, fails
+        doctest_passed = (fails == 0) and (tests >= 1)
+        if tests == 0:
+            errors.append(
+                "No doctests executed (test_count=0). Ensure >>> doctest examples are present in the module docstring."
+            )
+        if fails > 0:
+            errors.append(f"Doctest failures: {fails}")
+
+    ok = (
+        syntax_ok
+        and has_module_docstring
+        and docstring_closed
+        and has_doctest_markers
+        and doctest_tests >= 1
+        and doctest_failures == 0
+    )
 
     return ValidationReport(
         syntax_ok=syntax_ok,
         has_module_docstring=has_module_docstring,
         docstring_closed=docstring_closed,
         has_doctest_markers=has_doctest_markers,
+        doctest_tests=doctest_tests,
+        doctest_failures=doctest_failures,
+        doctest_passed=doctest_passed,
+        ok=ok,
         errors=errors,
     )
 
@@ -140,15 +195,20 @@ def build_repair_prompt(
         issue_list = [str(x) for x in (issues.get("errors") or [])]
 
     checklist = "\n".join(f"- {it}" for it in issue_list) or "- syntax/structure issues"
+    emphasis = ""
+    if isinstance(issues, ValidationReport):
+        if (not issues.has_doctest_markers) or issues.doctest_tests == 0:
+            emphasis = (
+                "\n\nYour previous output contained no doctests. Add doctests inside the module docstring at the very top,"
+                " using lines starting with >>> and exact expected outputs. Close the triple-quoted docstring properly."
+            )
     doctest_note = (
-        "\n\nDoctest failures:\n" + doctest_output.strip()
-        if doctest_output
-        else ""
+        "\n\nDoctest failures:\n" + doctest_output.strip() if doctest_output else ""
     )
     return (
         "You are fixing a Python module. Return ONLY one fenced python code block for the file "
         f"named {filename_hint}. Preserve public function names and signatures when possible.\n\n"
-        "Fix these issues:\n" + checklist + doctest_note + "\n\n"
+        "Fix these issues:\n" + checklist + emphasis + doctest_note + "\n\n"
         "Requirements:\n"
         "- Include a top-level module docstring that contains at least one doctest example (>>>).\n"
         "- Ensure all triple-quoted strings are closed.\n"
@@ -157,5 +217,3 @@ def build_repair_prompt(
         "- No extra prose. No explanations. Only the code block.\n\n"
         "Current code:\n```python\n" + original_code.strip() + "\n```\n"
     )
-
-

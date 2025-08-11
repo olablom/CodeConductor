@@ -1722,40 +1722,64 @@ class CodeConductorApp:
                         run_doctest_on_file,
                         build_repair_prompt,
                     )
-                    from codeconductor.utils.extract import extract_code, normalize_python
+                    from codeconductor.utils.extract import (
+                        extract_code,
+                        normalize_python,
+                    )
+
                     after_path = None
                     if materialize_status and materialize_status.get("ok"):
-                        after_path = Path(materialize_status["path"]) if materialize_status.get("path") else None
+                        after_path = (
+                            Path(materialize_status["path"])
+                            if materialize_status.get("path")
+                            else None
+                        )
                     else:
                         # Best-effort resolve GUI run dir
                         run_dir = Path("artifacts") / "runs"
-                        latest = sorted(run_dir.glob("*_gui"))[-1] if run_dir.exists() else None
+                        latest = (
+                            sorted(run_dir.glob("*_gui"))[-1]
+                            if run_dir.exists()
+                            else None
+                        )
                         if latest:
                             after_path = latest / "after" / "generated.py"
                     if after_path and after_path.exists():
                         code_txt = after_path.read_text(encoding="utf-8")
-                        report = validate_python_code(code_txt)
+                        report = validate_python_code(code_txt, run_doctests=True)
                         iter_count = 0
-                        while (
-                            (not report.syntax_ok or not report.docstring_closed or not report.has_doctest_markers)
-                            and iter_count < 2
-                        ):
+                        while (not report.ok) and iter_count < 2:
                             # Try doctest to capture concrete failures
                             ok_dt, dt_out = run_doctest_on_file(after_path)
-                            repair_prompt = build_repair_prompt(code_txt, report, dt_out if not ok_dt else None)
+                            repair_prompt = build_repair_prompt(
+                                code_txt, report, dt_out if not ok_dt else None
+                            )
 
                             # Ask the ensemble for a repair (single-turn, minimal)
                             fix_task = f"Return ONLY a single fenced python code block that fixes the module.\n{repair_prompt}"
-                            fix_result = await self.hybrid_ensemble.process_task(fix_task)
+                            fix_result = await self.hybrid_ensemble.process_task(
+                                fix_task
+                            )
                             # Extract and normalize code
-                            fixed_raw = getattr(fix_result.final_consensus, "consensus", None) or str(fix_result.final_consensus)
-                            fixed_code = normalize_python(extract_code(fixed_raw, lang_hint="python"))
+                            fixed_raw = getattr(
+                                fix_result.final_consensus, "consensus", None
+                            ) or str(fix_result.final_consensus)
+                            fixed_code = normalize_python(
+                                extract_code(fixed_raw, lang_hint="python")
+                            )
                             after_path.write_text(fixed_code + "\n", encoding="utf-8")
                             repaired_code = fixed_code
                             # Re-validate
                             code_txt = fixed_code
-                            report = validate_python_code(code_txt)
+                            report = validate_python_code(code_txt, run_doctests=True)
                             iter_count += 1
+
+                        # Only keep file if final report is ok; otherwise do not leave a broken file
+                        try:
+                            if not report.ok and after_path.exists():
+                                after_path.unlink(missing_ok=True)
+                        except Exception:
+                            pass
                 except Exception:
                     pass
 
