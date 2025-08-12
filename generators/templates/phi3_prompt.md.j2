@@ -1,0 +1,101 @@
+# Code Generation Task: {{ consensus.task | default("Implement requested functionality") }}
+
+## Task Overview
+{{ consensus.approach | default("Create a well-structured, production-ready implementation") }}
+
+## Requirements
+{% if consensus.requirements %}
+{% for req in consensus.requirements %}
+- {{ req }}
+{% endfor %}
+{% else %}
+- Implement the requested functionality with clean, readable code
+- Include comprehensive error handling and validation
+- Write thorough unit tests with good coverage
+- Follow Python best practices and PEP 8
+- Add proper type hints and docstrings
+{% endif %}
+
+{% if consensus.files_needed %}
+## Files to Create
+{% for file in consensus.files_needed %}
+- `{{ file }}`: {{ file.split('.')[-1] | upper }} implementation
+{% endfor %}
+{% endif %}
+
+{% if consensus.dependencies %}
+## Dependencies
+{% for dep in consensus.dependencies %}
+- {{ dep }}
+{% endfor %}
+{% endif %}
+
+## Code Standards
+{% for standard in context.coding_standards %}
+- {{ standard }}
+{% endfor %}
+
+{% if context.existing_patterns %}
+## Existing Patterns to Follow
+{% for pattern in context.existing_patterns %}
+- {{ pattern }}
+{% endfor %}
+{% endif %}
+
+{% if context.project_structure %}
+## Project Structure
+{{ context.project_structure }}
+{% endif %}
+
+## Implementation Instructions
+
+1. **Start with imports and setup**
+2. **Implement the core functionality**
+3. **Add proper error handling**
+4. **Include comprehensive docstrings**
+5. **Write unit tests**
+6. **Ensure code follows PEP 8**
+
+## Output Format
+
+Please provide your implementation in this exact format:
+
+### Main Implementation
+```{{ consensus.language | default("python") }}
+# Imports
+import sys
+from typing import Optional, List, Dict, Any
+
+# Your implementation here
+# Make sure to include:
+# - Type hints
+# - Docstrings
+# - Error handling
+# - Clean, readable code
+```
+
+### Test Implementation
+```python
+# Test file: test_{{ consensus.test_file | default("test_implementation") }}.py
+import pytest
+from your_module import your_function
+
+# Your test cases here
+# Include:
+# - Happy path tests
+# - Edge case tests
+# - Error condition tests
+# - Good test coverage
+```
+
+## Quality Checklist
+- [ ] Code is clean and readable
+- [ ] Type hints are included
+- [ ] Docstrings are comprehensive
+- [ ] Error handling is robust
+- [ ] Tests are thorough
+- [ ] PEP 8 compliance
+- [ ] No hardcoded values
+- [ ] Proper logging (if applicable)
+
+Please provide a complete, working implementation that meets all requirements.

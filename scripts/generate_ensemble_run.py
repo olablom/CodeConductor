@@ -181,8 +181,20 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                 except Exception:
                                     pass
 
+                                # Ensure shebang + UTF-8 header + filename comment
+                                header_lines = [
+                                    "#!/usr/bin/env python3",
+                                    "# -*- coding: utf-8 -*-",
+                                    "# generated.py",
+                                ]
                                 gen_path = after_dir / "generated.py"
-                                gen_path.write_text(final_code + "\n", encoding="utf-8")
+                                gen_path.write_text(
+                                    "\n".join(header_lines)
+                                    + "\n\n"
+                                    + final_code
+                                    + "\n",
+                                    encoding="utf-8",
+                                )
 
                                 # Validate Python syntax with ast and py_compile; attempt auto-close for triple quotes
                                 import ast, py_compile

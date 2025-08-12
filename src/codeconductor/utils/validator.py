@@ -13,14 +13,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import ast
+import doctest
 import re
 import subprocess
 import sys
 import types
-import doctest
 
 
 _TRIPLE_QUOTE_RE = re.compile(r"([\"]{3}|[\']{3})")
@@ -36,10 +36,14 @@ class ValidationReport:
     doctest_tests: int
     doctest_failures: int
     doctest_passed: bool
+    # Policy checks
+    header_ok: bool
+    trailer_required: bool
+    trailer_ok: bool
     ok: bool
-    errors: List[str]
+    errors: list[str]
 
-    def to_dict(self) -> Dict[str, object]:
+    def to_dict(self) -> dict[str, object]:
         return {
             "syntax_ok": self.syntax_ok,
             "has_module_docstring": self.has_module_docstring,
@@ -48,6 +52,9 @@ class ValidationReport:
             "doctest_tests": self.doctest_tests,
             "doctest_failures": self.doctest_failures,
             "doctest_passed": self.doctest_passed,
+            "header_ok": self.header_ok,
+            "trailer_required": self.trailer_required,
+            "trailer_ok": self.trailer_ok,
             "ok": self.ok,
             "errors": list(self.errors),
         }
@@ -102,8 +109,73 @@ def run_doctest_on_code(code: str) -> tuple[int, int, str]:
         return 0, 1, f"doctest error: {e}"
 
 
-def validate_python_code(code: str, run_doctests: bool = True) -> ValidationReport:
-    errors: List[str] = []
+def _check_exact_header(code: str) -> tuple[bool, list[str]]:
+    """Return (header_ok, header_errors). Enforces first three lines exactly and
+    that nothing precedes the shebang (no BOM/blank/comment)."""
+    required = [
+        "#!/usr/bin/env python3",
+        "# -*- coding: utf-8 -*-",
+        "# generated.py",
+    ]
+    errs: list[str] = []
+
+    # Detect BOM or any leading whitespace/comment before shebang
+    if code.startswith("\ufeff"):
+        errs.append("BOM detected before shebang; remove BOM")
+
+    lines = (code or "").splitlines()
+    if not lines:
+        errs.append("empty file (missing header)")
+        return False, errs
+
+    # Anything before shebang? i.e., first non-empty character must start the shebang
+    if not code.startswith(required[0]):
+        errs.append(
+            "invalid header: line 1 must be '#!/usr/bin/env python3' with nothing before it"
+        )
+
+    # Check next two lines exactly
+    if len(lines) < 3:
+        errs.append("invalid header: file must have at least three lines for header")
+        return False, errs
+    if lines[:3] != required:
+        # Produce specific diagnostics
+        exp = " | ".join(required)
+        got = " | ".join(lines[:3])
+        errs.append(f"invalid header: expected first three lines: {exp}; got: {got}")
+        return False, errs
+
+    return True, []
+
+
+def _check_required_trailer(code: str, require_trailer: bool) -> tuple[bool, list[str]]:
+    """If trailer is required, ensure last two lines are exactly the markers."""
+    if not require_trailer:
+        return True, []
+    # Ignore trailing empty lines
+    lines = (code or "").splitlines()
+    while lines and lines[-1].strip() == "":
+        lines.pop()
+    if len(lines) < 2:
+        return False, [
+            "invalid trailer: missing required last two lines '# SYNTAX_ERROR BELOW' and '('",
+        ]
+    if lines[-2] != "# SYNTAX_ERROR BELOW" or lines[-1] != "(":
+        return False, [
+            "invalid trailer: expected last two lines to be exactly '# SYNTAX_ERROR BELOW' and '('",
+        ]
+    return True, []
+
+
+def validate_python_code(
+    code: str,
+    run_doctests: bool = True,
+    *,
+    enforce_header: bool = True,
+    require_trailer: Optional[bool] = None,
+    task_input: Optional[str] = None,
+) -> ValidationReport:
+    errors: list[str] = []
 
     # Syntax
     syntax_ok = True
@@ -141,6 +213,28 @@ def validate_python_code(code: str, run_doctests: bool = True) -> ValidationRepo
         if fails > 0:
             errors.append(f"Doctest failures: {fails}")
 
+    # Policy: exact header
+    header_ok = True
+    if enforce_header:
+        header_ok, header_errors = _check_exact_header(code or "")
+        errors.extend(header_errors)
+
+    # Policy: conditional trailer
+    trailer_needed = bool(require_trailer)
+    if require_trailer is None and task_input is not None:
+        trailer_needed = "# SYNTAX_ERROR BELOW" in task_input
+    trailer_ok = True
+    if trailer_needed:
+        trailer_ok, trailer_errors = _check_required_trailer(code or "", True)
+        errors.extend(trailer_errors)
+    else:
+        # When trailer is NOT required (e.g., post-repair), ensure marker is absent
+        if "# SYNTAX_ERROR BELOW" in (code or ""):
+            trailer_ok = False
+            errors.append(
+                "trailer present when not required: remove '# SYNTAX_ERROR BELOW' and '(' from EOF"
+            )
+
     ok = (
         syntax_ok
         and has_module_docstring
@@ -148,6 +242,8 @@ def validate_python_code(code: str, run_doctests: bool = True) -> ValidationRepo
         and has_doctest_markers
         and doctest_tests >= 1
         and doctest_failures == 0
+        and header_ok
+        and (trailer_ok if trailer_needed else True)
     )
 
     return ValidationReport(
@@ -158,12 +254,15 @@ def validate_python_code(code: str, run_doctests: bool = True) -> ValidationRepo
         doctest_tests=doctest_tests,
         doctest_failures=doctest_failures,
         doctest_passed=doctest_passed,
+        header_ok=header_ok,
+        trailer_required=trailer_needed,
+        trailer_ok=trailer_ok,
         ok=ok,
         errors=errors,
     )
 
 
-def run_doctest_on_file(path: Path, timeout_seconds: int = 15) -> Tuple[bool, str]:
+def run_doctest_on_file(path: Path, timeout_seconds: int = 15) -> tuple[bool, str]:
     """Run doctest against a saved Python file; return (ok, output)."""
     try:
         proc = subprocess.run(
@@ -179,11 +278,25 @@ def run_doctest_on_file(path: Path, timeout_seconds: int = 15) -> Tuple[bool, st
         return False, f"doctest error: {e}"
 
 
+def _diagnose_header_trailer(original_code: str) -> str:
+    """Return short diagnostics for header/trailer presence and correctness."""
+    lines = (original_code or "").splitlines()
+    header_found = lines[:3]
+    trailer_found = lines[-2:] if len(lines) >= 2 else lines
+    diag = [
+        f"Header(first 3): {' | '.join(header_found) if header_found else '(missing)'}",
+        f"Trailer(last 2): {' | '.join(trailer_found) if trailer_found else '(missing)'}",
+    ]
+    return "\n".join(diag)
+
+
 def build_repair_prompt(
     original_code: str,
-    issues: ValidationReport | Dict[str, object],
+    issues: ValidationReport | dict[str, object],
     doctest_output: Optional[str] = None,
     filename_hint: str = "generated.py",
+    *,
+    require_trailer_by_task: bool = False,
 ) -> str:
     """
     Construct a concise repair prompt instructing the model to fix issues and
@@ -202,18 +315,45 @@ def build_repair_prompt(
                 "\n\nYour previous output contained no doctests. Add doctests inside the module docstring at the very top,"
                 " using lines starting with >>> and exact expected outputs. Close the triple-quoted docstring properly."
             )
+    # Policy guidance
+    header_policy = (
+        "- Place the exact three header lines at file start; nothing before them.\n"
+        "  1) #!/usr/bin/env python3\n"
+        "  2) # -*- coding: utf-8 -*-\n"
+        "  3) # generated.py\n"
+    )
+    # Decide trailer instruction: if the current code already contains the syntax-error trailer
+    # we want to REMOVE it in the repaired version. Otherwise, if the task requires it, we instruct to append it.
+    has_trailer_marker = "# SYNTAX_ERROR BELOW" in (original_code or "")
+    if has_trailer_marker:
+        trailer_policy = (
+            "- Remove the two trailer lines from EOF if present (they are only for triggering a SyntaxError):\n"
+            "  '# SYNTAX_ERROR BELOW' and '(' must NOT remain in the final file.\n"
+        )
+    elif require_trailer_by_task:
+        trailer_policy = "- Append the two exact trailer lines at EOF: first '# SYNTAX_ERROR BELOW' then '(' (on its own line).\n"
+    else:
+        trailer_policy = ""
     doctest_note = (
         "\n\nDoctest failures:\n" + doctest_output.strip() if doctest_output else ""
     )
+    diagnosis = _diagnose_header_trailer(original_code)
     return (
         "You are fixing a Python module. Return ONLY one fenced python code block for the file "
         f"named {filename_hint}. Preserve public function names and signatures when possible.\n\n"
         "Fix these issues:\n" + checklist + emphasis + doctest_note + "\n\n"
         "Requirements:\n"
-        "- Include a top-level module docstring that contains at least one doctest example (>>>).\n"
-        "- Ensure all triple-quoted strings are closed.\n"
-        "- Ensure valid Python (passes ast.parse).\n"
-        "- If doctests are present, include an if __name__ == '__main__': block that runs doctest.testmod().\n"
-        "- No extra prose. No explanations. Only the code block.\n\n"
-        "Current code:\n```python\n" + original_code.strip() + "\n```\n"
+        + header_policy
+        + trailer_policy
+        + "- Include a top-level module docstring that contains at least one doctest example (>>>).\n"
+        + "- Ensure all triple-quoted strings are closed.\n"
+        + "- Ensure valid Python (passes ast.parse).\n"
+        + "- If doctests are present, include an if __name__ == '__main__': block that runs doctest.testmod().\n"
+        + "- No extra prose. No explanations. Only the code block.\n\n"
+        + "Header/Trailer diagnostics:\n"
+        + diagnosis
+        + "\n\n"
+        + "Current code:\n```python\n"
+        + original_code.strip()
+        + "\n```\n"
     )

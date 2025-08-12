@@ -24,6 +24,11 @@ import datetime as _dt
 import os
 from pathlib import Path
 from typing import List, Tuple
+import shutil
+import time
+import os
+import json
+import zipfile
 
 
 def _is_run_dir(path: Path) -> bool:
@@ -44,7 +49,7 @@ def _list_runs(runs_root: Path) -> List[Path]:
     if not runs_root.exists():
         return []
     runs = [p for p in runs_root.iterdir() if _is_run_dir(p)]
-    # Sort newest first by directory name timestamp
+    # Sort newest first by directory name timestamp (lexicographic on run-id)
     runs.sort(key=lambda p: p.name, reverse=True)
     return runs
 
@@ -77,6 +82,40 @@ def cleanup_runs(
     dry_run: bool,
 ) -> dict:
     runs_root = artifacts_dir / "runs"
+    # Locking to avoid concurrent prunes
+    lock_dir = artifacts_dir / ".prune.lock"
+    if lock_dir.exists():
+        age = 0
+        try:
+            age = time.time() - lock_dir.stat().st_mtime
+        except Exception:
+            pass
+        if age <= 600:
+            return {
+                "artifacts_dir": str(artifacts_dir),
+                "runs_root": str(runs_root),
+                "total_runs": 0,
+                "to_delete": [],
+                "kept": [],
+                "deleted": [],
+                "dry_run": True,
+                "locked": True,
+            }
+        else:
+            shutil.rmtree(lock_dir, ignore_errors=True)
+    try:
+        lock_dir.mkdir(parents=True, exist_ok=False)
+    except Exception:
+        return {
+            "artifacts_dir": str(artifacts_dir),
+            "runs_root": str(runs_root),
+            "total_runs": 0,
+            "to_delete": [],
+            "kept": [],
+            "deleted": [],
+            "dry_run": True,
+            "locked": True,
+        }
     runs = _list_runs(runs_root)
 
     result = {
@@ -95,21 +134,122 @@ def cleanup_runs(
     # Age-based partition
     recent, old = _partition_by_age(runs, days)
 
-    # Keep only latest N among "recent" according to --keep
-    to_keep = recent[: max(keep, 0)] if keep > 0 else recent
-    overflow = recent[max(keep, 0) :] if keep > 0 else []
+    # OR logic: keep if index < keep OR age <= days
+    keep_cap = max(keep, 0)
+    to_keep: List[Path] = []
+    overflow: List[Path] = []
+    for idx, r in enumerate(recent):
+        if idx < keep_cap:
+            to_keep.append(r)
+        else:
+            overflow.append(r)
 
     # To delete = old by age + overflow beyond keep cap
     to_delete = old + overflow
 
+    # PIN_RUNS support
+    pinned_runs = set(filter(None, os.getenv("PIN_RUNS", "").split(";")))
+    to_delete = [p for p in to_delete if p.name not in pinned_runs]
+
+    # Reference integrity: skip runs referenced by kept exports
+    def _get_referenced_runs(exports_dir: Path) -> set[str]:
+        refs: set[str] = set()
+        for zpath in exports_dir.glob("*.zip"):
+            try:
+                with zipfile.ZipFile(zpath, "r") as zf:
+                    name = (
+                        "manifest.json"
+                        if "manifest.json" in zf.namelist()
+                        else (
+                            "MANIFEST.json"
+                            if "MANIFEST.json" in zf.namelist()
+                            else None
+                        )
+                    )
+                    if not name:
+                        continue
+                    try:
+                        manifest = json.loads(
+                            zf.read(name).decode("utf-8", errors="ignore")
+                        )
+                        rid = manifest.get("run_id")
+                        if isinstance(rid, str) and rid:
+                            refs.add(rid)
+                    except Exception:
+                        continue
+            except Exception:
+                continue
+        return refs
+
+    referenced = _get_referenced_runs(artifacts_dir / "exports")
+    to_delete = [p for p in to_delete if p.name not in referenced]
+
     result["to_delete"] = [str(p) for p in to_delete]
     result["kept"] = [str(p) for p in to_keep]
 
+    # Optional size cap for entire artifacts
+    def _dir_size_bytes(p: Path) -> int:
+        total = 0
+        for root, dirs, files in os.walk(p):
+            if any(skip in root for skip in (".trash", ".prune.lock", "_unzipped")):
+                continue
+            for fn in files:
+                try:
+                    total += (Path(root) / fn).stat().st_size
+                except Exception:
+                    pass
+        return total
+
+    cap_gb_str = os.getenv("ARTIFACTS_SIZE_CAP_GB", "").strip()
+    before_bytes = _dir_size_bytes(artifacts_dir)
+    extra_delete: List[Path] = []
+    if cap_gb_str:
+        try:
+            cap_bytes = int(float(cap_gb_str) * (1024**3))
+            if before_bytes > cap_bytes:
+                # Build referenced runs from kept exports (optional simple pass)
+                referenced: set[str] = set()
+                exports_dir = artifacts_dir / "exports"
+                try:
+                    for z in exports_dir.glob("codeconductor_case_*.zip"):
+                        # Prefer not to parse zip here for speed; fallback to run_id in filename
+                        try:
+                            rid = z.stem.split("_")[-1]
+                            if rid:
+                                referenced.add(rid)
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+                # Candidates: oldest lex first among to_delete, skipping pinned and referenced
+                pin_runs = set([x for x in os.getenv("PIN_RUNS", "").split(";") if x])
+                cands = [
+                    p
+                    for p in to_delete
+                    if p.name not in pin_runs and p.name not in referenced
+                ]
+                cands.sort(key=lambda p: p.name)  # oldest first
+                remaining = before_bytes
+                for p in cands:
+                    if remaining <= cap_bytes:
+                        break
+                    # Approximate size of this run dir
+                    sz = _dir_size_bytes(p)
+                    remaining -= sz
+                    extra_delete.append(p)
+        except Exception:
+            pass
+
     if dry_run:
+        # Release lock
+        try:
+            shutil.rmtree(lock_dir, ignore_errors=True)
+        except Exception:
+            pass
         return result
 
     # Perform deletion
-    for d in to_delete:
+    for d in to_delete + extra_delete:
         try:
             for child in d.rglob("*"):
                 if child.is_file() or child.is_symlink():
@@ -131,6 +271,27 @@ def cleanup_runs(
             # Best-effort: ignore errors
             pass
 
+    # Release lock
+    try:
+        shutil.rmtree(lock_dir, ignore_errors=True)
+    except Exception:
+        pass
+
+    # Cleanup old trash in exports/.trash if present (24h default)
+    try:
+        trash_dir = artifacts_dir / "exports" / ".trash"
+        cutoff = time.time() - 24 * 3600
+        if trash_dir.exists():
+            for entry in os.scandir(trash_dir):
+                try:
+                    if entry.is_file() and entry.stat().st_mtime < cutoff:
+                        os.remove(entry.path)
+                    elif entry.is_dir() and entry.stat().st_mtime < cutoff:
+                        shutil.rmtree(entry.path, ignore_errors=True)
+                except Exception:
+                    continue
+    except Exception:
+        pass
     return result
 
 

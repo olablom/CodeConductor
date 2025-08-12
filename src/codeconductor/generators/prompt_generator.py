@@ -8,6 +8,7 @@ import json
 import logging
 from typing import Dict, Any, List, Optional
 from pathlib import Path
+import os
 from jinja2 import Environment, FileSystemLoader, Template
 from dataclasses import dataclass
 
@@ -43,27 +44,87 @@ class PromptGenerator:
     """Generates structured prompts from ensemble consensus."""
 
     def __init__(self, template_dir: str = "generators/templates"):
-        self.template_dir = Path(template_dir)
+        # Canonical and legacy template directories
+        self.canonical_dir = Path("src/codeconductor/generators/templates").resolve()
+        self.legacy_dir = Path("generators/templates").resolve()
+        # Preserve compatibility with explicit argument
+        self.template_dir = Path(template_dir).resolve()
+
+        # Search order: canonical first, then legacy, then provided template_dir (if different)
+        search_paths: List[str] = []
+        for p in [self.canonical_dir, self.legacy_dir, self.template_dir]:
+            p_str = str(p)
+            if p_str not in search_paths and p.exists():
+                search_paths.append(p_str)
+        # If none exist yet, still register canonical then legacy to allow creation later
+        if not search_paths:
+            search_paths = [str(self.canonical_dir), str(self.legacy_dir)]
+
         self.env = Environment(
-            loader=FileSystemLoader(str(self.template_dir)),
+            loader=FileSystemLoader(search_paths),
             trim_blocks=True,
             lstrip_blocks=True,
         )
+
+        # Only create default templates if missing in both locations
         self._ensure_template_dir()
 
+        # Optional sanity logging
+        if os.getenv("CHECK_TEMPLATES", "0").strip() == "1":
+            self._sanity_log_templates()
+
     def _ensure_template_dir(self):
-        """Ensure template directory exists with default templates."""
-        self.template_dir.mkdir(parents=True, exist_ok=True)
+        """Ensure templates exist in at least one location. Do not duplicate if already present in canonical or legacy."""
+        # Determine effective write target: prefer canonical if parent exists or can be created
+        target_dir = (
+            self.canonical_dir
+            if self.canonical_dir.parent.exists()
+            else self.template_dir
+        )
+        try:
+            target_dir.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            # Fallback to legacy
+            target_dir = self.legacy_dir
+            target_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create default template if it doesn't exist
-        default_template = self.template_dir / "prompt.md.j2"
-        if not default_template.exists():
-            self._create_default_template(default_template)
+        def exists_any(name: str) -> bool:
+            return (self.canonical_dir / name).exists() or (
+                self.legacy_dir / name
+            ).exists()
 
-        # Create phi3:mini specialized template
-        phi3_template = self.template_dir / "phi3_prompt.md.j2"
-        if not phi3_template.exists():
-            self._create_phi3_template(default_template)
+        # Create default template only if missing in both places
+        if not exists_any("prompt.md.j2"):
+            self._create_default_template(target_dir / "prompt.md.j2")
+
+        # Create phi3 template only if missing in both places
+        if not exists_any("phi3_prompt.md.j2"):
+            self._create_phi3_template(target_dir / "prompt.md.j2")
+
+    def _sanity_log_templates(self) -> None:
+        """If CHECK_TEMPLATES=1, print which paths are used and warn on legacy fallback."""
+        required = ["prompt.md.j2", "phi3_prompt.md.j2"]
+        logger.info("CHECK_TEMPLATES=1: Resolving templates...")
+        for name in required:
+            try:
+                tmpl = self.env.get_template(name)
+                fpath = Path(getattr(tmpl, "filename", ""))
+                logger.info(f"Template {name} -> {fpath}")
+                # Warn if fallback to legacy is used
+                try:
+                    if fpath.is_file() and str(fpath).startswith(str(self.legacy_dir)):
+                        logger.warning(
+                            f"Template {name} loaded from legacy path: {fpath}. Prefer canonical {self.canonical_dir / name}"
+                        )
+                    # Also warn if canonical file is missing
+                    if not (self.canonical_dir / name).exists():
+                        logger.warning(
+                            f"Canonical template missing: {self.canonical_dir / name}. Legacy fallback may be in use."
+                        )
+                except Exception:
+                    pass
+            except Exception as e:
+                logger.error(f"Failed to resolve template {name}: {e}")
 
     def _create_default_template(self, template_path: Path):
         """Create the default Jinja2 template."""
@@ -290,6 +351,15 @@ Please provide a complete, working implementation that meets all requirements.
             # Choose template based on model
             template_name = self._get_template_for_model(model)
             template = self.env.get_template(template_name)
+            # Warn if template resolved from legacy path
+            try:
+                tpath = Path(getattr(template, "filename", ""))
+                if tpath.is_file() and str(tpath).startswith(str(self.legacy_dir)):
+                    logger.warning(
+                        f"Using legacy template path for {template_name}: {tpath}. Consider moving to {self.canonical_dir / template_name}"
+                    )
+            except Exception:
+                pass
             prompt = template.render(**template_data)
 
             # Validate prompt length

@@ -30,9 +30,23 @@ def extract_code(raw_text: str, lang_hint: Optional[str] = None) -> str:
     if not raw_text:
         return ""
 
-    # 1) Prefer fenced blocks
+    # 1) Prefer fenced blocks (return the longest)
     blocks = [m.group(1).strip() for m in FENCE_RE.finditer(raw_text)]
     if blocks:
+        # Ensure we return python block when multiple blocks exist and one appears to be python
+        if (lang_hint or "").lower() == "python":
+            # Prefer blocks that look like python by having def/class/if etc.
+            def score_py(b: str) -> int:
+                score = 0
+                for kw in ("def ", "class ", "if ", "import ", "from "):
+                    if kw in b:
+                        score += 1
+                return score
+
+            blocks_sorted = sorted(
+                blocks, key=lambda b: (score_py(b), len(b)), reverse=True
+            )
+            return blocks_sorted[0].strip()
         return max(blocks, key=len).strip()
 
     # 2) SQL fallback

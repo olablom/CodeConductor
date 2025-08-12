@@ -1,0 +1,20 @@
+Create one Python file that:
+- First three lines EXACTLY:
+  #!/usr/bin/env python3
+  # -*- coding: utf-8 -*-
+  # generated.py
+- Define: def echo(x: int) -> int: return x
+- Put ALL doctests inside the TOP module docstring:
+  >>> echo(0)
+  0
+  >>> [echo(i) for i in range(3)]
+  [0, 1, 2]
+- In __main__:
+  import doctest
+  failures, _ = doctest.testmod()
+  print(f"OK={failures==0}")
+  print(echo(12))
+- Finally, append EXACTLY these two lines to force a syntax error (do NOT fix them):
+  # SYNTAX_ERROR BELOW
+  (
+Return ONLY one fenced Python block (```python ... ```), no extra text.

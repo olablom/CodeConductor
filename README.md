@@ -19,7 +19,7 @@
 
 **CodeConductor** - Local agents debate before coding. Think of it as having a team of expert developers discussing your problem before writing the solution.
 
-**Local agents · 30s fixes · 0% data leaves laptop**
+**Local agents · 30s fixes · 0% data leaves computer**
 
 ### Project Conductor (analyze → .cursorrules → propose)
 

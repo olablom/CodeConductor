@@ -105,7 +105,7 @@ def export_latest_run(
     if run_dir is None:
         raise FileNotFoundError("No runs found under artifacts/runs")
 
-    # Gather candidate files
+    # Gather candidate files (top-level JSON/TXT) + optionally include generated code
     candidates = list(run_dir.glob("*.json")) + list(run_dir.glob("*.txt"))
 
     # Optionally exclude raw-like files when include_raw is False
@@ -127,6 +127,13 @@ def export_latest_run(
         except Exception:
             continue
         files_to_add.append(p)
+
+    # Optionally include generated code file from after/
+    include_code = os.getenv("EXPORT_INCLUDE_CODE", "1").strip() in {"1", "true", "yes"}
+    gen_path = run_dir / "after" / "generated.py"
+    if include_code and gen_path.exists():
+        # We do not add to candidates (since z.write needs explicit arcname), handle later
+        pass
 
     # Prepare sanitized overlays
     overlays: Dict[str, bytes] = {}
@@ -162,8 +169,10 @@ def export_latest_run(
     zip_name = f"codeconductor_run_{ts}_{safe_policy}_{hitmiss}.zip"
     zip_path = exports_dir / zip_name
 
+    # Write atomically via temporary file then replace
+    tmp_path = zip_path.with_suffix(".zip.tmp")
     with zipfile.ZipFile(
-        zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
+        tmp_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
     ) as z:
         # Add files (with optional overlays)
         for p in files_to_add:
@@ -172,8 +181,24 @@ def export_latest_run(
                 z.writestr(arcname, overlays[arcname])
             else:
                 z.write(p, arcname=arcname)
+        # Add generated code if requested
+        if include_code and gen_path.exists():
+            try:
+                z.write(gen_path, arcname=str(Path("after") / gen_path.name))
+            except Exception:
+                pass
         # Add manifest
         z.writestr("MANIFEST.json", json.dumps(manifest, ensure_ascii=False, indent=2))
+
+    try:
+        os.replace(tmp_path, zip_path)
+    except Exception:
+        # Best-effort cleanup
+        try:
+            if tmp_path.exists():
+                tmp_path.unlink()
+        except Exception:
+            pass
 
     # Retention policy
     zips = sorted(

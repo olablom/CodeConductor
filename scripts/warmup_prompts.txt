@@ -1,0 +1,3 @@
+﻿Say "ready".
+Explain Fibonacci in one sentence.
+Return the first 5 Fibonacci numbers separated by commas.

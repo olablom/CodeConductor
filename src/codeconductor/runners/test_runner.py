@@ -196,12 +196,30 @@ class PytestRunner:
             if self.prompt and self.code and test_results:
                 reward = self._log_test_reward(test_results)
 
+            total = len(test_results)
+            passed = sum(1 for t in test_results if t.get("passed"))
+            # Force fail if doctest path produced 0 tests
+            if (
+                os.getenv("CC_TEST_SCOPE", "artifact").strip().lower() == "artifact"
+                and total == 0
+            ):
+                success = False
+                test_results.append(
+                    {
+                        "name": "no_tests",
+                        "passed": False,
+                        "type": "doctest",
+                        "summary": "No doctests executed (test_count=0)",
+                    }
+                )
+                total = 1
+
             return {
                 "success": success,
                 "test_results": test_results,
                 "reward": reward,
-                "passed_tests": sum(1 for t in test_results if t.get("passed")),
-                "total_tests": len(test_results),
+                "passed_tests": passed,
+                "total_tests": total,
                 "stdout": output,
             }
 
