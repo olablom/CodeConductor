@@ -18,12 +18,18 @@ def iter_sse_lines(resp):
     for chunk in resp.iter_lines():
         if not chunk:
             continue
-        if chunk.startswith(b"data: "):
-            payload = chunk[len(b"data: ") :].decode("utf-8")
-            # payload is a Python dict repr; make it JSON by replacing quotes if needed
-            # Safer approach: eval-like using json after transforming single quotes
-            data = json.loads(payload)
-            yield data
+        # Handle both bytes and string chunks
+        if isinstance(chunk, bytes):
+            if chunk.startswith(b"data: "):
+                payload = chunk[len(b"data: ") :].decode("utf-8")
+                data = json.loads(payload)
+                yield data
+        else:
+            # Handle string chunks
+            if chunk.startswith("data: "):
+                payload = chunk[len("data: ") :]
+                data = json.loads(payload)
+                yield data
 
 
 def test_stream_basic_order_and_done():

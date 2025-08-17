@@ -1,26 +1,67 @@
+#!/usr/bin/env python3
 """
-CodeConductor Debate Manager
-
-Adapts the AI Project Advisor debate system for code generation tasks.
+CodeConductor Debate Manager - Multi-Agent Debate System
 """
 
 import asyncio
 import yaml
 import json
 import logging
-from typing import List, Dict, Any
+import time
+from datetime import datetime
+from typing import List, Dict, Any, Optional
 from pathlib import Path
+from dataclasses import dataclass
+
 from .local_agent import LocalAIAgent
+from .personas import get_persona_prompt
 
 logger = logging.getLogger(__name__)
+
+
+class SingleModelDebateManager:
+    """Base debate manager for single model debates"""
+    
+    def __init__(self, *args, **kwargs):
+        self.transcript = []
+        # optional attrs used by save_transcript()
+        self.agents = getattr(self, "agents", [])
+        self.model_name = getattr(self, "model_name", "unknown")
+        
+    def save_transcript(self, filename: str = "debate_transcript.json"):
+        """
+        Save debate transcript to artifacts/runs/<filename> as JSON.
+        Safe to call even if agents/model_name are unset.
+        """
+        output_dir = Path("artifacts/runs")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / filename
+
+        payload = {
+            "agents": [getattr(a, "name", str(a)) for a in self.agents] if self.agents else [],
+            "turns": self.transcript,
+            "timestamp": datetime.now().isoformat(),
+            "model": self.model_name or "unknown",
+        }
+        with output_file.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+        return output_file
 
 
 class CodeConductorDebateManager:
     """Debate manager for code generation tasks"""
 
-    def __init__(self, agents: List[LocalAIAgent]):
-        self.agents = agents
+    def __init__(self, agents: Optional[List[LocalAIAgent]] = None):
+        self.agents = agents if agents is not None else self._default_agents()
         self.full_transcript = []
+
+    def _default_agents(self) -> List[LocalAIAgent]:
+        """Minimal set för tester; kan vara mockade eller enkla lokala agenter"""
+        from .local_ai_agent import LocalAIAgent
+        return [
+            LocalAIAgent(name="Architect", persona="You are an Architect."),
+            LocalAIAgent(name="Coder", persona="You are a Coder."),
+        ]
 
     async def conduct_debate(self, user_prompt: str) -> Dict[str, Any]:
         """Conduct a multi-agent debate for code generation"""
@@ -161,6 +202,22 @@ class CodeConductorDebateManager:
             json.dump(self.full_transcript, f, indent=2, ensure_ascii=False)
 
         logger.info(f"Transcript saved to {filename} and {json_filename}")
+        
+        # Also save to artifacts/runs/ for consistency
+        output_dir = Path("artifacts/runs")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        artifacts_file = output_dir / f"debate_transcript_{int(time.time())}.json"
+        
+        payload = {
+            "agents": [agent.name for agent in self.agents] if hasattr(self, 'agents') else [],
+            "turns": self.full_transcript,
+            "timestamp": datetime.now().isoformat(),
+            "model": getattr(self, 'model_name', 'unknown'),
+        }
+        with artifacts_file.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+        
+        return artifacts_file
 
     def extract_consensus(self) -> str:
         """Extract consensus from final recommendations"""

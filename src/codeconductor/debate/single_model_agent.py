@@ -7,6 +7,7 @@ A simplified agent that uses only one model, similar to OpenAI API approach.
 import asyncio
 import logging
 from typing import Optional
+from pathlib import Path
 
 from ..ensemble.single_model_engine import SingleModelEngine, SingleModelRequest
 
@@ -230,4 +231,28 @@ class SingleModelDebateManager:
             ]
         )
 
-        return consensus 
+        return consensus
+    
+    def save_transcript(self, filename: str = "debate_transcript.json") -> Path:
+        """Save debate transcript to file"""
+        import json
+        from pathlib import Path
+        from datetime import datetime
+        
+        # Skapa artifacts/runs om den inte finns
+        output_dir = Path("artifacts/runs")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        output_file = output_dir / filename
+        
+        transcript_data = {
+            "agents": [agent.name for agent in self.agents] if hasattr(self, 'agents') else [],
+            "turns": self.full_transcript,
+            "timestamp": datetime.now().isoformat(),
+            "model": getattr(self, 'model_name', 'unknown')
+        }
+        
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(transcript_data, f, indent=2, ensure_ascii=False)
+        
+        return output_file 

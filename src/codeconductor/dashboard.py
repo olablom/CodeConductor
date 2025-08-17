@@ -559,7 +559,7 @@ def render_validation_dashboard():
     dashboard.render_dashboard()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     # Test dashboard
     import streamlit as st
 

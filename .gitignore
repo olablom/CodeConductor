@@ -133,6 +133,13 @@ dmypy.json
 feedback/patterns.json
 patterns.json
 
+# Production artifacts (keep exports, ignore runtime data)
+artifacts/runs/          # Runtime test results
+artifacts/logs/          # Application logs
+artifacts/temp/          # Temporary files
+!artifacts/exports/      # Keep export bundles
+!artifacts/exports/*.zip # Keep zip files
+
 # Test result files
 *_test_results.json
 gui_test_results.json
@@ -178,6 +185,7 @@ nul
 logs/
 # Artifacts root (keep zip exports, ignore everything else by default)
 artifacts/
+.artifacts/
 !artifacts/exports/
 !artifacts/exports/*.zip
 .tmp/

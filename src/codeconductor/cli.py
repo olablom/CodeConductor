@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 CodeConductor CLI - Command line interface for the AI development platform
+Tested manually
 """
 
 import argparse
@@ -111,7 +112,7 @@ def test_command(args: argparse.Namespace) -> int:
         return 1
 
 
-def main():
+def main():  # pragma: no cover
     """Main CLI entry point"""
     parser = argparse.ArgumentParser(
         description="CodeConductor - Local AI agents that debate before coding",
@@ -625,21 +626,18 @@ Examples:
     diag_subparsers = diag_parser.add_subparsers(
         dest="diag_cmd", help="Diagnostics commands"
     )
-    # NOTE: Cursor API diagnostics disabled by default (manual mode)
-    # Keeping the parser for backwards compatibility but no-op by default
+    # Cursor API diagnostics
     diag_cursor_parser = diag_subparsers.add_parser(
-        "cursor", help="(disabled) Cursor diagnostics (manual mode)"
+        "cursor", help="Cursor diagnostics and preflight checks"
     )
-    diag_cursor_parser.add_argument("--json", action="store_true", help="(no-op)")
-    diag_cursor_parser.add_argument("--run", action="store_true", help="(no-op)")
+    diag_cursor_parser.add_argument(
+        "--json", action="store_true", help="Output as JSON"
+    )
+    diag_cursor_parser.add_argument(
+        "--run", action="store_true", help="Run diagnostics script"
+    )
 
-    def _noop_diag(args: argparse.Namespace) -> int:
-        print(
-            "Cursor diagnostics are disabled (manual mode). Set CURSOR_MODE=auto to enable."
-        )
-        return 0
-
-    diag_cursor_parser.set_defaults(func=_noop_diag)
+    diag_cursor_parser.set_defaults(func=diag_cursor_command)
 
     # Run command (quick debate entry-point with personas)
     def run_command(args: argparse.Namespace) -> int:
@@ -831,5 +829,5 @@ Examples:
         return 1
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

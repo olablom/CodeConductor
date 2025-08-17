@@ -1,273 +1,318 @@
-# 🤝 Contributing to CodeConductor MVP
+# Contributing to CodeConductor
 
-Thank you for your interest in contributing to CodeConductor MVP! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to CodeConductor! This document provides guidelines and information for contributors.
 
-## 🎯 **Project Vision**
+## 🎯 **Our Mission**
 
-CodeConductor MVP is an AI-powered development pipeline that automates the manual "AI → Cursor → Test → Feedback" workflow using local LLM ensemble reasoning, saving 95% development time.
+CodeConductor aims to democratize senior developer thinking by providing local-first AI development assistance. We believe in:
 
-### **Core Philosophy**
+- **Privacy First** - Zero data leaves your machine
+- **Quality Code** - Multi-agent debate before implementation
+- **Open Source** - Community-driven development
+- **Enterprise Ready** - Production-grade reliability
 
-- **Human-in-the-Loop is the STRENGTH, not a limitation**
-- **Cost Effective**: Uses local LLMs (95% cost reduction vs cloud APIs)
-- **Privacy First**: All processing happens on your machine
-- **Quality Control**: Human review ensures code meets your standards
-- **Learning**: System improves over time by learning from successful patterns
-
-## 🚀 **Getting Started**
+## 🚀 **Quick Start**
 
 ### **Prerequisites**
 
-- Python 3.8+
-- RTX 5090 GPU (recommended)
-- 6 local LLM models (LM Studio + Ollama)
+- Python 3.11+
 - Git
+- Basic understanding of AI/ML concepts
 
-### **Installation**
+### **Setup Development Environment**
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/CodeConductor-MVP.git
-cd CodeConductor-MVP
+git clone https://github.com/your-username/CodeConductor.git
+cd CodeConductor
 
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/Scripts/activate  # Windows
+# or
+source venv/bin/activate      # Linux/Mac
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Run tests to verify installation
-python tests/master_integration_test_simple.py
+# Install development dependencies
+pip install -r requirements-dev.txt  # If available
 ```
 
-## 🧪 **Testing Guidelines**
+## 🧪 **Testing**
 
-### **Test Structure**
-
-```
-tests/
-├── master_integration_test_simple.py  # Main integration tests
-├── automated_test_suite_fixed.py      # Component tests
-└── [component]_tests.py              # Individual component tests
-```
-
-### **Running Tests**
+### **Run All Tests**
 
 ```bash
-# Run all tests
-python tests/master_integration_test_simple.py
+# Full test suite
+python -m pytest tests/ -v --tb=short
 
-# Run specific component tests
-python tests/automated_test_suite_fixed.py
+# With coverage
+python -m pytest tests/ -v --cov=codeconductor --cov-report=term-missing
 
-# Run with verbose output
-python -v tests/master_integration_test_simple.py
+# Quick smoke test
+python -m pytest tests/ --quick
 ```
 
-### **Test Requirements**
+### **Test Quality Standards**
 
-- **100% Success Rate**: All tests must pass
-- **Component Isolation**: Test each component independently
-- **Integration Testing**: Verify systems work together
-- **Error Handling**: Test edge cases and error recovery
-- **Performance**: Stress test with concurrent operations
+- **100% Test Success** - All tests must pass
+- **Coverage Target** - Aim for >80% coverage on new code
+- **Async Support** - Use pytest-asyncio for async tests
+- **Windows Compatible** - Test on Windows without WSL2
 
-## 📁 **Project Structure**
+## 📝 **Code Style**
 
+### **Python Standards**
+
+- **PEP 8** - Follow Python style guide
+- **Type Hints** - Use type annotations
+- **Docstrings** - Document all public functions
+- **Async/Await** - Use modern async patterns
+
+### **File Naming**
+
+- **No Emojis** in Python files, filenames, or commits
+- **Snake Case** for Python files and functions
+- **Descriptive Names** - Make intent clear
+
+### **Code Organization**
+
+```python
+# Good structure
+class MyClass:
+    """Class description."""
+
+    def __init__(self):
+        """Initialize the class."""
+        pass
+
+    async def my_method(self) -> str:
+        """Method description."""
+        return "result"
 ```
-CodeConductor-MVP/
-├── codeconductor_app.py          # Main application
-├── validation_logger.py          # Validation system
-├── validation_dashboard.py       # Dashboard interface
-├── context/
-│   └── rag_system.py            # RAG system
-├── ensemble/
-│   ├── hybrid_ensemble.py       # Multi-model ensemble
-│   ├── model_manager.py         # Model management
-│   └── query_dispatcher.py      # Query routing
-├── feedback/
-│   ├── learning_system.py       # Learning patterns
-│   └── rlhf_agent.py           # RLHF agent
-├── tests/                       # Test files
-├── docs/                        # Documentation
-├── logs/                        # Runtime logs
-├── configs/                     # Configuration files
-└── validation_logs/             # Validation data
+
+## 🔧 **Development Workflow**
+
+### **1. Create Feature Branch**
+
+```bash
+git checkout -b feature/amazing-feature
 ```
 
-## 🔧 **Development Guidelines**
+### **2. Make Changes**
 
-### **Code Style**
+- Write code following our standards
+- Add tests for new functionality
+- Update documentation
 
-- Follow PEP 8 style guidelines
-- Use meaningful variable and function names
-- Add comprehensive docstrings
-- Include type hints where appropriate
+### **3. Test Your Changes**
 
-### **Commit Messages**
+```bash
+# Run tests
+python -m pytest tests/ -v
 
-Use conventional commit format:
+# Check code style
+black src/ tests/
+flake8 src/ tests/
+```
+
+### **4. Commit Changes**
+
+```bash
+git add .
+git commit -m "feat: add amazing feature
+
+- Added new functionality
+- Updated tests
+- Fixed related issues"
+```
+
+### **5. Push and Create PR**
+
+```bash
+git push origin feature/amazing-feature
+# Create Pull Request on GitHub
+```
+
+## 📋 **Pull Request Guidelines**
+
+### **PR Title Format**
 
 ```
 type(scope): description
 
-feat(validation): add empirical validation system
-fix(ensemble): resolve async/await syntax issues
-docs(readme): update with 100% test success results
-test(integration): add master integration test
+feat(debate): add new agent persona
+fix(cli): resolve cursor integration issue
+docs(readme): update installation guide
 ```
 
-### **Pull Request Process**
+### **PR Description Template**
 
-1. **Fork** the repository
-2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
-3. **Make** your changes with comprehensive tests
-4. **Run** all tests to ensure 100% success rate
-5. **Commit** your changes: `git commit -m 'feat: add amazing feature'`
-6. **Push** to the branch: `git push origin feature/amazing-feature`
-7. **Open** a Pull Request with detailed description
+```markdown
+## 🎯 **What does this PR do?**
 
-## 🎯 **Areas for Contribution**
+Brief description of changes
 
-### **High Priority**
+## 🔧 **Changes Made**
 
-- **Performance Optimization**: Improve model loading and inference speed
-- **Error Handling**: Enhance error recovery and user feedback
-- **Testing**: Add more comprehensive test coverage
-- **Documentation**: Improve user guides and API documentation
+- [ ] Feature A added
+- [ ] Bug B fixed
+- [ ] Documentation C updated
 
-### **Medium Priority**
+## 🧪 **Testing**
 
-- **UI/UX**: Enhance Streamlit interface and user experience
-- **Integration**: Add support for more AI code generators
-- **Analytics**: Improve metrics and reporting capabilities
-- **Security**: Add security features and validation
+- [ ] All tests pass
+- [ ] New tests added
+- [ ] Coverage maintained
 
-### **Low Priority**
+## 📚 **Documentation**
 
-- **Multi-language Support**: Extend beyond Python
-- **Advanced Features**: Implement advanced AI capabilities
-- **Enterprise Features**: Add team collaboration tools
-- **Mobile Support**: Create mobile-friendly interface
+- [ ] README updated
+- [ ] CHANGELOG updated
+- [ ] Code documented
 
-## 🧪 **Testing Standards**
+## 🚀 **Breaking Changes**
 
-### **Component Testing**
+None (or describe if applicable)
+```
 
-Each component must have:
+## 🏗️ **Architecture Guidelines**
 
-- **Unit Tests**: Test individual functions and methods
-- **Integration Tests**: Test component interactions
-- **Error Tests**: Test error handling and edge cases
-- **Performance Tests**: Test under load and stress
+### **Core Principles**
 
-### **Integration Testing**
+1. **Local-First** - No external API calls by default
+2. **Modular Design** - Components can be swapped independently
+3. **Async Support** - Use async/await for I/O operations
+4. **Error Handling** - Graceful fallbacks for all failures
+5. **Cross-Platform** - Windows, Linux, macOS support
 
-- **End-to-End**: Test complete workflow
-- **Concurrent**: Test multiple simultaneous operations
-- **Error Recovery**: Test system recovery from failures
-- **Performance**: Test system performance under load
+### **Component Structure**
 
-### **Test Requirements**
+```
+src/codeconductor/
+├── ensemble/          # Multi-model orchestration
+├── debate/            # Agent debate system
+├── context/           # RAG and context management
+├── feedback/          # Learning and validation
+├── integrations/      # External tool integration
+└── utils/             # Shared utilities
+```
 
-- **100% Success Rate**: All tests must pass
-- **Fast Execution**: Tests should complete quickly
-- **Isolated**: Tests should not depend on each other
-- **Comprehensive**: Cover all code paths and edge cases
+## 🐛 **Bug Reports**
 
-## 📊 **Quality Metrics**
+### **Bug Report Template**
 
-### **Code Quality**
+```markdown
+## 🐛 **Bug Description**
 
-- **Test Coverage**: 100% for critical components
-- **Documentation**: Comprehensive docstrings and comments
-- **Code Style**: PEP 8 compliance
-- **Type Hints**: Where appropriate
+Clear description of the issue
 
-### **Performance Metrics**
+## 🔍 **Steps to Reproduce**
 
-- **Response Time**: < 5 seconds for typical tasks
-- **Memory Usage**: Efficient GPU memory management
-- **Concurrent Operations**: Support multiple simultaneous users
-- **Error Rate**: < 1% for normal operations
+1. Step 1
+2. Step 2
+3. Step 3
 
-### **User Experience**
+## 💻 **Environment**
 
-- **Ease of Use**: Intuitive interface and workflow
-- **Error Messages**: Clear and helpful error feedback
-- **Performance**: Fast and responsive interface
-- **Reliability**: Stable and predictable behavior
+- OS: Windows 10
+- Python: 3.11.0
+- CodeConductor: 1.0.0
 
-## 🚀 **Release Process**
+## 📊 **Expected vs Actual**
 
-### **Version Numbering**
+- Expected: What should happen
+- Actual: What actually happens
 
-- **Major**: Breaking changes (1.0.0 → 2.0.0)
-- **Minor**: New features (1.0.0 → 1.1.0)
-- **Patch**: Bug fixes (1.0.0 → 1.0.1)
+## 📝 **Additional Context**
 
-### **Release Checklist**
+Any other relevant information
+```
 
-- [ ] All tests pass (100% success rate)
-- [ ] Documentation updated
-- [ ] CHANGELOG.md updated
-- [ ] Version number updated
-- [ ] Release notes prepared
-- [ ] Tagged release in Git
+## 💡 **Feature Requests**
+
+### **Feature Request Template**
+
+```markdown
+## 🚀 **Feature Description**
+
+Clear description of the requested feature
+
+## 🎯 **Use Case**
+
+Why is this feature needed?
+
+## 💭 **Proposed Solution**
+
+How should this feature work?
+
+## 🔧 **Implementation Ideas**
+
+Any technical suggestions?
+
+## 📊 **Impact**
+
+How will this benefit users?
+```
 
 ## 🤝 **Community Guidelines**
 
-### **Communication**
+### **Code of Conduct**
 
-- **Respectful**: Be respectful and constructive
-- **Helpful**: Provide helpful feedback and suggestions
-- **Inclusive**: Welcome contributors from all backgrounds
-- **Professional**: Maintain professional communication
+- **Be Respectful** - Treat everyone with respect
+- **Be Helpful** - Help others learn and grow
+- **Be Constructive** - Provide helpful feedback
+- **Be Inclusive** - Welcome diverse perspectives
 
-### **Code Review**
+### **Communication Channels**
 
-- **Thorough**: Review code thoroughly and thoughtfully
-- **Constructive**: Provide constructive feedback
-- **Timely**: Respond to pull requests promptly
-- **Educational**: Help contributors learn and improve
-
-### **Issue Reporting**
-
-When reporting issues:
-
-- **Clear Description**: Provide clear problem description
-- **Reproduction Steps**: Include steps to reproduce
-- **Environment Info**: Include system and environment details
-- **Expected vs Actual**: Describe expected vs actual behavior
+- **GitHub Issues** - Bug reports and feature requests
+- **GitHub Discussions** - General questions and ideas
+- **Pull Requests** - Code contributions and reviews
 
 ## 📚 **Resources**
 
 ### **Documentation**
 
-- [README.md](README.md) - Project overview and setup
+- [README.md](README.md) - Project overview
 - [CHANGELOG.md](CHANGELOG.md) - Version history
-- [API.md](docs/API.md) - API documentation
+- [docs/](docs/) - Detailed documentation
 
 ### **Testing**
 
-- [Master Integration Test](tests/master_integration_test_simple.py)
-- [Automated Test Suite](tests/automated_test_suite_fixed.py)
-- [Test Guidelines](docs/TESTING.md)
+- [tests/](tests/) - Test suite examples
+- [pytest.ini](pytest.ini) - Test configuration
+- [.coveragerc](.coveragerc) - Coverage configuration
 
-### **Development**
+### **Development Tools**
 
-- [Architecture Overview](docs/ARCHITECTURE.md)
-- [Development Setup](docs/DEVELOPMENT.md)
-- [Deployment Guide](docs/DEPLOYMENT.md)
+- **Black** - Code formatting
+- **Flake8** - Linting
+- **Pytest** - Testing framework
+- **Coverage** - Code coverage
 
-## 🎉 **Recognition**
+## 🏆 **Recognition**
 
 Contributors will be recognized in:
 
-- **README.md** - Contributors section
-- **CHANGELOG.md** - Release notes
-- **GitHub Contributors** - Automatic recognition
-- **Project Documentation** - Where appropriate
+- [CHANGELOG.md](CHANGELOG.md)
+- [README.md](README.md) contributors section
+- GitHub contributors page
 
-Thank you for contributing to CodeConductor MVP! 🚀
+## 📞 **Getting Help**
+
+If you need help:
+
+1. Check existing issues and discussions
+2. Search documentation
+3. Create a new issue with clear details
+4. Ask in GitHub discussions
+
+## 🎉 **Thank You!**
+
+Thank you for contributing to CodeConductor! Your contributions help make AI development more accessible and private for everyone.
+
+---
+
+**Remember**: Every contribution, no matter how small, makes a difference! 🚀

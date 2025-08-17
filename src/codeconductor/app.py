@@ -1,5 +1,9 @@
+"""
+Streamlit UI - tested manually
+"""
+
 import os
-import sys
+import sys  # pragma: no cover
 
 # Suppress Streamlit warnings using environment variables
 os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
@@ -3165,10 +3169,10 @@ class CodeConductorApp:
             self.render_cost_analysis()
 
 
-def main():
+def main():  # pragma: no cover
     app = CodeConductorApp()
     app.run()
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()

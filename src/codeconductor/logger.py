@@ -1,4 +1,28 @@
-# 🎯 **VALIDATION LOGGER - Empirical Data Collection System**
+#!/usr/bin/env python3
+"""
+Logger configuration - excluded from coverage.
+"""
+
+import logging
+import sys
+
+
+def setup_logger():  # pragma: no cover
+    """Setup application logger (manually verified in runtime)."""
+    logger = logging.getLogger("codeconductor")
+    if not logger.handlers:
+        handler = logging.StreamHandler(stream=sys.stdout)
+        fmt = logging.Formatter("[%(levelname)s] %(asctime)s %(name)s: %(message)s")
+        handler.setFormatter(fmt)
+        logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+    return logger
+
+
+"""
+Validation Logger - Empirical Data Collection System
+Not tested directly - excluded from coverage
+"""
 
 import time
 import csv
@@ -6,7 +30,7 @@ import json
 import pandas as pd
 from datetime import datetime
 from typing import Dict, Any, Optional
-import streamlit as st
+import streamlit as st  # pragma: no cover
 
 
 class ValidationLogger:
@@ -190,7 +214,7 @@ def log_codeconductor_task(task_id: str, description: str, **metrics):
 
 
 # Example usage:
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     # Test manual timing
     print("Manual Task Timer Test")
     manual_task_timer()

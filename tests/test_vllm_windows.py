@@ -1,92 +1,37 @@
 #!/usr/bin/env python3
-"""
-Test vLLM Integration Status
+# Filename: tests/test_vllm_windows.py
+import pytest
+import platform
 
-Checks vLLM availability and provides setup information.
-"""
-
-import sys
-import os
-
+def _is_wsl() -> bool:
+    rel = platform.release().lower()
+    ver = getattr(platform, "version", lambda: "")().lower() if hasattr(platform, "version") else ""
+    return ("microsoft" in rel) or ("microsoft" in ver)
 
 def test_vllm_availability():
-    """Test if vLLM is available and provide setup info."""
-    print("🔍 Checking vLLM Integration Status...")
+    """
+    vLLM stöds inte på *native* Windows. I WSL2/Linux/macOS är det valfritt.
+    Testet PASSAR om vLLM finns; annars SKIP med tydlig orsak.
+    Inga vilseledande prints.
+    """
+    system = platform.system()
+    in_wsl = _is_wsl()
 
-    # Check if we're in WSL2
+    # Native Windows (ej WSL): alltid skip
+    if system == "Windows" and not in_wsl:
+        pytest.skip("vLLM not supported on native Windows (use LM Studio/Ollama instead)")
+
+    # WSL2: försök importera; om ej installerat → skip (optional dep)
+    if in_wsl:
+        try:
+            import vllm  # noqa: F401
+        except Exception:
+            pytest.skip("vLLM not installed in WSL2 (optional dependency)")
+        return  # import ok ⇒ test pass
+
+    # Linux/macOS: försök importera; om ej installerat → skip (optional)
     try:
-        with open("/proc/version", "r") as f:
-            if "microsoft" in f.read().lower():
-                print("✅ Running in WSL2 environment")
-                wsl2 = True
-            else:
-                print("❌ Not running in WSL2")
-                wsl2 = False
-    except FileNotFoundError:
-        print("❌ Not running in WSL2 (no /proc/version)")
-        wsl2 = False
-
-    # Try to import vLLM
-    try:
-        import vllm
-
-        print(f"✅ vLLM available: {vllm.__version__}")
-
-        # Test basic vLLM functionality
-        from vllm import LLM, SamplingParams
-
-        print("✅ vLLM imports successful")
-
-        # Check CUDA availability
-        import torch
-
-        if torch.cuda.is_available():
-            print(f"✅ CUDA available: {torch.version.cuda}")
-            print(f"✅ GPU: {torch.cuda.get_device_name(0)}")
-        else:
-            print("❌ CUDA not available")
-
-    except ImportError as e:
-        print(f"❌ vLLM not available: {e}")
-
-        if wsl2:
-            print("\n💡 Setup instructions for WSL2:")
-            print("1. Open WSL2 terminal:")
-            print("   wsl -d Ubuntu")
-            print("2. Navigate to project:")
-            print("   cd /mnt/c/Users/olabl/Documents/GitHub/CodeConductor")
-            print("3. Activate vLLM environment:")
-            print("   source vllm_env/bin/activate")
-            print("4. Test vLLM:")
-            print("   python test_vllm_wsl.py")
-        else:
-            print("\n💡 vLLM is only available in WSL2 environment")
-            print("   Use 'wsl -d Ubuntu' to access WSL2")
-
-    # Test CodeConductor integration
-    try:
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
-        from codeconductor.vllm_integration import VLLMEngine
-
-        print("✅ CodeConductor vLLM integration available")
-    except ImportError as e:
-        print(f"❌ CodeConductor vLLM integration not available: {e}")
-
-    print("\n📊 Summary:")
-    print(f"   WSL2 Environment: {'✅' if wsl2 else '❌'}")
-    print(f"   vLLM Available: {'✅' if 'vllm' in sys.modules else '❌'}")
-
-    # Check CUDA availability safely
-    cuda_available = False
-    try:
-        if "torch" in sys.modules:
-            import torch
-
-            cuda_available = torch.cuda.is_available()
-    except:
-        pass
-    print(f"   CUDA Available: {'✅' if cuda_available else '❌'}")
-
-
-if __name__ == "__main__":
-    test_vllm_availability()
+        import vllm  # noqa: F401
+    except Exception:
+        pytest.skip("vLLM not installed on this platform (optional dependency)")
+    # import ok ⇒ test pass

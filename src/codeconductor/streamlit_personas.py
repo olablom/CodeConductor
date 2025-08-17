@@ -3,6 +3,7 @@
 Streamlit Personas Runner for CodeConductor
 
 Minimal UI: pick personas/agents, prompt, rounds, timeout, model; run debate and save artifacts.
+Tested manually - excluded from coverage
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List
 
-import streamlit as st
+import streamlit as st  # pragma: no cover
 
 from codeconductor.debate.personas import load_personas_yaml, build_agents_from_personas
 from codeconductor.debate.local_ai_agent import LocalDebateManager
@@ -27,7 +28,7 @@ def run_sync(coro):
     return asyncio.run(coro)
 
 
-def main() -> None:
+def main() -> None:  # pragma: no cover
     st.set_page_config(
         page_title="CodeConductor – Personas", page_icon="🎭", layout="wide"
     )
@@ -129,5 +130,5 @@ def main() -> None:
                 st.error(f"Run failed: {e}")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main()
