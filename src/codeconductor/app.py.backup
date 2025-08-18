@@ -80,6 +80,20 @@ src_dir = Path(__file__).resolve().parents[1]
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
+from codeconductor.analysis.planner_agent import PlannerAgent
+from codeconductor.context.rag_system import rag_system
+from codeconductor.ensemble.consensus_calculator import ConsensusCalculator
+from codeconductor.ensemble.ensemble_engine import EnsembleEngine
+from codeconductor.ensemble.hybrid_ensemble import HybridEnsemble
+from codeconductor.ensemble.model_manager import ModelManager
+from codeconductor.ensemble.query_dispatcher import QueryDispatcher
+from codeconductor.feedback.learning_system import (
+    LearningSystem,
+    save_successful_pattern,
+)
+from codeconductor.feedback.validation_system import validate_cursor_output
+from codeconductor.generators.prompt_generator import PromptGenerator
+from codeconductor.runners.test_runner import PytestRunner, TestRunner
 
 
 def _auto_prune_on_start() -> None:
