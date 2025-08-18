@@ -331,7 +331,9 @@ def build_repair_prompt(
         trailer_policy = "- Append the two exact trailer lines at EOF: first '# SYNTAX_ERROR BELOW' then '(' (on its own line).\n"
     else:
         trailer_policy = ""
-    doctest_note = "\n\nDoctest failures:\n" + doctest_output.strip() if doctest_output else ""
+    doctest_note = (
+        "\n\nDoctest failures:\n" + doctest_output.strip() if doctest_output else ""
+    )
     diagnosis = _diagnose_header_trailer(original_code)
     return (
         "You are fixing a Python module. Return ONLY one fenced python code block for the file "

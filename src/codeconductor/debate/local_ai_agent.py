@@ -49,7 +49,9 @@ class LocalAIAgent:
         """
         try:
             # Create the full prompt with persona
-            full_prompt = f"System: {self.persona}\n\nUser: {user_prompt}\n\n{self.name}:"
+            full_prompt = (
+                f"System: {self.persona}\n\nUser: {user_prompt}\n\n{self.name}:"
+            )
 
             logger.info(
                 f"[PERSONA] {self.name}: {self.persona.splitlines()[0] if self.persona else ''}"
@@ -170,14 +172,22 @@ class LocalDebateManager:
                         for r in debate_responses
                         if r["turn"] == "proposal" and r["agent"] != agent.name
                     ]
-                    rebuttal_prompt = f"User: {user_prompt}\n\nOther agents' proposals:\n"
+                    rebuttal_prompt = (
+                        f"User: {user_prompt}\n\nOther agents' proposals:\n"
+                    )
                     for prop in other_proposals:
-                        rebuttal_prompt += f"- {prop['agent']}: {prop['content'][:200]}...\n\n"
-                    rebuttal_prompt += "Please provide your rebuttal to these proposals:"
+                        rebuttal_prompt += (
+                            f"- {prop['agent']}: {prop['content'][:200]}...\n\n"
+                        )
+                    rebuttal_prompt += (
+                        "Please provide your rebuttal to these proposals:"
+                    )
 
                     logger.info(f"{agent.name} making rebuttal...")
                     response = await asyncio.wait_for(
-                        agent.generate_response(rebuttal_prompt, timeout=timeout_per_turn),
+                        agent.generate_response(
+                            rebuttal_prompt, timeout=timeout_per_turn
+                        ),
                         timeout=timeout_per_turn,
                     )
                     debate_responses.append(

@@ -134,7 +134,9 @@ class BreakerManager:
                         return
                 else:
                     # immediate reopen
-                    self._open(model_id, st, reason=error_class or "HALFOPEN_FAIL", now=now)
+                    self._open(
+                        model_id, st, reason=error_class or "HALFOPEN_FAIL", now=now
+                    )
                     return
 
             # Closed evaluation

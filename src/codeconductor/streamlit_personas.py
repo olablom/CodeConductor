@@ -27,9 +27,13 @@ def run_sync(coro):
 
 
 def main() -> None:  # pragma: no cover
-    st.set_page_config(page_title="CodeConductor – Personas", page_icon="🎭", layout="wide")
+    st.set_page_config(
+        page_title="CodeConductor – Personas", page_icon="🎭", layout="wide"
+    )
     st.title("🎭 CodeConductor – Personas Runner")
-    st.caption("Pick personas and run a quick debate; results saved under artifacts/streamlit_runs")
+    st.caption(
+        "Pick personas and run a quick debate; results saved under artifacts/streamlit_runs"
+    )
 
     with st.sidebar:
         st.header("Configuration")

@@ -72,7 +72,9 @@ from codeconductor.runners.test_runner import PytestRunner, TestRunner
 logging.getLogger().setLevel(logging.ERROR)
 logging.getLogger("streamlit").setLevel(logging.ERROR)
 logging.getLogger("streamlit.runtime.scriptrunner").setLevel(logging.ERROR)
-logging.getLogger("streamlit.runtime.scriptrunner.script_run_context").setLevel(logging.ERROR)
+logging.getLogger("streamlit.runtime.scriptrunner.script_run_context").setLevel(
+    logging.ERROR
+)
 logging.getLogger("streamlit.runtime").setLevel(logging.ERROR)
 
 # Ensure the `src` directory is on sys.path for absolute imports when run via Streamlit
@@ -184,7 +186,9 @@ def _materialize_generated_code(consensus_text: str) -> dict:
                 )
 
         # Normalize to exact three header lines at top with nothing before them
-        EXACT_HEADER = "#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\n# generated.py\n\n"
+        EXACT_HEADER = (
+            "#!/usr/bin/env python3\n# -*- coding: utf-8 -*-\n# generated.py\n\n"
+        )
         # Remove BOM
         if code.startswith("\ufeff"):
             code = code.lstrip("\ufeff")
@@ -418,7 +422,9 @@ class MonitoringSystem:
                 metrics["circuit_breaker_state"] = "OPEN"
         elif metrics["circuit_breaker_state"] == "OPEN":
             # Try to close circuit after timeout
-            if time.time() - metrics["circuit_breaker_last_failure"] > 60:  # 1 minute timeout
+            if (
+                time.time() - metrics["circuit_breaker_last_failure"] > 60
+            ):  # 1 minute timeout
                 metrics["circuit_breaker_state"] = "HALF_OPEN"
         elif metrics["circuit_breaker_state"] == "HALF_OPEN":
             # Close circuit if recent success
@@ -439,11 +445,14 @@ class MonitoringSystem:
                 }
 
             success_rate = (
-                metrics["success_count"] / (metrics["success_count"] + metrics["error_count"])
+                metrics["success_count"]
+                / (metrics["success_count"] + metrics["error_count"])
                 if (metrics["success_count"] + metrics["error_count"]) > 0
                 else 0
             )
-            avg_response_time = sum(metrics["response_times"]) / len(metrics["response_times"])
+            avg_response_time = sum(metrics["response_times"]) / len(
+                metrics["response_times"]
+            )
 
             # Determine health status
             if success_rate >= 0.9 and avg_response_time < 5.0:
@@ -541,7 +550,9 @@ class CodeConductorApp:
                 try:
                     gpu_info = asyncio.run(self.model_manager.get_gpu_memory_info())
                     if gpu_info:
-                        st.markdown(f"**Memory Usage:** {gpu_info['usage_percent']:.1f}%")
+                        st.markdown(
+                            f"**Memory Usage:** {gpu_info['usage_percent']:.1f}%"
+                        )
                         st.markdown(
                             f"**Used:** {gpu_info['used_gb']:.1f}GB / {gpu_info['total_gb']:.1f}GB"
                         )
@@ -568,7 +579,9 @@ class CodeConductorApp:
                                             )
                                         )
                                     if loaded_models:
-                                        st.success(f"✅ Loaded {len(loaded_models)} models safely")
+                                        st.success(
+                                            f"✅ Loaded {len(loaded_models)} models safely"
+                                        )
                                         # Auto-refresh GPU memory display
                                         st.rerun()
                                     else:
@@ -586,7 +599,9 @@ class CodeConductorApp:
                                             )
                                         )
                                     if loaded_models:
-                                        st.success(f"✅ Loaded {len(loaded_models)} models")
+                                        st.success(
+                                            f"✅ Loaded {len(loaded_models)} models"
+                                        )
                                         # Auto-refresh GPU memory display
                                         st.rerun()
                                     else:
@@ -595,7 +610,9 @@ class CodeConductorApp:
                                     st.error(f"❌ Error: {e}")
 
                         # Aggressive loading (separate row)
-                        if st.button("🚀 Aggressive Load (28GB)", key="load_aggressive"):
+                        if st.button(
+                            "🚀 Aggressive Load (28GB)", key="load_aggressive"
+                        ):
                             try:
                                 with st.spinner("Loading aggressive config..."):
                                     loaded_models = asyncio.run(
@@ -656,7 +673,9 @@ class CodeConductorApp:
                                     with st.spinner("Analyzing repository..."):
                                         root = Path(".")
                                         out = Path("artifacts")
-                                        data = write_repo_map(root, out / "repo_map.json")
+                                        data = write_repo_map(
+                                            root, out / "repo_map.json"
+                                        )
                                         write_state_md(data, out / "state.md")
                                     st.success(
                                         "✅ Wrote artifacts/repo_map.json and artifacts/state.md"
@@ -676,7 +695,9 @@ class CodeConductorApp:
                                         )
                                     )
                                     rules = generate_cursorrules(data)
-                                    Path(".cursorrules").write_text(rules, encoding="utf-8")
+                                    Path(".cursorrules").write_text(
+                                        rules, encoding="utf-8"
+                                    )
                                     st.success("✅ Wrote .cursorrules")
                                 except Exception as e:
                                     st.error(f"❌ .cursorrules failed: {e}")
@@ -694,9 +715,13 @@ class CodeConductorApp:
                                     )
                                     outp = Path("artifacts/prompts/next_feature.md")
                                     outp.parent.mkdir(parents=True, exist_ok=True)
-                                    prompt = propose_next_feature(repo, Path("artifacts/state.md"))
+                                    prompt = propose_next_feature(
+                                        repo, Path("artifacts/state.md")
+                                    )
                                     outp.write_text(prompt, encoding="utf-8")
-                                    st.success("✅ Wrote artifacts/prompts/next_feature.md")
+                                    st.success(
+                                        "✅ Wrote artifacts/prompts/next_feature.md"
+                                    )
                                 except Exception as e:
                                     st.error(f"❌ Propose failed: {e}")
 
@@ -711,20 +736,29 @@ class CodeConductorApp:
                                 if p.exists():
                                     st.markdown(f"**{title}** – {p.as_posix()}")
                                     txt = p.read_text(encoding="utf-8", errors="ignore")
-                                    st.code(txt[:1500] + ("\n..." if len(txt) > 1500 else ""))
+                                    st.code(
+                                        txt[:1500]
+                                        + ("\n..." if len(txt) > 1500 else "")
+                                    )
                                 else:
                                     st.info(f"{title}: not found")
 
                             _preview("artifacts/state.md", "state.md")
                             _preview(".cursorrules", ".cursorrules")
-                            _preview("artifacts/prompts/next_feature.md", "next_feature.md")
+                            _preview(
+                                "artifacts/prompts/next_feature.md", "next_feature.md"
+                            )
 
                         # Check and cleanup memory
                         if st.button("🔍 Check & Cleanup Memory", key="check_cleanup"):
                             try:
-                                with st.spinner("Checking memory and performing cleanup..."):
+                                with st.spinner(
+                                    "Checking memory and performing cleanup..."
+                                ):
                                     cleanup_performed = asyncio.run(
-                                        self.model_manager.check_and_cleanup_memory("medium_load")
+                                        self.model_manager.check_and_cleanup_memory(
+                                            "medium_load"
+                                        )
                                     )
                                 if cleanup_performed:
                                     st.success("🧹 Memory cleanup performed")
@@ -740,7 +774,9 @@ class CodeConductorApp:
                         if st.button("🧪 Test GPU Methods", key="test_gpu"):
                             try:
                                 with st.spinner("Testing GPU memory methods..."):
-                                    results = asyncio.run(self.model_manager.test_all_gpu_methods())
+                                    results = asyncio.run(
+                                        self.model_manager.test_all_gpu_methods()
+                                    )
                                 st.success("🧪 GPU Methods Test Complete!")
                                 # Display results in a more readable format
                                 st.markdown("### GPU Memory Detection Results:")
@@ -774,7 +810,9 @@ class CodeConductorApp:
                                         f"**Emergency triggers:** {stats['emergency_triggers']}"
                                     )
                                     if stats["last_check"]:
-                                        st.markdown(f"**Last check:** {stats['last_check']}")
+                                        st.markdown(
+                                            f"**Last check:** {stats['last_check']}"
+                                        )
                                     st.markdown(
                                         f"**Current VRAM:** {stats['last_vram_percent']:.1f}%"
                                     )
@@ -794,8 +832,12 @@ class CodeConductorApp:
             st.markdown("### Model Loading Status")
             if hasattr(self, "model_manager"):
                 try:
-                    loaded_status = asyncio.run(self.model_manager.get_loaded_models_status())
-                    st.markdown(f"**Loaded Models:** {loaded_status.get('total_loaded', 0)}")
+                    loaded_status = asyncio.run(
+                        self.model_manager.get_loaded_models_status()
+                    )
+                    st.markdown(
+                        f"**Loaded Models:** {loaded_status.get('total_loaded', 0)}"
+                    )
                     if loaded_status.get("loaded_models"):
                         st.markdown("**Currently Loaded:**")
                         for model in loaded_status["loaded_models"]:
@@ -816,7 +858,9 @@ class CodeConductorApp:
                         preferred_models = LM_STUDIO_PREFERRED_MODELS[:3]
                         with st.spinner("Loading preferred models..."):
                             loaded_models = asyncio.run(
-                                self.model_manager.ensure_models_loaded(preferred_models)
+                                self.model_manager.ensure_models_loaded(
+                                    preferred_models
+                                )
                             )
                         if loaded_models:
                             st.success(
@@ -841,7 +885,9 @@ class CodeConductorApp:
             if hasattr(self, "model_manager"):
                 try:
                     models = asyncio.run(self.model_manager.list_models())
-                    healthy_models = asyncio.run(self.model_manager.list_healthy_models())
+                    healthy_models = asyncio.run(
+                        self.model_manager.list_healthy_models()
+                    )
 
                     st.markdown(f"**Total Models:** {len(models)}")
                     st.markdown(f"**Healthy Models:** {len(healthy_models)}")
@@ -892,7 +938,9 @@ class CodeConductorApp:
                         f"**Hit-rate:** {hr:.1f}%  |  ns=`{cache_obj.namespace}`  TTL={cache_obj.ttl_seconds}s"
                     )
                     last_hit = getattr(self.ensemble_engine, "last_cache_hit", False)
-                    st.markdown("**Last request:** " + ("✅ HIT" if last_hit else "MISS"))
+                    st.markdown(
+                        "**Last request:** " + ("✅ HIT" if last_hit else "MISS")
+                    )
 
             st.markdown("---")
             st.markdown("### Export bundle")
@@ -930,9 +978,14 @@ class CodeConductorApp:
                             retention=int(retention),
                             policy=os.getenv("SELECTOR_POLICY", "latency"),
                             selected_model=(
-                                getattr(self.ensemble_engine, "last_selector_decision", {}) or {}
+                                getattr(
+                                    self.ensemble_engine, "last_selector_decision", {}
+                                )
+                                or {}
                             ).get("chosen"),
-                            cache_hit=getattr(self.ensemble_engine, "last_cache_hit", False),
+                            cache_hit=getattr(
+                                self.ensemble_engine, "last_cache_hit", False
+                            ),
                             app_version=os.getenv("APP_VERSION"),
                             git_commit=os.getenv("GIT_COMMIT"),
                         )
@@ -940,7 +993,9 @@ class CodeConductorApp:
                         ok = bool(ver.get("verified"))
                         size_mb = 0.0
                         try:
-                            size_mb = round(os.path.getsize(zip_path) / (1024 * 1024), 2)
+                            size_mb = round(
+                                os.path.getsize(zip_path) / (1024 * 1024), 2
+                            )
                         except Exception:
                             pass
                         st.success(
@@ -950,14 +1005,18 @@ class CodeConductorApp:
                             hasattr(self.ensemble_engine, "last_artifacts_dir")
                             and self.ensemble_engine.last_artifacts_dir
                         ):
-                            st.caption(f"Run dir: {self.ensemble_engine.last_artifacts_dir}")
+                            st.caption(
+                                f"Run dir: {self.ensemble_engine.last_artifacts_dir}"
+                            )
                     except Exception as e:
                         st.error(f"Export failed: {e}")
 
             with col_b:
                 if st.button("📂 Open run folder", use_container_width=True):
                     try:
-                        run_dir = getattr(self.ensemble_engine, "last_artifacts_dir", None)
+                        run_dir = getattr(
+                            self.ensemble_engine, "last_artifacts_dir", None
+                        )
                         if run_dir:
                             os.startfile(run_dir)
                         else:
@@ -1014,13 +1073,17 @@ class CodeConductorApp:
                                     )
                                     or {}
                                 ).get("chosen"),
-                                cache_hit=getattr(self.ensemble_engine, "last_cache_hit", False),
+                                cache_hit=getattr(
+                                    self.ensemble_engine, "last_cache_hit", False
+                                ),
                                 app_version=os.getenv("APP_VERSION"),
                                 git_commit=os.getenv("GIT_COMMIT"),
                             )
                             self.ensemble_engine.last_export_path = zip_path
 
-                        zip_path = getattr(self.ensemble_engine, "last_export_path", None)
+                        zip_path = getattr(
+                            self.ensemble_engine, "last_export_path", None
+                        )
                         if not zip_path:
                             st.info("Create an export first")
                         else:
@@ -1038,7 +1101,9 @@ class CodeConductorApp:
                                 # Prepare mailto
                                 hitmiss = (
                                     "HIT"
-                                    if getattr(self.ensemble_engine, "last_cache_hit", False)
+                                    if getattr(
+                                        self.ensemble_engine, "last_cache_hit", False
+                                    )
                                     else "MISS"
                                 )
                                 policy = os.getenv("SELECTOR_POLICY", "latency")
@@ -1062,11 +1127,17 @@ class CodeConductorApp:
                                     pass
                                 # Hit rate
                                 hr = 0.0
-                                cache_obj = getattr(self.ensemble_engine, "response_cache", None)
+                                cache_obj = getattr(
+                                    self.ensemble_engine, "response_cache", None
+                                )
                                 if cache_obj is not None:
-                                    total = cache_obj.stats.hits + cache_obj.stats.misses
+                                    total = (
+                                        cache_obj.stats.hits + cache_obj.stats.misses
+                                    )
                                     if total:
-                                        hr = round(cache_obj.stats.hits / total * 100.0, 1)
+                                        hr = round(
+                                            cache_obj.stats.hits / total * 100.0, 1
+                                        )
                                 app_version = os.getenv("APP_VERSION", "")
                                 commit = os.getenv("GIT_COMMIT", "")
 
@@ -1084,9 +1155,7 @@ class CodeConductorApp:
                                 try:
                                     import urllib.parse as ul
 
-                                    mailto = (
-                                        f"mailto:?subject={ul.quote(subject)}&body={ul.quote(body)}"
-                                    )
+                                    mailto = f"mailto:?subject={ul.quote(subject)}&body={ul.quote(body)}"
                                     webbrowser.open(mailto)
                                 except Exception:
                                     pass
@@ -1141,9 +1210,14 @@ class CodeConductorApp:
                 st.success("✅ RAG System Available")
 
                 # Show context stats
-                if hasattr(st.session_state, "rag_context") and st.session_state.rag_context:
+                if (
+                    hasattr(st.session_state, "rag_context")
+                    and st.session_state.rag_context
+                ):
                     context_info = st.session_state.rag_context
-                    st.markdown(f"**Documents Found:** {context_info.get('context_count', 0)}")
+                    st.markdown(
+                        f"**Documents Found:** {context_info.get('context_count', 0)}"
+                    )
                     st.markdown(
                         f"**Average Relevance:** {context_info.get('avg_relevance', 0):.3f}"
                     )
@@ -1151,12 +1225,17 @@ class CodeConductorApp:
                         f"**Context Types:** {', '.join(context_info.get('context_types', []))}"
                     )
                 else:
-                    st.info("ℹ️ No context loaded yet. Generate code to see RAG context.")
+                    st.info(
+                        "ℹ️ No context loaded yet. Generate code to see RAG context."
+                    )
             else:
                 st.warning("⚠️ RAG System not available")
 
             # Show recent context
-            if hasattr(st.session_state, "last_rag_context") and st.session_state.last_rag_context:
+            if (
+                hasattr(st.session_state, "last_rag_context")
+                and st.session_state.last_rag_context
+            ):
                 st.markdown("### Recent Context")
                 recent_context = st.session_state.last_rag_context
                 st.markdown(f"**Last Query:** {recent_context.get('query', 'N/A')}")
@@ -1184,10 +1263,18 @@ class CodeConductorApp:
 
                 if patterns:
                     for i, pattern in enumerate(patterns[:5]):  # Show first 5
-                        with st.expander(f"Pattern {i + 1}: {pattern.get('task_type', 'Unknown')}"):
-                            st.markdown(f"**Task:** {pattern.get('task', 'N/A')[:50]}...")
-                            st.markdown(f"**Success Rate:** {pattern.get('success_rate', 0):.2f}")
-                            st.markdown(f"**Last Used:** {pattern.get('last_used', 'N/A')}")
+                        with st.expander(
+                            f"Pattern {i + 1}: {pattern.get('task_type', 'Unknown')}"
+                        ):
+                            st.markdown(
+                                f"**Task:** {pattern.get('task', 'N/A')[:50]}..."
+                            )
+                            st.markdown(
+                                f"**Success Rate:** {pattern.get('success_rate', 0):.2f}"
+                            )
+                            st.markdown(
+                                f"**Last Used:** {pattern.get('last_used', 'N/A')}"
+                            )
                 else:
                     st.info("ℹ️ No patterns stored yet")
             else:
@@ -1202,7 +1289,9 @@ class CodeConductorApp:
                     stats = self.monitoring.get_statistics()
 
                     st.markdown(f"**Total Requests:** {stats.get('total_requests', 0)}")
-                    st.markdown(f"**Success Rate:** {stats.get('success_rate', 0):.1f}%")
+                    st.markdown(
+                        f"**Success Rate:** {stats.get('success_rate', 0):.1f}%"
+                    )
                     st.markdown(
                         f"**Average Response Time:** {stats.get('avg_response_time', 0):.2f}s"
                     )
@@ -1226,7 +1315,9 @@ class CodeConductorApp:
             try:
                 import requests
 
-                health_response = requests.get("http://localhost:8081/health", timeout=2)
+                health_response = requests.get(
+                    "http://localhost:8081/health", timeout=2
+                )
                 if health_response.status_code == 200:
                     st.success("✅ Health API Running")
                     health_data = health_response.json()
@@ -1314,7 +1405,9 @@ class CodeConductorApp:
         st.markdown("### 🤖 Model Status Dashboard")
 
         if not st.session_state.models_discovered:
-            st.info("Click 'Refresh Models' in the sidebar to discover available models.")
+            st.info(
+                "Click 'Refresh Models' in the sidebar to discover available models."
+            )
             return
 
         try:
@@ -1382,7 +1475,9 @@ class CodeConductorApp:
                     "Create a function to validate Swedish phone numbers"
                 )
         with col2:
-            if st.button("🧮 Calculator", use_container_width=True, key="calculator_btn"):
+            if st.button(
+                "🧮 Calculator", use_container_width=True, key="calculator_btn"
+            ):
                 st.session_state.current_task = (
                     "Create a simple calculator class with basic operations"
                 )
@@ -1392,9 +1487,7 @@ class CodeConductorApp:
                 use_container_width=True,
                 key="password_generator_btn",
             ):
-                st.session_state.current_task = (
-                    "Create a secure password generator with configurable length and complexity"
-                )
+                st.session_state.current_task = "Create a secure password generator with configurable length and complexity"
 
         # Task input
         task = st.text_area(
@@ -1453,9 +1546,13 @@ class CodeConductorApp:
     def _create_development_plan(self, task):
         """Create development plan using Planner Agent with RAG context"""
         try:
-            with st.spinner("🧠 Creating intelligent development plan with RAG context..."):
+            with st.spinner(
+                "🧠 Creating intelligent development plan with RAG context..."
+            ):
                 # Initialize planner with current project
-                project_path = st.session_state.get("project_path", "test_fastapi_project")
+                project_path = st.session_state.get(
+                    "project_path", "test_fastapi_project"
+                )
                 planner = PlannerAgent(project_path)
 
                 # Get relevant context using RAG
@@ -1488,9 +1585,13 @@ class CodeConductorApp:
     def _generate_cursor_prompts(self, task):
         """Generate Cursor prompts using Planner Agent with RAG context"""
         try:
-            with st.spinner("🤖 Generating optimized Cursor prompts with RAG context..."):
+            with st.spinner(
+                "🤖 Generating optimized Cursor prompts with RAG context..."
+            ):
                 # Initialize planner
-                project_path = st.session_state.get("project_path", "test_fastapi_project")
+                project_path = st.session_state.get(
+                    "project_path", "test_fastapi_project"
+                )
                 planner = PlannerAgent(project_path)
 
                 # Get relevant context using RAG
@@ -1529,7 +1630,9 @@ class CodeConductorApp:
                                 "💡 **How to copy:** Hover over the code block above and click the copy button that appears"
                             )
                         with col2:
-                            if st.button(f"💾 Save Pattern {i}", key=f"save_pattern_{i}"):
+                            if st.button(
+                                f"💾 Save Pattern {i}", key=f"save_pattern_{i}"
+                            ):
                                 st.session_state.last_generated_prompt = prompt
                                 st.session_state.prompt_feedback = (
                                     f"✅ Pattern {i} saved for learning!"
@@ -1629,7 +1732,9 @@ class CodeConductorApp:
             status_text.text("📝 Generating prompt...")
             progress_bar.progress(70)
 
-            prompt = self.prompt_generator.generate_prompt(hybrid_result.final_consensus, task)
+            prompt = self.prompt_generator.generate_prompt(
+                hybrid_result.final_consensus, task
+            )
 
             # Step 5: Automated testing
             status_text.text("🧪 Running automated tests...")
@@ -1675,7 +1780,11 @@ class CodeConductorApp:
                     else:
                         # Best-effort resolve GUI run dir
                         run_dir = Path("artifacts") / "runs"
-                        latest = sorted(run_dir.glob("*_gui"))[-1] if run_dir.exists() else None
+                        latest = (
+                            sorted(run_dir.glob("*_gui"))[-1]
+                            if run_dir.exists()
+                            else None
+                        )
                         if latest:
                             after_path = latest / "after" / "generated.py"
                     if after_path and after_path.exists():
@@ -1684,7 +1793,9 @@ class CodeConductorApp:
                         # Temporary guarded hook for Test 6: if task requires SyntaxError
                         # trailer but candidate lacks it, inject trailer before validation
                         try:
-                            print(f"DEBUG: Task content: {task[:200] if task else 'None'}")
+                            print(
+                                f"DEBUG: Task content: {task[:200] if task else 'None'}"
+                            )
                             print(
                                 f"DEBUG: Looking for SYNTAX_ERROR in task: {('# SYNTAX_ERROR BELOW' in (task or ''))}"
                             )
@@ -1705,7 +1816,9 @@ class CodeConductorApp:
                                     append_txt = (
                                         "\n" if not code_txt.endswith("\n") else ""
                                     ) + "# SYNTAX_ERROR BELOW\n(\n"
-                                    after_path.write_text(code_txt + append_txt, encoding="utf-8")
+                                    after_path.write_text(
+                                        code_txt + append_txt, encoding="utf-8"
+                                    )
                                     code_txt = after_path.read_text(encoding="utf-8")
                         except Exception:
                             pass
@@ -1718,7 +1831,9 @@ class CodeConductorApp:
                         )
                         print("DEBUG: About to enter repair loop")
                         print(f"DEBUG: report.ok = {report.ok}")
-                        print(f"DEBUG: report.syntax_ok = {getattr(report, 'syntax_ok', 'N/A')}")
+                        print(
+                            f"DEBUG: report.syntax_ok = {getattr(report, 'syntax_ok', 'N/A')}"
+                        )
                         print(
                             f"DEBUG: report.doctest_failures = {getattr(report, 'doctest_failures', 'N/A')}"
                         )
@@ -1735,12 +1850,16 @@ class CodeConductorApp:
                                 code_txt,
                                 report,
                                 dt_out if not ok_dt else None,
-                                require_trailer_by_task=("# SYNTAX_ERROR BELOW" in (task or "")),
+                                require_trailer_by_task=(
+                                    "# SYNTAX_ERROR BELOW" in (task or "")
+                                ),
                             )
 
                             # Ask the ensemble for a repair (single-turn, minimal)
                             fix_task = f"Return ONLY a single fenced python code block that fixes the module.\n{repair_prompt}"
-                            fix_result = await self.hybrid_ensemble.process_task(fix_task)
+                            fix_result = await self.hybrid_ensemble.process_task(
+                                fix_task
+                            )
                             # Extract and normalize code
                             fixed_raw = getattr(
                                 fix_result.final_consensus, "consensus", None
@@ -1761,7 +1880,9 @@ class CodeConductorApp:
                             )
                             iter_count += 1
 
-                        print(f"DEBUG: Exited repair loop. Final report.ok = {report.ok}")
+                        print(
+                            f"DEBUG: Exited repair loop. Final report.ok = {report.ok}"
+                        )
                         # Only keep file if final report is ok; otherwise do not leave a broken file
                         try:
                             if not report.ok and after_path.exists():
@@ -1924,7 +2045,9 @@ class CodeConductorApp:
         # Test metrics - Row 1
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Test Status", "✅ Passed" if test_results["success"] else "❌ Failed")
+            st.metric(
+                "Test Status", "✅ Passed" if test_results["success"] else "❌ Failed"
+            )
         with col2:
             st.metric("Reward Score", f"{test_results['reward']:.2f}")
         with col3:
@@ -1967,7 +2090,9 @@ class CodeConductorApp:
                 if "duration_s" in test:
                     test_durations.append(test["duration_s"])
 
-            avg_duration = sum(test_durations) / len(test_durations) if test_durations else 0.0
+            avg_duration = (
+                sum(test_durations) / len(test_durations) if test_durations else 0.0
+            )
             st.metric(
                 "Avg Test Duration",
                 f"{avg_duration:.3f}s",
@@ -1990,7 +2115,9 @@ class CodeConductorApp:
             if test_results["test_results"]:
                 for i, test in enumerate(test_results["test_results"], 1):
                     status = "✅" if test.get("passed", False) else "❌"
-                    st.markdown(f"{status} **Test {i}:** {test.get('name', 'Unknown test')}")
+                    st.markdown(
+                        f"{status} **Test {i}:** {test.get('name', 'Unknown test')}"
+                    )
                     if test.get("type"):
                         st.caption(f"Type: {test['type']}")
             else:
@@ -2006,7 +2133,9 @@ class CodeConductorApp:
         with st.expander("🎯 Reward Analysis", expanded=False):
             reward = test_results["reward"]
             if reward >= 0.8:
-                st.success("🎉 Excellent! High reward score indicates good code quality.")
+                st.success(
+                    "🎉 Excellent! High reward score indicates good code quality."
+                )
             elif reward >= 0.5:
                 st.warning("⚠️ Moderate reward score. Code may need improvements.")
             else:
@@ -2102,7 +2231,9 @@ class CodeConductorApp:
             with col2:
                 st.metric("Confidence", f"{complexity.confidence:.2f}")
             with col3:
-                escalation_status = "☁️ Used" if results.get("escalation_used") else "🏠 Local"
+                escalation_status = (
+                    "☁️ Used" if results.get("escalation_used") else "🏠 Local"
+                )
                 st.metric("Escalation", escalation_status)
             with col4:
                 if "escalation_reason" in results:
@@ -2135,7 +2266,9 @@ class CodeConductorApp:
             with col2:
                 st.metric("Cloud Models", len(results["cloud_responses"]))
             with col3:
-                total_models = len(results["local_responses"]) + len(results["cloud_responses"])
+                total_models = len(results["local_responses"]) + len(
+                    results["cloud_responses"]
+                )
                 st.metric("Total Models", total_models)
 
         # Performance metrics
@@ -2175,7 +2308,9 @@ class CodeConductorApp:
                             pyperclip.copy(results["generated_code"])
                             st.success("✅ Code copied to clipboard!")
                         else:
-                            st.info("📋 Select the code above and copy manually (Ctrl+C)")
+                            st.info(
+                                "📋 Select the code above and copy manually (Ctrl+C)"
+                            )
                     except Exception as e:
                         st.warning(f"⚠️ Could not copy to clipboard: {e}")
                         st.info("📋 Select the code above and copy manually (Ctrl+C)")
@@ -2205,18 +2340,30 @@ class CodeConductorApp:
 
                         # Also show consensus metadata
                         st.markdown("📊 **Consensus Metadata:**")
-                        st.markdown(f"**Confidence:** {results['consensus'].confidence:.2f}")
+                        st.markdown(
+                            f"**Confidence:** {results['consensus'].confidence:.2f}"
+                        )
                         st.markdown(
                             f"**Code Quality Score:** {results['consensus'].code_quality_score:.2f}"
                         )
-                        st.markdown(f"**Syntax Valid:** {results['consensus'].syntax_valid}")
+                        st.markdown(
+                            f"**Syntax Valid:** {results['consensus'].syntax_valid}"
+                        )
                         st.markdown(f"**Reasoning:** {results['consensus'].reasoning}")
                     else:
                         st.info("🤖 **Model Consensus Summary**")
-                        st.markdown("**Strategy:** " + results.get("strategy", "consensus"))
-                        st.markdown("**Models Used:** " + str(results.get("models_used", 0)))
-                        st.markdown("**Confidence:** " + f"{results.get('confidence', 0):.2f}")
-                        st.markdown("**Total Time:** " + f"{results.get('total_time', 0):.2f}s")
+                        st.markdown(
+                            "**Strategy:** " + results.get("strategy", "consensus")
+                        )
+                        st.markdown(
+                            "**Models Used:** " + str(results.get("models_used", 0))
+                        )
+                        st.markdown(
+                            "**Confidence:** " + f"{results.get('confidence', 0):.2f}"
+                        )
+                        st.markdown(
+                            "**Total Time:** " + f"{results.get('total_time', 0):.2f}s"
+                        )
                         st.caption(
                             "💡 Models provided free-form responses rather than structured consensus data"
                         )
@@ -2247,7 +2394,11 @@ class CodeConductorApp:
                             else:
                                 content = str(response)
                             st.code(
-                                (content[:500] + "..." if len(content) > 500 else content),
+                                (
+                                    content[:500] + "..."
+                                    if len(content) > 500
+                                    else content
+                                ),
                                 language="python",
                             )
                         else:
@@ -2296,7 +2447,9 @@ class CodeConductorApp:
         with col1:
             st.metric("FastAPI Routes", len(report.get("routes", [])))
         with col2:
-            st.metric("Database Tables", len(report.get("schema", {}).get("tables", [])))
+            st.metric(
+                "Database Tables", len(report.get("schema", {}).get("tables", []))
+            )
         with col3:
             st.metric("Files Analyzed", report.get("files_analyzed", 0))
 
@@ -2368,7 +2521,9 @@ class CodeConductorApp:
 
         # Write tables
         for table in report.get("schema", {}).get("tables", []):
-            writer.writerow(["Table", table["name"], f"Columns: {len(table['columns'])}"])
+            writer.writerow(
+                ["Table", table["name"], f"Columns: {len(table['columns'])}"]
+            )
 
         return output.getvalue()
 
@@ -2407,7 +2562,9 @@ class CodeConductorApp:
 
                         with col1:
                             st.metric("Validation Score", f"{result.score:.1%}")
-                            st.metric("Is Valid", "✅ Yes" if result.is_valid else "❌ No")
+                            st.metric(
+                                "Is Valid", "✅ Yes" if result.is_valid else "❌ No"
+                            )
 
                         with col2:
                             st.metric("Total Issues", len(result.issues))
@@ -2436,7 +2593,9 @@ class CodeConductorApp:
                             ),
                             (
                                 "FastAPI Patterns",
-                                result.compliance.get("follows_fastapi_patterns", False),
+                                result.compliance.get(
+                                    "follows_fastapi_patterns", False
+                                ),
                             ),
                             (
                                 "Code Style",
@@ -2551,7 +2710,9 @@ class CodeConductorApp:
                                                     "user_rating": user_rating,
                                                     "timestamp": datetime.now().isoformat(),
                                                 }
-                                                rag_system.add_pattern_to_context(pattern_data)
+                                                rag_system.add_pattern_to_context(
+                                                    pattern_data
+                                                )
                                                 st.info(
                                                     "🔍 Pattern also added to RAG context database for future reference!"
                                                 )
@@ -2561,7 +2722,9 @@ class CodeConductorApp:
                                                 )
 
                                             # Clear the form
-                                            st.session_state.last_validation_result = None
+                                            st.session_state.last_validation_result = (
+                                                None
+                                            )
                                             st.session_state.last_generated_code = None
                                             st.rerun()
                                         else:
@@ -2569,7 +2732,9 @@ class CodeConductorApp:
                                     except Exception as e:
                                         st.error(f"Error saving pattern: {str(e)}")
                         else:
-                            st.warning("⚠️ Code validation failed. Please address the issues above.")
+                            st.warning(
+                                "⚠️ Code validation failed. Please address the issues above."
+                            )
 
                     except Exception as e:
                         st.error(f"Validation error: {str(e)}")
@@ -2612,7 +2777,9 @@ class CodeConductorApp:
         with col1:
             min_score = st.slider("Minimum Score", 0.0, 1.0, 0.0, 0.1)
         with col2:
-            task_filter = st.text_input("Task Keyword", placeholder="e.g., 'auth', 'cache'")
+            task_filter = st.text_input(
+                "Task Keyword", placeholder="e.g., 'auth', 'cache'"
+            )
         with col3:
             model_filter = st.selectbox("Model", ["All"] + stats["models_used"])
 
@@ -2620,10 +2787,14 @@ class CodeConductorApp:
         patterns = self.learning_system.get_patterns()
 
         if min_score > 0.0:
-            patterns = [p for p in patterns if p.validation.get("score", 0.0) >= min_score]
+            patterns = [
+                p for p in patterns if p.validation.get("score", 0.0) >= min_score
+            ]
 
         if task_filter:
-            patterns = [p for p in patterns if task_filter.lower() in p.task_description.lower()]
+            patterns = [
+                p for p in patterns if task_filter.lower() in p.task_description.lower()
+            ]
 
         if model_filter != "All":
             patterns = [p for p in patterns if p.model_used == model_filter]
@@ -2636,11 +2807,15 @@ class CodeConductorApp:
         if top_patterns:
             st.markdown("##### ⭐ Top-Rated Patterns (5/5)")
             for pattern in top_patterns[:3]:  # Show top 3
-                with st.expander(f"🏆 {pattern.task_description[:50]}...", expanded=True):
+                with st.expander(
+                    f"🏆 {pattern.task_description[:50]}...", expanded=True
+                ):
                     col1, col2 = st.columns([3, 1])
                     with col1:
                         st.markdown(f"**Task:** {pattern.task_description}")
-                        st.markdown(f"**Score:** {pattern.validation.get('score', 0.0):.1%}")
+                        st.markdown(
+                            f"**Score:** {pattern.validation.get('score', 0.0):.1%}"
+                        )
                         st.markdown(f"**Model:** {pattern.model_used or 'Unknown'}")
                         st.markdown(f"**Date:** {pattern.timestamp[:10]}")
                     with col2:
@@ -2668,7 +2843,9 @@ class CodeConductorApp:
 
                     with col1:
                         st.markdown(f"**Task:** {pattern.task_description}")
-                        st.markdown(f"**Score:** {pattern.validation.get('score', 0.0):.1%}")
+                        st.markdown(
+                            f"**Score:** {pattern.validation.get('score', 0.0):.1%}"
+                        )
                         st.markdown(f"**Model:** {pattern.model_used or 'Unknown'}")
                         st.markdown(f"**Rating:** {'⭐' * (pattern.user_rating or 0)}")
                         st.markdown(f"**Date:** {pattern.timestamp[:10]}")
@@ -2678,7 +2855,9 @@ class CodeConductorApp:
 
                     with col2:
                         if st.button("🗑️ Delete", key=f"delete_{i}"):
-                            if self.learning_system.delete_pattern(len(patterns) - 1 - i):
+                            if self.learning_system.delete_pattern(
+                                len(patterns) - 1 - i
+                            ):
                                 st.success("Pattern deleted!")
                                 st.rerun()
                             else:
@@ -2726,7 +2905,9 @@ class CodeConductorApp:
 
         with col1:
             if st.button("📥 Export All Patterns"):
-                export_file = f"patterns_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                export_file = (
+                    f"patterns_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                )
                 if self.learning_system.export_patterns(export_file):
                     st.success(f"✅ Patterns exported to {export_file}")
                 else:
@@ -2734,7 +2915,9 @@ class CodeConductorApp:
 
         with col2:
             if st.button("🗑️ Clear All Patterns"):
-                if st.checkbox("I understand this will delete ALL patterns permanently"):
+                if st.checkbox(
+                    "I understand this will delete ALL patterns permanently"
+                ):
                     # Clear all patterns by recreating the file
                     self.learning_system.patterns = []
                     self.learning_system._save_patterns()
@@ -2749,7 +2932,9 @@ class CodeConductorApp:
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            st.metric("Local LLM Cost", "$0.00", help="Cost for using local models (free)")
+            st.metric(
+                "Local LLM Cost", "$0.00", help="Cost for using local models (free)"
+            )
 
         with col2:
             # Calculate estimated cloud cost based on usage
@@ -2775,13 +2960,20 @@ class CodeConductorApp:
             st.markdown("#### 📊 Cost Savings Over Time")
 
             # Create cost data
-            dates = [entry.get("timestamp", datetime.now()) for entry in self.generation_history]
+            dates = [
+                entry.get("timestamp", datetime.now())
+                for entry in self.generation_history
+            ]
             local_costs = [0.0] * len(dates)  # Always free
             cloud_costs = [0.15] * len(dates)  # $0.15 per call
 
             # Create cumulative costs
-            cumulative_local = [sum(local_costs[: i + 1]) for i in range(len(local_costs))]
-            cumulative_cloud = [sum(cloud_costs[: i + 1]) for i in range(len(cloud_costs))]
+            cumulative_local = [
+                sum(local_costs[: i + 1]) for i in range(len(local_costs))
+            ]
+            cumulative_cloud = [
+                sum(cloud_costs[: i + 1]) for i in range(len(cloud_costs))
+            ]
 
             # Create DataFrame for plotting
             cost_data = pd.DataFrame(
@@ -2791,7 +2983,9 @@ class CodeConductorApp:
                     "Cloud Cost": cumulative_cloud,
                     "Savings": [
                         cloud - local
-                        for cloud, local in zip(cumulative_cloud, cumulative_local, strict=False)
+                        for cloud, local in zip(
+                            cumulative_cloud, cumulative_local, strict=False
+                        )
                     ],
                 }
             )
@@ -2851,7 +3045,9 @@ class CodeConductorApp:
                 st.markdown("- 📈 **Scaling costs** - More usage = higher bills")
 
         else:
-            st.info("No generation history yet. Start generating code to see cost savings!")
+            st.info(
+                "No generation history yet. Start generating code to see cost savings!"
+            )
 
         # Cost calculator
         st.markdown("---")
@@ -2950,7 +3146,9 @@ class CodeConductorApp:
                         st.session_state.generation_results = results
                         # Auto-save generated code for validation
                         if results.get("generated_code"):
-                            st.session_state.last_generated_code = results["generated_code"]
+                            st.session_state.last_generated_code = results[
+                                "generated_code"
+                            ]
                 except Exception as e:
                     st.error(f"Generation failed: {e}")
                     st.exception(e)
@@ -2969,12 +3167,16 @@ class CodeConductorApp:
                 )
 
                 st.metric("Total Generations", total_generations)
-                st.metric("Success Rate", f"{successful / total_generations * 100:.1f}%")
+                st.metric(
+                    "Success Rate", f"{successful / total_generations * 100:.1f}%"
+                )
 
                 # Recent activity chart
                 if len(self.generation_history) > 1:
                     df = pd.DataFrame(self.generation_history)
-                    fig = px.line(df, x=df.index, y="models_used", title="Recent Model Usage")
+                    fig = px.line(
+                        df, x=df.index, y="models_used", title="Recent Model Usage"
+                    )
                     st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("No generation history yet. Start generating to see stats!")

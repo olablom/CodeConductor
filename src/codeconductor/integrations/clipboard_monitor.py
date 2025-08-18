@@ -133,8 +133,12 @@ class ClipboardMonitor:
                 current_content = self.read_clipboard()
 
                 # Check if content changed and looks like Cursor output
-                if current_content != self.last_content and self.is_cursor_output(current_content):
-                    logger.info(f"Cursor output detected! ({len(current_content)} chars)")
+                if current_content != self.last_content and self.is_cursor_output(
+                    current_content
+                ):
+                    logger.info(
+                        f"Cursor output detected! ({len(current_content)} chars)"
+                    )
 
                     # Notify all callbacks
                     for callback in self.callbacks:
@@ -191,7 +195,9 @@ class ClipboardMonitor:
             current_content = self.read_clipboard()
 
             if self.is_cursor_output(current_content):
-                logger.info(f"Cursor output detected after {time.time() - start_time:.1f}s")
+                logger.info(
+                    f"Cursor output detected after {time.time() - start_time:.1f}s"
+                )
                 return current_content
 
             time.sleep(self.check_interval)

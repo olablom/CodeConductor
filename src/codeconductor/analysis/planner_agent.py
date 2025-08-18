@@ -75,7 +75,9 @@ class PlannerAgent:
         for root, _dirs, files in os.walk(self.project_path):
             for file in files:
                 if file.endswith(".py"):
-                    rel_path = os.path.relpath(os.path.join(root, file), self.project_path)
+                    rel_path = os.path.relpath(
+                        os.path.join(root, file), self.project_path
+                    )
 
                     if "routers" in rel_path:
                         structure["routers"].append(rel_path)
@@ -126,7 +128,9 @@ class PlannerAgent:
                 name_lower = element.name.lower()
 
                 # Auth patterns
-                if any(auth in name_lower for auth in ["login", "auth", "token", "jwt"]):
+                if any(
+                    auth in name_lower for auth in ["login", "auth", "token", "jwt"]
+                ):
                     patterns["authentication"] = True
 
                 # CRUD patterns
@@ -197,11 +201,16 @@ class PlannerAgent:
             return "complex"
 
         # Medium indicators
-        if any(word in task_lower for word in ["add", "implement", "create", "update", "modify"]):
+        if any(
+            word in task_lower
+            for word in ["add", "implement", "create", "update", "modify"]
+        ):
             return "medium"
 
         # Simple indicators
-        if any(word in task_lower for word in ["fix", "change", "rename", "move", "typo"]):
+        if any(
+            word in task_lower for word in ["fix", "change", "rename", "move", "typo"]
+        ):
             return "simple"
 
         return "medium"  # Default
@@ -241,11 +250,17 @@ Provide a detailed plan with specific implementation steps.
     def _format_routes_for_prompt(self) -> str:
         """Format routes for LLM context"""
         routes_str = ""
-        for route in self.project_context["routes"][:10]:  # Limit to 10 for context size
-            routes_str += f"- {route['method']} {route['path']} -> {route['function']}()\n"
+        for route in self.project_context["routes"][
+            :10
+        ]:  # Limit to 10 for context size
+            routes_str += (
+                f"- {route['method']} {route['path']} -> {route['function']}()\n"
+            )
 
         if len(self.project_context["routes"]) > 10:
-            routes_str += f"... and {len(self.project_context['routes']) - 10} more routes\n"
+            routes_str += (
+                f"... and {len(self.project_context['routes']) - 10} more routes\n"
+            )
 
         return routes_str
 
@@ -341,7 +356,9 @@ Provide a detailed plan with specific implementation steps.
         else:
             return f"Generic plan for: {task_line}"
 
-    def _generate_development_steps(self, task: str, reasoning: str) -> list[dict[str, Any]]:
+    def _generate_development_steps(
+        self, task: str, reasoning: str
+    ) -> list[dict[str, Any]]:
         """Generate structured development steps from reasoning"""
         steps = []
 
@@ -430,7 +447,9 @@ Generate clean, production-ready code that integrates seamlessly with the existi
 
         return context
 
-    def _define_validation_criteria(self, task: str, steps: list[dict[str, Any]]) -> list[str]:
+    def _define_validation_criteria(
+        self, task: str, steps: list[dict[str, Any]]
+    ) -> list[str]:
         """Define criteria to validate successful implementation"""
         criteria = [
             "Code follows existing project patterns",

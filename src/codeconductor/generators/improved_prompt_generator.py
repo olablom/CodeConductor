@@ -68,7 +68,9 @@ Let me write production-grade code that passes all tests:
 
         return prompt
 
-    def generate_fix_prompt(self, original_code: str, error_message: str, task_type: str) -> str:
+    def generate_fix_prompt(
+        self, original_code: str, error_message: str, task_type: str
+    ) -> str:
         """Generate prompt to fix failed code"""
 
         test_cases = self.test_cases.get(task_type, [])

@@ -62,7 +62,9 @@ class HybridEnsemble:
         self.min_local_confidence = 0.6  # Lower threshold for escalation
         self.max_local_models = 1  # TEMPORARY: Use only 1 model (mistral)
 
-    async def process_task(self, task: str, context: dict | None = None) -> HybridResult:
+    async def process_task(
+        self, task: str, context: dict | None = None
+    ) -> HybridResult:
         """
         Process task using hybrid local + cloud approach.
 
@@ -81,7 +83,9 @@ class HybridEnsemble:
             local_confidence = self._calculate_local_confidence(local_responses)
 
             # Step 3: Enhanced escalation decision with safety checks
-            escalation_decision = self._make_escalation_decision(complexity, local_confidence, task)
+            escalation_decision = self._make_escalation_decision(
+                complexity, local_confidence, task
+            )
 
             cloud_responses = []
             total_cost = 0.0
@@ -122,13 +126,17 @@ class HybridEnsemble:
                         cloud_responses = []
                 else:
                     escalation_reason += " (cloud APIs not available)"
-                    logger.warning("⚠️ Cloud escalation requested but APIs not available")
+                    logger.warning(
+                        "⚠️ Cloud escalation requested but APIs not available"
+                    )
             else:
                 escalation_reason = "Local models sufficient"
                 logger.info(f"🏠 Using local models only: {escalation_reason}")
 
             # Step 4: Combine results and calculate consensus
-            final_consensus = await self._combine_results(task, local_responses, cloud_responses)
+            final_consensus = await self._combine_results(
+                task, local_responses, cloud_responses
+            )
 
             total_time = time.time() - start_time
             cloud_confidence = self._calculate_cloud_confidence(cloud_responses)
@@ -164,9 +172,13 @@ class HybridEnsemble:
             if complexity.level.value == "simple":
                 max_models = min(2, self.max_local_models)
             elif complexity.level.value == "moderate":
-                max_models = min(2, self.max_local_models)  # Reduced for better performance
+                max_models = min(
+                    2, self.max_local_models
+                )  # Reduced for better performance
             else:
-                max_models = min(1, self.max_local_models)  # Single model for complex tasks
+                max_models = min(
+                    1, self.max_local_models
+                )  # Single model for complex tasks
 
             # Use faster timeout for local models
             responses = await asyncio.wait_for(
@@ -227,7 +239,9 @@ class HybridEnsemble:
                 if "test" in content.lower() or "assert" in content:  # Contains tests
                     response_quality += 0.1
 
-        base_confidence = valid_responses / total_responses if total_responses > 0 else 0.0
+        base_confidence = (
+            valid_responses / total_responses if total_responses > 0 else 0.0
+        )
         quality_bonus = min(response_quality / total_responses, 0.3)  # Max 30% bonus
 
         final_confidence = min(base_confidence + quality_bonus, 1.0)
@@ -245,7 +259,9 @@ class HybridEnsemble:
         # 1. Complexity-based escalation
         if complexity.requires_cloud:
             should_escalate = True
-            reason = f"Task requires cloud models (complexity: {complexity.level.value})"
+            reason = (
+                f"Task requires cloud models (complexity: {complexity.level.value})"
+            )
 
         # 2. Confidence-based escalation
         elif local_confidence < self.min_local_confidence:
@@ -270,7 +286,9 @@ class HybridEnsemble:
             "cloud_available": self.cloud_escalator.is_available(),
         }
 
-    def _calculate_cloud_confidence(self, cloud_responses: list[CloudResponse]) -> float:
+    def _calculate_cloud_confidence(
+        self, cloud_responses: list[CloudResponse]
+    ) -> float:
         """Calculate confidence from cloud responses."""
         if not cloud_responses:
             return 0.0
@@ -367,7 +385,9 @@ class HybridEnsemble:
 
 
 # Convenience functions
-async def process_with_hybrid_ensemble(task: str, context: dict | None = None) -> HybridResult:
+async def process_with_hybrid_ensemble(
+    task: str, context: dict | None = None
+) -> HybridResult:
     """Process task with hybrid ensemble."""
     ensemble = HybridEnsemble()
     return await ensemble.process_task(task, context)

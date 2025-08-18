@@ -28,7 +28,9 @@ def _sha256_file(path: Path) -> str:
 
 
 def _latest_run_dir(artifacts_dir: Path) -> Path | None:
-    runs = sorted((artifacts_dir / "runs").glob("*"), key=lambda p: p.name, reverse=True)
+    runs = sorted(
+        (artifacts_dir / "runs").glob("*"), key=lambda p: p.name, reverse=True
+    )
     return runs[0] if runs else None
 
 
@@ -138,7 +140,9 @@ def export_latest_run(
         rc = _read_json(rc_path)
         if redact_env and isinstance(rc.get("env"), dict):
             rc["env"] = _redact_env(rc["env"])  # type: ignore[index]
-        overlays["run_config.json"] = json.dumps(rc, ensure_ascii=False, indent=2).encode("utf-8")
+        overlays["run_config.json"] = json.dumps(
+            rc, ensure_ascii=False, indent=2
+        ).encode("utf-8")
 
     # Build manifest
     file_entries = _manifest_for_files(files_to_add, overlays)
@@ -165,7 +169,9 @@ def export_latest_run(
 
     # Write atomically via temporary file then replace
     tmp_path = zip_path.with_suffix(".zip.tmp")
-    with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+    with zipfile.ZipFile(
+        tmp_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
+    ) as z:
         # Add files (with optional overlays)
         for p in files_to_add:
             arcname = p.name
@@ -260,10 +266,14 @@ def _write_temp(z: zipfile.ZipFile, arcname: str, content: str) -> None:
     z.writestr(arcname, content.encode("utf-8"))
 
 
-def _unified_diff(a: str, b: str, fromfile: str = "before", tofile: str = "after") -> str:
+def _unified_diff(
+    a: str, b: str, fromfile: str = "before", tofile: str = "after"
+) -> str:
     a_lines = a.splitlines(keepends=True)
     b_lines = b.splitlines(keepends=True)
-    return "".join(difflib.unified_diff(a_lines, b_lines, fromfile=fromfile, tofile=tofile))
+    return "".join(
+        difflib.unified_diff(a_lines, b_lines, fromfile=fromfile, tofile=tofile)
+    )
 
 
 def _safe_json_load(path: Path) -> dict[str, Any]:
@@ -355,7 +365,9 @@ def export_case_bundle(
     warnings: list[str] = []
     valid_levels = {"public_safe", "team_safe", "full_internal"}
     if level not in valid_levels:
-        warnings.append(f"Unknown privacy_level '{privacy_level}', falling back to public_safe")
+        warnings.append(
+            f"Unknown privacy_level '{privacy_level}', falling back to public_safe"
+        )
         level = "public_safe"
 
     if include_raw is None:
@@ -384,7 +396,9 @@ def export_case_bundle(
     before_files: list[tuple[str, bytes]] = []
     after_files: list[tuple[str, bytes]] = []
     diffs_files: list[tuple[str, bytes]] = []
-    logs_files: list[tuple[str, bytes]] = [("pipeline.txt", b"pipeline log N/A in v1\n")]
+    logs_files: list[tuple[str, bytes]] = [
+        ("pipeline.txt", b"pipeline log N/A in v1\n")
+    ]
     tests_dir = run_dir / "tests"
     tests_files: list[Path] = []
     if tests_dir.exists():
@@ -410,11 +424,17 @@ def export_case_bundle(
     hashes: dict[str, str] = {}
     code_hashes: dict[str, str] = {}
 
-    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+    with zipfile.ZipFile(
+        zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
+    ) as z:
         # Add zip comment for quick sanity check
-        z.comment = f"run_id={run_id};privacy={level};schema=kpi@1.0.0,manifest@1.0.0".encode()
+        z.comment = (
+            f"run_id={run_id};privacy={level};schema=kpi@1.0.0,manifest@1.0.0".encode()
+        )
         # Core JSONs
-        core_files = [("kpi.json", json.dumps(kpi, ensure_ascii=False, indent=2).encode("utf-8"))]
+        core_files = [
+            ("kpi.json", json.dumps(kpi, ensure_ascii=False, indent=2).encode("utf-8"))
+        ]
         if consensus:
             core_files.append(
                 (

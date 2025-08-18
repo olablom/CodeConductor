@@ -103,9 +103,9 @@ class SelfReflectionAgent:
             lines = response.split("\n")
             code_lines = []
             for line in lines:
-                if any(keyword in line for keyword in python_keywords) or line.strip().startswith(
-                    "#"
-                ):
+                if any(
+                    keyword in line for keyword in python_keywords
+                ) or line.strip().startswith("#"):
                     code_lines.append(line)
 
             if code_lines:
@@ -228,11 +228,16 @@ class SelfReflectionAgent:
 
         return False, error
 
-    def reflect_and_fix(self, original_code: str, error_message: str, task_type: str) -> str:
+    def reflect_and_fix(
+        self, original_code: str, error_message: str, task_type: str
+    ) -> str:
         """Generate improved code based on error analysis"""
 
         # Analyze common patterns
-        if "stack overflow" in error_message.lower() or "recursion" in error_message.lower():
+        if (
+            "stack overflow" in error_message.lower()
+            or "recursion" in error_message.lower()
+        ):
             # Convert recursive to iterative
             if task_type == "fibonacci":
                 return """def fibonacci(n):

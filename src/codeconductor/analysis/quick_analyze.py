@@ -82,7 +82,9 @@ def write_repo_map(root: Path, out_json: Path) -> dict:
         "languages": lang_counts,
         "files": files,
     }
-    out_json.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    out_json.write_text(
+        json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     return data
 
 

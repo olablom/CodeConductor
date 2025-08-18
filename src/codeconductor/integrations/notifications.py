@@ -112,7 +112,9 @@ class NotificationManager:
         if file_count > 0:
             message = f"Code detected! Extracted {file_count} files."
 
-        self.show_notification(title="🤖 CodeConductor", message=message, duration=5, sound=True)
+        self.show_notification(
+            title="🤖 CodeConductor", message=message, duration=5, sound=True
+        )
 
     def tests_running(self):
         """Notify that tests are running."""
@@ -129,7 +131,9 @@ class NotificationManager:
         if test_count > 0:
             message = f"Tests passed! ({test_count} tests) ✅"
 
-        self.show_notification(title="✅ CodeConductor", message=message, duration=8, sound=True)
+        self.show_notification(
+            title="✅ CodeConductor", message=message, duration=8, sound=True
+        )
 
     def tests_failed(self, error_count: int = 0):
         """Notify that tests failed."""
@@ -137,7 +141,9 @@ class NotificationManager:
         if error_count > 0:
             message = f"Tests failed! ({error_count} errors) ❌"
 
-        self.show_notification(title="❌ CodeConductor", message=message, duration=10, sound=True)
+        self.show_notification(
+            title="❌ CodeConductor", message=message, duration=10, sound=True
+        )
 
     def pipeline_complete(self, success: bool = True):
         """Notify that pipeline is complete."""

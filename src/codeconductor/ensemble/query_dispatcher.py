@@ -208,7 +208,9 @@ class QueryDispatcher:
                         if choices and len(choices) > 0:
                             content = choices[0].get("message", {}).get("content", "")
                             logger.info(f"🐛 DEBUG: Content length: {len(content)}")
-                            logger.info(f"🐛 DEBUG: Content preview: {content[:200]}...")
+                            logger.info(
+                                f"🐛 DEBUG: Content preview: {content[:200]}..."
+                            )
                             # If LM Studio returns an empty message content, mark explicitly
                             if not content:
                                 logger.warning(
@@ -224,18 +226,26 @@ class QueryDispatcher:
                         else:
                             logger.warning("🐛 DEBUG: No choices in response")
                     else:
-                        logger.warning(f"🐛 DEBUG: Unexpected response format: {type(data)}")
+                        logger.warning(
+                            f"🐛 DEBUG: Unexpected response format: {type(data)}"
+                        )
 
-                    logger.info(f"✅ Successfully queried {model_info.id} with optimized config")
+                    logger.info(
+                        f"✅ Successfully queried {model_info.id} with optimized config"
+                    )
                     return model_info.id, data
         except TimeoutError:
             logger.warning(f"⏰ Timeout for {model_info.id} after {timeout}s")
             # Check if we actually got a response despite timeout
             try:
-                async with session.post(url, json=payload, timeout=ClientTimeout(total=30)) as resp:
+                async with session.post(
+                    url, json=payload, timeout=ClientTimeout(total=30)
+                ) as resp:
                     if resp.status == 200:
                         data = await resp.json()
-                        logger.info(f"✅ Got response from {model_info.id} despite timeout")
+                        logger.info(
+                            f"✅ Got response from {model_info.id} despite timeout"
+                        )
                         return model_info.id, data
             except Exception:
                 pass
@@ -275,7 +285,9 @@ class QueryDispatcher:
                 ) as resp:
                     resp.raise_for_status()
                     data = await resp.json()
-                    logger.info(f"✅ Successfully queried {model_info.id} with optimized config")
+                    logger.info(
+                        f"✅ Successfully queried {model_info.id} with optimized config"
+                    )
                     return model_info.id, data
         except TimeoutError:
             logger.warning(f"⏰ Timeout for {model_info.id} after {timeout}s")
@@ -319,7 +331,9 @@ class QueryDispatcher:
             err = err_map.get(inj_mode, "mock_error")
             start = asyncio.get_event_loop().time()
             total_ms = (asyncio.get_event_loop().time() - start) * 1000.0
-            cls = "timeout" if err == "timeout" else ("5xx" if "HTTP" in err else "reset")
+            cls = (
+                "timeout" if err == "timeout" else ("5xx" if "HTTP" in err else "reset")
+            )
             breaker.update(
                 model_info.id,
                 success=False,
@@ -342,7 +356,9 @@ class QueryDispatcher:
         err_class: str | None = None
         try:
             if model_info.provider == "lm_studio":
-                mid, data = await self._query_lm_studio_model(session, model_info, prompt)
+                mid, data = await self._query_lm_studio_model(
+                    session, model_info, prompt
+                )
             elif model_info.provider == "ollama":
                 mid, data = await self._query_ollama_model(session, model_info, prompt)
             else:
@@ -356,9 +372,9 @@ class QueryDispatcher:
                 )
         finally:
             total_ms = (asyncio.get_event_loop().time() - start) * 1000.0
-            success = isinstance(locals().get("data", {}), dict) and "error" not in locals().get(
-                "data", {}
-            )
+            success = isinstance(
+                locals().get("data", {}), dict
+            ) and "error" not in locals().get("data", {})
             if not success:
                 # classify error
                 err = (
@@ -395,7 +411,9 @@ class QueryDispatcher:
             )
         return mid, data
 
-    async def dispatch(self, prompt: str, max_models: int | None = None) -> dict[str, Any]:
+    async def dispatch(
+        self, prompt: str, max_models: int | None = None
+    ) -> dict[str, Any]:
         """
         Dispatch the prompt to healthy models and collect raw responses.
 
@@ -441,7 +459,9 @@ class QueryDispatcher:
         # Log summary
         success_count = sum(1 for r in results.values() if "error" not in r)
         error_count = len(results) - success_count
-        logger.info(f"📊 Dispatch complete: {success_count} success, {error_count} errors")
+        logger.info(
+            f"📊 Dispatch complete: {success_count} success, {error_count} errors"
+        )
 
         return results
 
@@ -461,7 +481,9 @@ class QueryDispatcher:
         health_status = await self.model_manager.check_all_health(models)
 
         # Filter to healthy models only
-        healthy_models = [model for model in models if health_status.get(model.id, False)]
+        healthy_models = [
+            model for model in models if health_status.get(model.id, False)
+        ]
 
         if not healthy_models:
             logger.warning("⚠️ No healthy models available")
@@ -488,15 +510,21 @@ class QueryDispatcher:
             return await self.dispatch(prompt)
 
         if len(best_models) < min_models:
-            logger.warning(f"⚠️ Only {len(best_models)} best models available (need {min_models})")
+            logger.warning(
+                f"⚠️ Only {len(best_models)} best models available (need {min_models})"
+            )
             # Continue with what we have
 
-        logger.info(f"✅ Using {len(best_models)} best models: {[m.id for m in best_models]}")
+        logger.info(
+            f"✅ Using {len(best_models)} best models: {[m.id for m in best_models]}"
+        )
 
         # Dispatch to best models
         return await self.dispatch_to_models(best_models, prompt)
 
-    async def dispatch_to_models(self, models: list[ModelInfo], prompt: str) -> dict[str, Any]:
+    async def dispatch_to_models(
+        self, models: list[ModelInfo], prompt: str
+    ) -> dict[str, Any]:
         """
         Dispatch to specific models.
         """
@@ -521,11 +549,15 @@ class QueryDispatcher:
         # Log summary
         success_count = sum(1 for r in results.values() if "error" not in r)
         error_count = len(results) - success_count
-        logger.info(f"📊 Dispatch complete: {success_count} success, {error_count} errors")
+        logger.info(
+            f"📊 Dispatch complete: {success_count} success, {error_count} errors"
+        )
 
         return results
 
-    async def dispatch_with_fallback(self, prompt: str, min_models: int = 2) -> dict[str, Any]:
+    async def dispatch_with_fallback(
+        self, prompt: str, min_models: int = 2
+    ) -> dict[str, Any]:
         """
         Dispatch with intelligent fallback strategies.
         """
@@ -537,17 +569,23 @@ class QueryDispatcher:
         success_count = sum(1 for r in results.values() if "error" not in r)
 
         if success_count >= min_models:
-            logger.info(f"✅ Got {success_count} successful responses, no fallback needed")
+            logger.info(
+                f"✅ Got {success_count} successful responses, no fallback needed"
+            )
             return results
 
-        logger.warning(f"⚠️ Only {success_count} successful responses, trying fallback...")
+        logger.warning(
+            f"⚠️ Only {success_count} successful responses, trying fallback..."
+        )
 
         # Fallback 1: Try all models
         all_results = await self.dispatch(prompt)
         all_success_count = sum(1 for r in all_results.values() if "error" not in r)
 
         if all_success_count > success_count:
-            logger.info(f"✅ Fallback improved results: {all_success_count} vs {success_count}")
+            logger.info(
+                f"✅ Fallback improved results: {all_success_count} vs {success_count}"
+            )
             return all_results
 
         # Fallback 2: Try with longer timeout
@@ -557,7 +595,9 @@ class QueryDispatcher:
 
         try:
             extended_results = await self.dispatch(prompt)
-            extended_success_count = sum(1 for r in extended_results.values() if "error" not in r)
+            extended_success_count = sum(
+                1 for r in extended_results.values() if "error" not in r
+            )
 
             if extended_success_count > success_count:
                 logger.info(
@@ -687,7 +727,9 @@ async def main():
     print()
 
     # Dispatch to all models
-    results = await dispatcher.dispatch(test_prompt, max_models=2)  # Limit to 2 for demo
+    results = await dispatcher.dispatch(
+        test_prompt, max_models=2
+    )  # Limit to 2 for demo
 
     print("📊 Results:")
     for model_id, response in results.items():

@@ -86,7 +86,9 @@ class RAGSystem:
 
         # Check if RAG dependencies are available
         if not RAG_AVAILABLE:
-            logger.warning("RAG system initialized in disabled mode - dependencies not available")
+            logger.warning(
+                "RAG system initialized in disabled mode - dependencies not available"
+            )
             self.embedding_model = None
             self.text_splitter = None
             self.vector_store = None
@@ -220,7 +222,9 @@ class RAGSystem:
             except Exception as e:
                 logger.error(f"Error indexing documents: {e}")
 
-    def retrieve_context(self, task_description: str, k: int = 5) -> list[dict[str, Any]]:
+    def retrieve_context(
+        self, task_description: str, k: int = 5
+    ) -> list[dict[str, Any]]:
         """
         Retrieve relevant context for a task description.
 
@@ -310,7 +314,9 @@ class RAGSystem:
             logger.error(f"Error fetching external context from {source}: {e}")
             return []
 
-    def _fetch_stackoverflow_context(self, query: str, max_results: int = 3) -> list[str]:
+    def _fetch_stackoverflow_context(
+        self, query: str, max_results: int = 3
+    ) -> list[str]:
         """Fetch context from Stack Overflow API with optional key and disk cache."""
         try:
             import hashlib
@@ -323,8 +329,12 @@ class RAGSystem:
             # Env controls
             timeout_s = float(os.getenv("NET_TIMEOUT_S", "10") or "10")
             max_retries = max(0, int(os.getenv("NET_MAX_RETRIES", "2") or "2"))
-            cache_ttl = max(0, int(os.getenv("NET_CACHE_TTL_SECONDS", "3600") or "3600"))
-            pagesize = max(1, int(os.getenv("SO_PAGESIZE", str(max_results)) or str(max_results)))
+            cache_ttl = max(
+                0, int(os.getenv("NET_CACHE_TTL_SECONDS", "3600") or "3600")
+            )
+            pagesize = max(
+                1, int(os.getenv("SO_PAGESIZE", str(max_results)) or str(max_results))
+            )
             stack_key = (os.getenv("STACKEXCHANGE_KEY") or "").strip()
             cache_dir = _Path(os.getenv("NET_CACHE_DIR", "artifacts/net_cache"))
             cache_dir.mkdir(parents=True, exist_ok=True)
@@ -378,11 +388,15 @@ class RAGSystem:
                         return results
                     elif response.status_code in (429, 502, 503):
                         # backoff with jitter
-                        delay = min(60.0, (1.0 * (2**attempt)) + _random.uniform(0.0, 0.5))
+                        delay = min(
+                            60.0, (1.0 * (2**attempt)) + _random.uniform(0.0, 0.5)
+                        )
                         _time.sleep(delay)
                         last_error = RuntimeError(f"HTTP {response.status_code}")
                     else:
-                        logger.warning(f"Stack Overflow API returned status {response.status_code}")
+                        logger.warning(
+                            f"Stack Overflow API returned status {response.status_code}"
+                        )
                         return []
                 except Exception as e:
                     last_error = e
@@ -401,7 +415,9 @@ class RAGSystem:
         logger.info("GitHub context fetching not yet implemented")
         return []
 
-    def _fetch_documentation_context(self, query: str, max_results: int = 3) -> list[str]:
+    def _fetch_documentation_context(
+        self, query: str, max_results: int = 3
+    ) -> list[str]:
         """Fetch context from documentation sites (placeholder)."""
         # TODO: Implement documentation site scraping
         logger.info("Documentation context fetching not yet implemented")
@@ -457,7 +473,9 @@ class RAGSystem:
 
         try:
             # Search vector store
-            results = self.vector_store.similarity_search_with_relevance_scores(query, k=top_k)
+            results = self.vector_store.similarity_search_with_relevance_scores(
+                query, k=top_k
+            )
 
             # Format results
             formatted_results = []
@@ -613,7 +631,9 @@ Rating: {pattern.get("user_rating", 0)}/5
             ),
         }
 
-    def augment_prompt(self, task_description: str, include_external: bool = True) -> str:
+    def augment_prompt(
+        self, task_description: str, include_external: bool = True
+    ) -> str:
         """
         Augment a task description with relevant context.
 

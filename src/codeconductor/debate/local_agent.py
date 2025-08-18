@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 class LocalAIAgent:
     """Local AI Agent that uses CodeConductor's ensemble system"""
 
-    def __init__(self, name: str, persona: str, model_manager: ModelManager | None = None):
+    def __init__(
+        self, name: str, persona: str, model_manager: ModelManager | None = None
+    ):
         self.name = name
         self.persona = persona
         self.conversation_history = [{"role": "system", "content": persona}]

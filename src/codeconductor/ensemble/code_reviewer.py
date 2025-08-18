@@ -37,7 +37,9 @@ class CodeReviewer:
     Multi-agent code reviewer that uses RLHF to select the best model for review.
     """
 
-    def __init__(self, models: list[str], ppo_model_path: str = "ppo_codeconductor.zip"):
+    def __init__(
+        self, models: list[str], ppo_model_path: str = "ppo_codeconductor.zip"
+    ):
         """
         Initialize the code reviewer.
 
@@ -85,7 +87,9 @@ class CodeReviewer:
         task_complexity = self.estimate_task_complexity(task_description)
 
         # Create observation vector
-        observation = np.array([test_reward, code_quality, 0.0, task_complexity], dtype=np.float32)
+        observation = np.array(
+            [test_reward, code_quality, 0.0, task_complexity], dtype=np.float32
+        )
 
         # Get action from RLHF agent to select reviewer
         action, _ = self.rlhf_agent.predict(observation)
@@ -167,7 +171,9 @@ class CodeReviewer:
         # Use pylint for accurate code quality assessment
         if PYLINT_AVAILABLE:
             try:
-                with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as temp_file:
+                with tempfile.NamedTemporaryFile(
+                    mode="w", suffix=".py", delete=False
+                ) as temp_file:
                     temp_file.write(code)
                     temp_file_path = temp_file.name
 
@@ -189,7 +195,9 @@ class CodeReviewer:
                 os.unlink(temp_file_path)
 
                 # Extract score from output
-                score_match = re.search(r"Your code has been rated at ([0-9.]+)/10", result.stdout)
+                score_match = re.search(
+                    r"Your code has been rated at ([0-9.]+)/10", result.stdout
+                )
                 if score_match:
                     score = float(score_match.group(1)) / 10.0
                     logger.info(f"📊 Pylint score: {score:.2f}/1.0")
@@ -272,7 +280,9 @@ class CodeReviewer:
         ]
 
         task_lower = task_description.lower()
-        complexity_score = sum(1 for keyword in complex_keywords if keyword in task_lower)
+        complexity_score = sum(
+            1 for keyword in complex_keywords if keyword in task_lower
+        )
 
         # Normalize to 0.0-1.0 range
         return min(1.0, complexity_score / len(complex_keywords))

@@ -85,7 +85,9 @@ class CloudEscalator:
         if model not in self.models:
             return False
 
-        estimated_cost = (estimated_tokens / 1000) * self.models[model]["cost_per_1k_tokens"]
+        estimated_cost = (estimated_tokens / 1000) * self.models[model][
+            "cost_per_1k_tokens"
+        ]
 
         if estimated_cost > MAX_COST_PER_REQUEST:
             logger.warning(
@@ -94,7 +96,9 @@ class CloudEscalator:
             return False
 
         if self.total_cost + estimated_cost > 0.05:  # $0.05 daily limit
-            logger.warning(f"⚠️ Would exceed daily cost limit (current: ${self.total_cost:.4f})")
+            logger.warning(
+                f"⚠️ Would exceed daily cost limit (current: ${self.total_cost:.4f})"
+            )
             return False
 
         return True
@@ -200,7 +204,9 @@ class CloudEscalator:
                         f"✅ Cloud response from {model}: ${response.cost:.4f}, {response.tokens_used} tokens"
                     )
                 else:
-                    logger.warning(f"❌ Cloud request failed for {model}: {response.error}")
+                    logger.warning(
+                        f"❌ Cloud request failed for {model}: {response.error}"
+                    )
 
             except Exception as e:
                 logger.error(f"❌ Exception querying {model}: {e}")
@@ -312,7 +318,9 @@ class CloudEscalator:
                     error=str(e),
                 )
 
-    async def _query_anthropic(self, model: str, task: str, config: dict) -> CloudResponse:
+    async def _query_anthropic(
+        self, model: str, task: str, config: dict
+    ) -> CloudResponse:
         """Query Anthropic API."""
         if not self.anthropic_api_key:
             return CloudResponse(
@@ -351,7 +359,9 @@ class CloudEscalator:
                     data = await resp.json()
 
                     content = data["content"][0]["text"]
-                    tokens_used = data["usage"]["input_tokens"] + data["usage"]["output_tokens"]
+                    tokens_used = (
+                        data["usage"]["input_tokens"] + data["usage"]["output_tokens"]
+                    )
                     cost = (tokens_used / 1000) * config["cost_per_1k_tokens"]
 
                     return CloudResponse(
@@ -382,7 +392,9 @@ class CloudEscalator:
             "requests_this_hour": self.requests_this_hour,
             "average_cost_per_request": self.total_cost / max(self.total_requests, 1),
             "cost_limit_remaining": max(0.05 - self.total_cost, 0),
-            "rate_limit_remaining": max(MAX_REQUESTS_PER_HOUR - self.requests_this_hour, 0),
+            "rate_limit_remaining": max(
+                MAX_REQUESTS_PER_HOUR - self.requests_this_hour, 0
+            ),
         }
 
     def is_available(self) -> bool:
@@ -391,7 +403,9 @@ class CloudEscalator:
 
 
 # Convenience functions
-async def escalate_to_cloud(task: str, local_confidence: float = 0.0) -> list[CloudResponse]:
+async def escalate_to_cloud(
+    task: str, local_confidence: float = 0.0
+) -> list[CloudResponse]:
     """Convenience function to escalate task to cloud."""
     escalator = CloudEscalator()
     return await escalator.escalate_task(task, local_confidence)

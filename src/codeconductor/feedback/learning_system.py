@@ -68,7 +68,9 @@ class LearningSystem:
                     data = json.load(f)
                     self.patterns = [Pattern(**pattern_data) for pattern_data in data]
             except (json.JSONDecodeError, KeyError) as e:
-                print(f"Warning: Could not load patterns from {self.patterns_file}: {e}")
+                print(
+                    f"Warning: Could not load patterns from {self.patterns_file}: {e}"
+                )
                 self.patterns = []
         else:
             self.patterns = []
@@ -235,7 +237,8 @@ class LearningSystem:
         return [
             p
             for p in self.patterns
-            if keyword_lower in p.task_description.lower() or keyword_lower in p.prompt.lower()
+            if keyword_lower in p.task_description.lower()
+            or keyword_lower in p.prompt.lower()
         ]
 
     def get_statistics(self) -> dict[str, Any]:
@@ -256,7 +259,9 @@ class LearningSystem:
         recent_count = sum(1 for p in self.patterns if self._is_recent(p.timestamp))
 
         # Count high reward patterns (reward >= 0.8)
-        high_reward_count = sum(1 for p in self.patterns if p.reward and p.reward >= 0.8)
+        high_reward_count = sum(
+            1 for p in self.patterns if p.reward and p.reward >= 0.8
+        )
 
         return {
             "total_patterns": len(self.patterns),
@@ -264,11 +269,21 @@ class LearningSystem:
             "recent_patterns": recent_count,
             "high_reward_patterns": high_reward_count,
             "reward_distribution": {
-                "0.0-0.2": sum(1 for p in self.patterns if p.reward and 0.0 <= p.reward < 0.2),
-                "0.2-0.4": sum(1 for p in self.patterns if p.reward and 0.2 <= p.reward < 0.4),
-                "0.4-0.6": sum(1 for p in self.patterns if p.reward and 0.4 <= p.reward < 0.6),
-                "0.6-0.8": sum(1 for p in self.patterns if p.reward and 0.6 <= p.reward < 0.8),
-                "0.8-1.0": sum(1 for p in self.patterns if p.reward and 0.8 <= p.reward <= 1.0),
+                "0.0-0.2": sum(
+                    1 for p in self.patterns if p.reward and 0.0 <= p.reward < 0.2
+                ),
+                "0.2-0.4": sum(
+                    1 for p in self.patterns if p.reward and 0.2 <= p.reward < 0.4
+                ),
+                "0.4-0.6": sum(
+                    1 for p in self.patterns if p.reward and 0.4 <= p.reward < 0.6
+                ),
+                "0.6-0.8": sum(
+                    1 for p in self.patterns if p.reward and 0.6 <= p.reward < 0.8
+                ),
+                "0.8-1.0": sum(
+                    1 for p in self.patterns if p.reward and 0.8 <= p.reward <= 1.0
+                ),
             },
         }
 
@@ -332,7 +347,9 @@ def save_successful_pattern(
     )
 
 
-def log_test_reward(prompt: str, code: str, test_results: list, metadata: dict = None) -> float:
+def log_test_reward(
+    prompt: str, code: str, test_results: list, metadata: dict = None
+) -> float:
     """Legacy function for backward compatibility"""
     learning_system = LearningSystem()
     return learning_system.log_test_reward(prompt, code, test_results, metadata)

@@ -114,7 +114,9 @@ class ComplexityAnalyzer:
             r"format.*code",
         ]
 
-    def analyze_complexity(self, task: str, context: dict | None = None) -> ComplexityResult:
+    def analyze_complexity(
+        self, task: str, context: dict | None = None
+    ) -> ComplexityResult:
         """
         Analyze task complexity and recommend escalation strategy.
 
@@ -152,7 +154,9 @@ class ComplexityAnalyzer:
 
         # Context-based adjustments
         if context:
-            complexity_score = self._adjust_for_context(complexity_score, context, reasons)
+            complexity_score = self._adjust_for_context(
+                complexity_score, context, reasons
+            )
 
         # Determine complexity level
         level, confidence = self._determine_level(complexity_score, estimated_tokens)
@@ -172,7 +176,9 @@ class ComplexityAnalyzer:
             suggested_models=suggested_models,
         )
 
-        logger.info(f"📊 Complexity analysis: {level.value} (confidence: {confidence:.2f})")
+        logger.info(
+            f"📊 Complexity analysis: {level.value} (confidence: {confidence:.2f})"
+        )
         return result
 
     def _count_keyword_matches(self, text: str, keywords: list[str]) -> int:
@@ -197,7 +203,9 @@ class ComplexityAnalyzer:
         # Simple estimation: 1 token ≈ 4 characters
         return len(text) // 4
 
-    def _adjust_for_context(self, score: float, context: dict, reasons: list[str]) -> float:
+    def _adjust_for_context(
+        self, score: float, context: dict, reasons: list[str]
+    ) -> float:
         """Adjust complexity score based on context."""
         # File size adjustment
         if "file_size" in context:
@@ -221,7 +229,9 @@ class ComplexityAnalyzer:
 
         return max(0.0, min(1.0, score))  # Clamp between 0 and 1
 
-    def _determine_level(self, score: float, tokens: int) -> tuple[ComplexityLevel, float]:
+    def _determine_level(
+        self, score: float, tokens: int
+    ) -> tuple[ComplexityLevel, float]:
         """Determine complexity level and confidence."""
         # Base level on score
         if score < 0.2:
@@ -247,7 +257,9 @@ class ComplexityAnalyzer:
 
         return level, confidence
 
-    def _suggest_models(self, level: ComplexityLevel, requires_cloud: bool) -> list[str]:
+    def _suggest_models(
+        self, level: ComplexityLevel, requires_cloud: bool
+    ) -> list[str]:
         """Suggest appropriate models for the complexity level."""
         if level == ComplexityLevel.SIMPLE:
             return ["codellama-7b-instruct", "mistral-7b-instruct-v0.1", "phi3:mini"]

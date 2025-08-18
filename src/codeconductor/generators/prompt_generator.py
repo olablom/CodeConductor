@@ -76,7 +76,11 @@ class PromptGenerator:
     def _ensure_template_dir(self):
         """Ensure templates exist in at least one location. Do not duplicate if already present in canonical or legacy."""
         # Determine effective write target: prefer canonical if parent exists or can be created
-        target_dir = self.canonical_dir if self.canonical_dir.parent.exists() else self.template_dir
+        target_dir = (
+            self.canonical_dir
+            if self.canonical_dir.parent.exists()
+            else self.template_dir
+        )
         try:
             target_dir.mkdir(parents=True, exist_ok=True)
         except Exception:
@@ -85,7 +89,9 @@ class PromptGenerator:
             target_dir.mkdir(parents=True, exist_ok=True)
 
         def exists_any(name: str) -> bool:
-            return (self.canonical_dir / name).exists() or (self.legacy_dir / name).exists()
+            return (self.canonical_dir / name).exists() or (
+                self.legacy_dir / name
+            ).exists()
 
         # Create default template only if missing in both places
         if not exists_any("prompt.md.j2"):
@@ -409,9 +415,13 @@ Please provide a complete, working implementation that meets all requirements.
         estimated_tokens = len(prompt) // 4
 
         if estimated_tokens > max_tokens:
-            logger.warning(f"⚠️ Prompt may exceed token limit: {estimated_tokens} > {max_tokens}")
+            logger.warning(
+                f"⚠️ Prompt may exceed token limit: {estimated_tokens} > {max_tokens}"
+            )
 
-    def _generate_fallback_prompt(self, consensus: dict[str, Any], context: PromptContext) -> str:
+    def _generate_fallback_prompt(
+        self, consensus: dict[str, Any], context: PromptContext
+    ) -> str:
         """Generate a simple fallback prompt if template fails."""
         logger.info("🔄 Using fallback prompt generation...")
 
@@ -421,7 +431,9 @@ Please provide a complete, working implementation that meets all requirements.
             "\n### Requirements",
         ]
 
-        for req in consensus.get("requirements", ["Implement the requested functionality"]):
+        for req in consensus.get(
+            "requirements", ["Implement the requested functionality"]
+        ):
             prompt_parts.append(f"- {req}")
 
         prompt_parts.append("\n### Constraints")
@@ -488,7 +500,11 @@ Please provide a complete, working implementation that meets all requirements.
                 consensus_dict = {"task": task}
 
             # Check if we have meaningful consensus data
-            if consensus_dict and isinstance(consensus_dict, dict) and len(consensus_dict) > 0:
+            if (
+                consensus_dict
+                and isinstance(consensus_dict, dict)
+                and len(consensus_dict) > 0
+            ):
                 # Use consensus data to generate rich prompt
                 return self.generate(consensus_dict)
             else:
@@ -600,7 +616,9 @@ async def main():
     print("✅ Generated prompt with context:")
     print("-" * 30)
     print(
-        prompt_with_context[:500] + "..." if len(prompt_with_context) > 500 else prompt_with_context
+        prompt_with_context[:500] + "..."
+        if len(prompt_with_context) > 500
+        else prompt_with_context
     )
 
     print(

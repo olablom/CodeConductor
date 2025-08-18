@@ -70,7 +70,9 @@ class ModelSelector:
             logger.info(f"ModelSelector forced by env: {forced} => {chosen}")
             sampling = {
                 "temperature": (
-                    sin.temperature if sin.temperature is not None else self.default_temperature
+                    sin.temperature
+                    if sin.temperature is not None
+                    else self.default_temperature
                 ),
                 "top_p": sin.top_p if sin.top_p is not None else self.default_top_p,
             }
@@ -111,7 +113,9 @@ class ModelSelector:
 
         sampling = {
             "temperature": (
-                sin.temperature if sin.temperature is not None else self.default_temperature
+                sin.temperature
+                if sin.temperature is not None
+                else self.default_temperature
             ),
             "top_p": sin.top_p if sin.top_p is not None else self.default_top_p,
         }

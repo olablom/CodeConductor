@@ -47,7 +47,9 @@ class MemoryWatchdog:
         self.last_check = None
         self.last_vram_percent = 0.0
         self.consecutive_high_usage = 0
-        self.max_consecutive_high_usage = 3  # Trigger cleanup after 3 consecutive high readings
+        self.max_consecutive_high_usage = (
+            3  # Trigger cleanup after 3 consecutive high readings
+        )
 
         # Statistics
         self.total_checks = 0
@@ -107,7 +109,9 @@ class MemoryWatchdog:
             else:
                 # Reset consecutive counter if usage is normal
                 if self.consecutive_high_usage > 0:
-                    logger.info(f"✅ VRAM usage normalized: {current_vram_percent:.1f}%")
+                    logger.info(
+                        f"✅ VRAM usage normalized: {current_vram_percent:.1f}%"
+                    )
                 self.consecutive_high_usage = 0
 
         except Exception as e:
@@ -123,7 +127,9 @@ class MemoryWatchdog:
         try:
             # Emergency unload all models
             unloaded_count = await self.model_manager.emergency_unload_all()
-            logger.info(f"🚨 Emergency cleanup completed: unloaded {unloaded_count} models")
+            logger.info(
+                f"🚨 Emergency cleanup completed: unloaded {unloaded_count} models"
+            )
 
             # Call custom cleanup callback if provided
             if self.cleanup_callback:
@@ -149,7 +155,9 @@ class MemoryWatchdog:
             try:
                 # Smart cleanup to target 60% VRAM usage
                 unloaded_count = await self.model_manager.smart_memory_cleanup(60.0)
-                logger.info(f"🧹 Critical cleanup completed: unloaded {unloaded_count} models")
+                logger.info(
+                    f"🧹 Critical cleanup completed: unloaded {unloaded_count} models"
+                )
 
                 # Call custom cleanup callback if provided
                 if self.cleanup_callback:
@@ -175,7 +183,9 @@ class MemoryWatchdog:
             try:
                 # Smart cleanup to target 50% VRAM usage
                 unloaded_count = await self.model_manager.smart_memory_cleanup(50.0)
-                logger.info(f"🧹 Warning cleanup completed: unloaded {unloaded_count} models")
+                logger.info(
+                    f"🧹 Warning cleanup completed: unloaded {unloaded_count} models"
+                )
 
                 # Call custom cleanup callback if provided
                 if self.cleanup_callback:

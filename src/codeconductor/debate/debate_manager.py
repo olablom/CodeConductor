@@ -37,7 +37,9 @@ class SingleModelDebateManager:
         output_file = output_dir / filename
 
         payload = {
-            "agents": ([getattr(a, "name", str(a)) for a in self.agents] if self.agents else []),
+            "agents": (
+                [getattr(a, "name", str(a)) for a in self.agents] if self.agents else []
+            ),
             "turns": self.transcript,
             "timestamp": datetime.now().isoformat(),
             "model": self.model_name or "unknown",
@@ -105,13 +107,16 @@ class CodeConductorDebateManager:
                             (
                                 entry["content"]
                                 for entry in reversed(self.full_transcript)
-                                if entry["agent"] == other.name and entry["turn"] == "proposal"
+                                if entry["agent"] == other.name
+                                and entry["turn"] == "proposal"
                             ),
                             "",
                         )
                         rebuttal_prompt += f"{other.name}: {last_proposal}\n"
 
-                    rebuttal_prompt += "Please provide your rebuttal or counter-argument."
+                    rebuttal_prompt += (
+                        "Please provide your rebuttal or counter-argument."
+                    )
                     response = await asyncio.wait_for(
                         agent.generate_response(rebuttal_prompt),
                         timeout=30.0,  # 30 second timeout per agent
@@ -128,7 +133,9 @@ class CodeConductorDebateManager:
                     )
                 except Exception as e:
                     print(f"❌ {agent.name} error during rebuttal: {e}")
-                    response = f"{agent.name} encountered an error during rebuttal: {str(e)}"
+                    response = (
+                        f"{agent.name} encountered an error during rebuttal: {str(e)}"
+                    )
                     self.full_transcript.append(
                         {"agent": agent.name, "turn": "rebuttal", "content": response}
                     )
@@ -162,9 +169,7 @@ class CodeConductorDebateManager:
                     )
                 except Exception as e:
                     print(f"❌ {agent.name} error during final recommendation: {e}")
-                    response = (
-                        f"{agent.name} encountered an error during final recommendation: {str(e)}"
-                    )
+                    response = f"{agent.name} encountered an error during final recommendation: {str(e)}"
                     self.full_transcript.append(
                         {
                             "agent": agent.name,
@@ -211,7 +216,9 @@ class CodeConductorDebateManager:
         artifacts_file = output_dir / f"debate_transcript_{int(time.time())}.json"
 
         payload = {
-            "agents": ([agent.name for agent in self.agents] if hasattr(self, "agents") else []),
+            "agents": (
+                [agent.name for agent in self.agents] if hasattr(self, "agents") else []
+            ),
             "turns": self.full_transcript,
             "timestamp": datetime.now().isoformat(),
             "model": getattr(self, "model_name", "unknown"),

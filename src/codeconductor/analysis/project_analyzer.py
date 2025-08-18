@@ -149,7 +149,9 @@ class ProjectAnalyzer:
                     # Check if function has route decorators
                     for decorator in node.decorator_list:
                         if self._is_route_decorator(decorator):
-                            route_info = self._extract_route_info(node, decorator, file_path)
+                            route_info = self._extract_route_info(
+                                node, decorator, file_path
+                            )
                             if route_info:
                                 self.routes.append(route_info)
 
@@ -309,7 +311,9 @@ class ProjectAnalyzer:
             "version": "MVP-1.0",
         }
 
-        logger.info(f"✅ Generated report with {total_routes} routes, {total_tables} tables")
+        logger.info(
+            f"✅ Generated report with {total_routes} routes, {total_tables} tables"
+        )
         return report
 
     def _generate_ai_recommendations(
@@ -337,7 +341,9 @@ class ProjectAnalyzer:
 
         # Security recommendations
         auth_routes = [
-            r for r in routes if "auth" in r["path"].lower() or "login" in r["path"].lower()
+            r
+            for r in routes
+            if "auth" in r["path"].lower() or "login" in r["path"].lower()
         ]
         if len(auth_routes) == 0:
             recommendations.append(
@@ -394,7 +400,9 @@ class ProjectAnalyzer:
             lines = ["Type,Name,Details"]
 
             for route in report.get("routes", []):
-                lines.append(f"Route,{route['method']} {route['path']},{route['function']}")
+                lines.append(
+                    f"Route,{route['method']} {route['path']},{route['function']}"
+                )
 
             for table in report.get("schema", {}).get("tables", []):
                 lines.append(f"Table,{table['name']},{len(table['columns'])} columns")

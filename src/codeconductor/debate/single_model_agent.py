@@ -57,7 +57,9 @@ class SingleModelAIAgent:
             # Process request
             response = await self.single_model_engine.process_request(request)
 
-            logger.info(f"✅ {self.name} generated response in {response.execution_time:.2f}s")
+            logger.info(
+                f"✅ {self.name} generated response in {response.execution_time:.2f}s"
+            )
             return response.content
 
         except Exception as e:
@@ -127,13 +129,16 @@ class SingleModelDebateManager:
                             (
                                 entry["content"]
                                 for entry in reversed(self.full_transcript)
-                                if entry["agent"] == other.name and entry["turn"] == "proposal"
+                                if entry["agent"] == other.name
+                                and entry["turn"] == "proposal"
                             ),
                             "",
                         )
                         rebuttal_prompt += f"{other.name}: {last_proposal}\n"
 
-                    rebuttal_prompt += "Please provide your rebuttal or counter-argument."
+                    rebuttal_prompt += (
+                        "Please provide your rebuttal or counter-argument."
+                    )
                     response = await asyncio.wait_for(
                         agent.generate_response(rebuttal_prompt), timeout=30.0
                     )
@@ -149,7 +154,9 @@ class SingleModelDebateManager:
                     )
                 except Exception as e:
                     print(f"❌ {agent.name} error during rebuttal: {e}")
-                    response = f"{agent.name} encountered an error during rebuttal: {str(e)}"
+                    response = (
+                        f"{agent.name} encountered an error during rebuttal: {str(e)}"
+                    )
                     self.full_transcript.append(
                         {"agent": agent.name, "turn": "rebuttal", "content": response}
                     )
@@ -182,9 +189,7 @@ class SingleModelDebateManager:
                     )
                 except Exception as e:
                     print(f"❌ {agent.name} error during final recommendation: {e}")
-                    response = (
-                        f"{agent.name} encountered an error during final recommendation: {str(e)}"
-                    )
+                    response = f"{agent.name} encountered an error during final recommendation: {str(e)}"
                     self.full_transcript.append(
                         {
                             "agent": agent.name,
@@ -246,7 +251,9 @@ class SingleModelDebateManager:
         output_file = output_dir / filename
 
         transcript_data = {
-            "agents": ([agent.name for agent in self.agents] if hasattr(self, "agents") else []),
+            "agents": (
+                [agent.name for agent in self.agents] if hasattr(self, "agents") else []
+            ),
             "turns": self.full_transcript,
             "timestamp": datetime.now().isoformat(),
             "model": getattr(self, "model_name", "unknown"),

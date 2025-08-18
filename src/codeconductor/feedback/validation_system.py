@@ -74,10 +74,13 @@ class CodeValidator:
                     func_info = {
                         "name": node.name,
                         "has_type_hints": bool(
-                            node.returns or any(arg.annotation for arg in node.args.args)
+                            node.returns
+                            or any(arg.annotation for arg in node.args.args)
                         ),
                         "has_docstring": ast.get_docstring(node) is not None,
-                        "decorators": [self._get_decorator_name(d) for d in node.decorator_list],
+                        "decorators": [
+                            self._get_decorator_name(d) for d in node.decorator_list
+                        ],
                     }
                     patterns["function_patterns"].append(func_info)
 
@@ -98,7 +101,9 @@ class CodeValidator:
                 return f"{decorator.func.value.id}.{decorator.func.attr}"
         return "unknown"
 
-    def validate_generated_code(self, code: str, task_description: str) -> ValidationResult:
+    def validate_generated_code(
+        self, code: str, task_description: str
+    ) -> ValidationResult:
         """
         Validate generated code against project requirements
         """
@@ -201,7 +206,9 @@ class CodeValidator:
                     functions_without_types.append(node.name)
 
         if functions_without_types:
-            issues.append(f"Functions without type hints: {', '.join(functions_without_types)}")
+            issues.append(
+                f"Functions without type hints: {', '.join(functions_without_types)}"
+            )
 
         return issues
 
@@ -216,7 +223,9 @@ class CodeValidator:
                     functions_without_docs.append(node.name)
 
         if functions_without_docs:
-            issues.append(f"Functions without docstrings: {', '.join(functions_without_docs)}")
+            issues.append(
+                f"Functions without docstrings: {', '.join(functions_without_docs)}"
+            )
 
         return issues
 
@@ -228,12 +237,17 @@ class CodeValidator:
         has_http_exception = False
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
-                if isinstance(node.func, ast.Attribute) and node.func.attr == "HTTPException":
+                if (
+                    isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "HTTPException"
+                ):
                     has_http_exception = True
                     break
 
         if not has_http_exception:
-            issues.append("No HTTPException usage found - consider adding proper error handling")
+            issues.append(
+                "No HTTPException usage found - consider adding proper error handling"
+            )
 
         return issues
 
@@ -269,9 +283,13 @@ class CodeValidator:
         issues = []
 
         # Check line length
-        long_lines = [i + 1 for i, line in enumerate(code.split("\n")) if len(line) > 88]
+        long_lines = [
+            i + 1 for i, line in enumerate(code.split("\n")) if len(line) > 88
+        ]
         if long_lines:
-            issues.append(f"Lines too long (>88 chars): {', '.join(map(str, long_lines))}")
+            issues.append(
+                f"Lines too long (>88 chars): {', '.join(map(str, long_lines))}"
+            )
 
         # Check for TODO comments
         if "TODO" in code.upper():
@@ -300,7 +318,9 @@ class CodeValidator:
                     functions_with_types += 1
 
         if total_functions > 0:
-            compliance["has_type_hints"] = (functions_with_types / total_functions) >= 0.5
+            compliance["has_type_hints"] = (
+                functions_with_types / total_functions
+            ) >= 0.5
 
         # Check docstrings
         functions_with_docs = 0
@@ -310,12 +330,17 @@ class CodeValidator:
                     functions_with_docs += 1
 
         if total_functions > 0:
-            compliance["has_docstrings"] = (functions_with_docs / total_functions) >= 0.5
+            compliance["has_docstrings"] = (
+                functions_with_docs / total_functions
+            ) >= 0.5
 
         # Check error handling
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
-                if isinstance(node.func, ast.Attribute) and node.func.attr == "HTTPException":
+                if (
+                    isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "HTTPException"
+                ):
                     compliance["has_error_handling"] = True
                     break
 
@@ -350,7 +375,9 @@ class CodeValidator:
         suggestions = []
 
         if not compliance.get("has_type_hints"):
-            suggestions.append("Add type hints to function parameters and return values")
+            suggestions.append(
+                "Add type hints to function parameters and return values"
+            )
 
         if not compliance.get("has_docstrings"):
             suggestions.append("Add docstrings to all functions")
@@ -358,8 +385,13 @@ class CodeValidator:
         if not compliance.get("has_error_handling"):
             suggestions.append("Add proper error handling with HTTPException")
 
-        if not compliance.get("follows_fastapi_patterns") and "route" in task_description.lower():
-            suggestions.append("Add FastAPI route decorators (@app.get, @router.get, etc.)")
+        if (
+            not compliance.get("follows_fastapi_patterns")
+            and "route" in task_description.lower()
+        ):
+            suggestions.append(
+                "Add FastAPI route decorators (@app.get, @router.get, etc.)"
+            )
 
         # Task-specific suggestions
         if "cache" in task_description.lower():
@@ -391,7 +423,9 @@ class CodeValidator:
                 metrics["total_imports"] += 1
 
         # Simple complexity calculation
-        metrics["complexity_score"] = metrics["total_functions"] + metrics["total_classes"]
+        metrics["complexity_score"] = (
+            metrics["total_functions"] + metrics["total_classes"]
+        )
 
         return metrics
 

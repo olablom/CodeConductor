@@ -107,7 +107,9 @@ class ConsensusCalculator:
         model_scores = {r["model"]: r["score"] for r in scored_responses}
 
         # Generate reasoning
-        reasoning = self._generate_reasoning(scored_responses, consistency_score, syntax_valid)
+        reasoning = self._generate_reasoning(
+            scored_responses, consistency_score, syntax_valid
+        )
 
         # TEMPORARY FIX: Better confidence calculation for single model
         if len(scored_responses) == 1:
@@ -216,7 +218,9 @@ class ConsensusCalculator:
             score += 0.15
 
         # 3. Check for type hints
-        if ":" in code and any(hint in code for hint in ["str", "int", "bool", "List", "Dict"]):
+        if ":" in code and any(
+            hint in code for hint in ["str", "int", "bool", "List", "Dict"]
+        ):
             score += 0.15
 
         # 4. Check for error handling
@@ -325,7 +329,10 @@ class ConsensusCalculator:
         # Unigram precision
         def precision_ngram(t1: list[str], t2: list[str], n: int) -> float:
             def ngrams(tokens: list[str], n: int) -> list[tuple[str, ...]]:
-                return [tuple(tokens[i : i + n]) for i in range(0, max(len(tokens) - n + 1, 0))]
+                return [
+                    tuple(tokens[i : i + n])
+                    for i in range(0, max(len(tokens) - n + 1, 0))
+                ]
 
             n1 = Counter(ngrams(t1, n))
             n2 = Counter(ngrams(t2, n))
@@ -357,7 +364,11 @@ class ConsensusCalculator:
         types1 = set(ast_types(s1))
         types2 = set(ast_types(s2))
         if types1 or types2:
-            ast_jaccard = len(types1 & types2) / len(types1 | types2) if (types1 | types2) else 0.0
+            ast_jaccard = (
+                len(types1 & types2) / len(types1 | types2)
+                if (types1 | types2)
+                else 0.0
+            )
         else:
             ast_jaccard = 0.0
 
@@ -384,7 +395,9 @@ class ConsensusCalculator:
         tok_set1 = set(toks1)
         tok_set2 = set(toks2)
         tok_jaccard = (
-            len(tok_set1 & tok_set2) / len(tok_set1 | tok_set2) if (tok_set1 | tok_set2) else 0.0
+            len(tok_set1 & tok_set2) / len(tok_set1 | tok_set2)
+            if (tok_set1 | tok_set2)
+            else 0.0
         )
 
         # Weighted combination (env override)
@@ -417,7 +430,9 @@ class ConsensusCalculator:
         reasoning_parts = []
 
         # Model selection reasoning
-        reasoning_parts.append(f"Selected {best_model} as primary model (score: {best_score:.2f})")
+        reasoning_parts.append(
+            f"Selected {best_model} as primary model (score: {best_score:.2f})"
+        )
 
         # Syntax validation
         if syntax_valid:

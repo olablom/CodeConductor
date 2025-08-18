@@ -28,7 +28,9 @@ class GitHubCodeSearch:
         )
         self._timeout_s = float(os.getenv("NET_TIMEOUT_S", "10") or "10")
         self._per_page = max(1, int(os.getenv("GH_PER_PAGE", "5") or "5"))
-        self._cache_ttl = max(0, int(os.getenv("NET_CACHE_TTL_SECONDS", "3600") or "3600"))
+        self._cache_ttl = max(
+            0, int(os.getenv("NET_CACHE_TTL_SECONDS", "3600") or "3600")
+        )
         self._cache_dir = Path(os.getenv("NET_CACHE_DIR", "artifacts/net_cache"))
         self._cache_dir.mkdir(parents=True, exist_ok=True)
         self._base = "https://api.github.com/search/code"
@@ -96,7 +98,9 @@ class GitHubCodeSearch:
                             logger.warning("GitHub API unauthorized/forbidden")
                             return []
                         elif r.status in (429, 502, 503):
-                            delay = min(60.0, (1.0 * (2**attempt)) + random.uniform(0.0, 0.5))
+                            delay = min(
+                                60.0, (1.0 * (2**attempt)) + random.uniform(0.0, 0.5)
+                            )
                             await asyncio.sleep(delay)
                             last_error = RuntimeError(f"HTTP {r.status}")
                         else:

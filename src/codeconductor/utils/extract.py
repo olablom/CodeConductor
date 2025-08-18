@@ -41,7 +41,9 @@ def extract_code(raw_text: str, lang_hint: str | None = None) -> str:
                         score += 1
                 return score
 
-            blocks_sorted = sorted(blocks, key=lambda b: (score_py(b), len(b)), reverse=True)
+            blocks_sorted = sorted(
+                blocks, key=lambda b: (score_py(b), len(b)), reverse=True
+            )
             return blocks_sorted[0].strip()
         return max(blocks, key=len).strip()
 
@@ -55,7 +57,9 @@ def extract_code(raw_text: str, lang_hint: str | None = None) -> str:
     if is_sql:
         # Prefer taking the substring starting from the first SQL keyword.
         # Try DML/DDL first to avoid matching natural-language "with ...".
-        first_kw = re.search(r"\b(select|insert|update|delete|create)\b", raw_text, re.I)
+        first_kw = re.search(
+            r"\b(select|insert|update|delete|create)\b", raw_text, re.I
+        )
         if not first_kw:
             # Consider WITH only at line start (SQL CTE), not inside prose
             first_kw = re.search(r"(?m)^(with)\b", raw_text, re.I)

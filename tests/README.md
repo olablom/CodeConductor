@@ -1,122 +1,162 @@
-# CodeConductor Test Suite
+# CodeConductor Test Strategy
 
-This directory contains the comprehensive test suite for CodeConductor, ensuring all components work correctly and perform within expected parameters.
+## 🎯 **Testnivåer**
 
-## 🧪 **Quick Start**
+### **1. Unit/CI Tester (Mockade, Snabba)**
+- **Syfte:** Validera kodlogik, API-format, async-flöden
+- **Körs:** I CI, på alla maskiner, utan GPU
+- **GPU:** Mock-data, `CC_GPU_DISABLED=1`
+- **Exempel:** `pytest -k "not gpu and not vllm"`
 
+### **2. GPU Integrationstester (Riktiga, Lokala)**
+- **Syfte:** Validera riktig hårdvara på RTX 5090
+- **Körs:** Lokalt på din 5090, inte i CI
+- **GPU:** Riktiga anrop, `nvidia-smi`, PyTorch CUDA
+- **Exempel:** `pytest -m gpu`
+
+### **3. vLLM Tester (Riktiga, Lokala)**
+- **Syfte:** Validera vLLM-integration
+- **Körs:** Lokalt med vLLM igång
+- **GPU:** Riktiga modeller, inference
+- **Exempel:** `pytest -m vllm`
+
+## 🚀 **Kör tester**
+
+### **Snabba tester (CI-kompatibla)**
 ```bash
-# Run the master test suite
-python test_master_simple.py --self_reflection
+# Alla tester utom GPU/vLLM
+pytest -k "not gpu and not vllm"
 
-# Run specific component tests
-python tests/test_single_agent.py
-python tests/test_rag_system.py
-python tests/test_performance.py
+# Endast unit-tester
+pytest -m unit
+
+# Med coverage
+pytest --cov=codeconductor -k "not gpu and not vllm"
 ```
 
-## 📊 **Benchmark Suite**
-
-### **Master Test (`test_master_simple.py`)**
-- **Purpose**: End-to-end validation of all core components
-- **Duration**: ~37 seconds
-- **Components Tested**:
-  - Single Agent Performance (100% success rate)
-  - RAG Functionality (100% success rate)
-  - Performance Benchmarks (TTFT < 6.0s)
-  - RLHF Learning (Active weight updates)
-
-### **Single Agent Tests**
-- **Fibonacci Functions**: Tests recursive/iterative implementations
-- **Binary Search**: Tests algorithm correctness and edge cases
-- **REST APIs**: Tests Flask endpoint generation
-
-### **Performance Benchmarks**
-- **TTFT (Time To First Token)**: Target < 6.0s
-- **Tokens/Second**: Target > 40 tokens/s
-- **Memory Usage**: Target < 40% VRAM
-- **CPU Usage**: Target < 15%
-
-## 🔧 **Test Configuration**
-
-### **Environment Variables**
+### **GPU-tester (lokalt på 5090)**
 ```bash
-export CODECONDUCTOR_LOG_LEVEL=INFO
-export CODECONDUCTOR_MODEL_PATH=/path/to/models
-export CODECONDUCTOR_MAX_TOKENS=2048
+# Aktivera riktig GPU
+set CC_GPU_DISABLED=0  # Windows
+export CC_GPU_DISABLED=0  # Linux/Mac
+
+# Kör GPU-tester
+pytest -m gpu -v
+
+# Endast GPU memory tester
+pytest tests/test_gpu_integration.py::test_real_gpu_memory_info -v
 ```
 
-### **Command Line Options**
+### **vLLM-tester (lokalt med vLLM)**
 ```bash
-python test_master_simple.py \
-  --self_reflection \     # Enable self-reflection loop
-  --agent_count 2 \       # Number of agents to use
-  --quick \              # Quick mode (fewer iterations)
-  --verbose              # Detailed logging
+# Starta vLLM först
+# Kör vLLM-tester
+pytest -m vllm -v
 ```
 
-## 📈 **Expected Results**
+## 🔒 **Säkerhetsfunktioner**
 
-| Test Category | Success Rate | Median Latency | 99th Percentile |
-|---------------|--------------|----------------|-----------------|
-| Single Agent  | 100%         | 5.2s           | 6.1s            |
-| RAG System    | 100%         | 0.0s           | 0.1s            |
-| Performance   | 100%         | 4.8s           | 12.0s           |
-| RLHF Learning | 100%         | 0.5s           | 1.2s            |
+### **Automatisk GPU-sanitizer**
+- **Default:** `CC_GPU_DISABLED=1` (mock-mode)
+- **Override:** Sätt miljövariabel för riktiga tester
+- **Cleanup:** VRAM-städning efter varje test
 
-## 🐛 **Troubleshooting**
-
-### **Common Issues**
-
-1. **VRAM Out of Memory**
-   ```bash
-   # Reduce model count
-   export CODECONDUCTOR_MAX_MODELS=1
-   ```
-
-2. **Model Loading Failures**
-   ```bash
-   # Check LM Studio is running
-   lms ps
-   ```
-
-3. **Test Timeouts**
-   ```bash
-   # Increase timeout
-   export CODECONDUCTOR_TIMEOUT=60
-   ```
-
-### **Debug Mode**
+### **Miljövariabler**
 ```bash
-# Enable debug logging
-export CODECONDUCTOR_LOG_LEVEL=DEBUG
-python test_master_simple.py --verbose
+# Säkert läge (default)
+CC_TESTING_MODE=1
+CC_GPU_DISABLED=1
+
+# Riktigt GPU-läge
+CC_TESTING_MODE=0
+CC_GPU_DISABLED=0
 ```
 
-## 📝 **Adding New Tests**
+## 📊 **Testresultat**
 
-1. **Create test file**: `tests/test_new_feature.py`
-2. **Follow naming convention**: `test_*_feature.py`
-3. **Include in master suite**: Add to `test_master_simple.py`
-4. **Document expected results**: Update this README
+### **CI (GitHub Actions)**
+- ✅ **Unit-tester:** Alla passerar
+- ⏭️ **GPU-tester:** Skippas (ingen GPU)
+- ⏭️ **vLLM-tester:** Skippas (ingen vLLM)
 
-## 🚀 **CI/CD Integration**
+### **Lokalt (RTX 5090)**
+- ✅ **Unit-tester:** Alla passerar
+- ✅ **GPU-tester:** Validerar riktig hårdvara
+- ✅ **vLLM-tester:** Validerar modeller
 
-The test suite is designed to run in CI/CD pipelines:
+## 🧪 **Testa lokalt**
 
-```yaml
-# GitHub Actions example
-- name: Run CodeConductor Tests
-  run: |
-    python test_master_simple.py --quick
-    python tests/run_benchmarks.py --agent-count=2
+### **1. Snabba tester (säkert)**
+```bash
+python scripts/test_simple.py
 ```
 
-## 📊 **Performance Monitoring**
+### **2. GPU-tester (riktig hårdvara)**
+```bash
+# Aktivera GPU
+set CC_GPU_DISABLED=0
 
-Tests automatically collect metrics:
-- **Latency**: Request/response times
-- **Throughput**: Tokens per second
-- **Resource Usage**: CPU, memory, VRAM
-- **Success Rate**: Pass/fail ratios
+# Kör GPU-tester
+pytest tests/test_gpu_integration.py -v
 
-Results are saved to `simple_master_test_results_*.json` for analysis.
+# Återställ säkert läge
+set CC_GPU_DISABLED=1
+```
+
+### **3. Fullständig testsvit**
+```bash
+# Säkert läge
+pytest -k "not gpu and not vllm" --tb=short
+
+# GPU-läge (lokalt)
+pytest -m gpu --tb=short
+
+# Alla tester (varning: kan ta lång tid)
+pytest --tb=short
+```
+
+## 🚨 **Felsökning**
+
+### **GPU-tester hänger**
+- Kontrollera att `CC_GPU_DISABLED=0`
+- Verifiera att `nvidia-smi` fungerar
+- Starta om om nödvändigt
+
+### **vLLM-tester misslyckas**
+- Kontrollera att vLLM är igång
+- Verifiera att modeller är tillgängliga
+- Kontrollera port 8000
+
+### **Async-fel**
+- Kör `pytest -k "not gpu"` först
+- Kontrollera att debattpipelinen är korrekt
+- Verifiera `ensure_async` wrapper
+
+## 📝 **Lägg till nya tester**
+
+### **Unit-test (mockad)**
+```python
+def test_model_manager_creation():
+    """Test that ModelManager can be created"""
+    from codeconductor.ensemble.model_manager import ModelManager
+    mm = ModelManager()
+    assert mm is not None
+```
+
+### **GPU-test (riktig hårdvara)**
+```python
+@pytest.mark.gpu
+def test_real_gpu_functionality():
+    """Test real GPU functionality"""
+    # Din GPU-test här
+    pass
+```
+
+### **vLLM-test (riktig modell)**
+```python
+@pytest.mark.vllm
+def test_real_model_inference():
+    """Test real model inference"""
+    # Din vLLM-test här
+    pass
+```

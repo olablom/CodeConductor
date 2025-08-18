@@ -57,7 +57,10 @@ class SimplePromptGenerator:
             return "class"
         elif any(word in task_lower for word in ["function", "def", "method"]):
             return "function"
-        elif any(word in task_lower for word in ["api", "endpoint", "route", "fastapi", "flask"]):
+        elif any(
+            word in task_lower
+            for word in ["api", "endpoint", "route", "fastapi", "flask"]
+        ):
             return "api"
         elif any(word in task_lower for word in ["script", "main", "run"]):
             return "script"

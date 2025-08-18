@@ -38,7 +38,9 @@ class HotkeyManager:
         }
 
         if not self.enabled:
-            logger.warning("Global hotkeys not available (keyboard library not installed)")
+            logger.warning(
+                "Global hotkeys not available (keyboard library not installed)"
+            )
 
     def register_hotkey(self, hotkey: str, callback: Callable, description: str = ""):
         """

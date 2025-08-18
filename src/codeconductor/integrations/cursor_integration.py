@@ -292,7 +292,9 @@ class CursorIntegration:
         # Store original clipboard content
         original_content = self.clipboard_manager.read_from_clipboard()
 
-        print(f"⏳ Waiting for clipboard change... (current: {len(original_content)} chars)")
+        print(
+            f"⏳ Waiting for clipboard change... (current: {len(original_content)} chars)"
+        )
 
         # Wait for user input
         input("Press Enter when you have Cursor output ready...")
@@ -304,7 +306,9 @@ class CursorIntegration:
         if new_content == original_content:
             print("⚠️  Clipboard content hasn't changed. Did you copy Cursor's output?")
         else:
-            print(f"✅ Clipboard updated: {len(original_content)} → {len(new_content)} chars")
+            print(
+                f"✅ Clipboard updated: {len(original_content)} → {len(new_content)} chars"
+            )
 
         _log_info("Reading Cursor output from clipboard...")
         return new_content
@@ -350,7 +354,9 @@ class CursorIntegration:
             print("⚠️  Auto-detection timeout, falling back to manual mode")
             return self.wait_for_cursor_output()
 
-    def extract_and_save_files(self, cursor_output: str, output_dir: Path = None) -> list[Path]:
+    def extract_and_save_files(
+        self, cursor_output: str, output_dir: Path = None
+    ) -> list[Path]:
         """
         Extract code files from Cursor output and save them.
 
@@ -405,7 +411,9 @@ class CursorIntegration:
         if callbacks is None:
             callbacks = {
                 "copy_prompt": lambda: print("🎯 Copy prompt hotkey pressed"),
-                "paste_from_cursor": lambda: print("🤖 Paste from Cursor hotkey pressed"),
+                "paste_from_cursor": lambda: print(
+                    "🤖 Paste from Cursor hotkey pressed"
+                ),
                 "rerun_last_task": lambda: print("🔄 Re-run last task hotkey pressed"),
                 "run_tests": lambda: print("🧪 Run tests hotkey pressed"),
                 "stop_pipeline": lambda: print("🛑 Stop pipeline hotkey pressed"),

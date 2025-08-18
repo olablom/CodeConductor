@@ -282,7 +282,9 @@ class VLLMEngine:
 
 
 # Factory function for creating vLLM engines
-async def create_vllm_engine(model_name: str = "microsoft/DialoGPT-medium", **kwargs) -> VLLMEngine:
+async def create_vllm_engine(
+    model_name: str = "microsoft/DialoGPT-medium", **kwargs
+) -> VLLMEngine:
     """Create and initialize a vLLM engine."""
     engine = VLLMEngine(model_name=model_name, **kwargs)
     await engine.initialize()

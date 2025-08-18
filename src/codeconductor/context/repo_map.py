@@ -148,12 +148,16 @@ def _score_match(task: str, candidate: str) -> float:
     return score
 
 
-def get_top_k_paths(repo_map: dict[str, Any], task_description: str, k: int = 5) -> list[str]:
+def get_top_k_paths(
+    repo_map: dict[str, Any], task_description: str, k: int = 5
+) -> list[str]:
     """
     Rank file paths by naive keyword overlap with task description.
     """
     files = repo_map.get("files", [])
-    ranked = sorted(files, key=lambda p: _score_match(task_description, p), reverse=True)
+    ranked = sorted(
+        files, key=lambda p: _score_match(task_description, p), reverse=True
+    )
     return ranked[:k]
 
 
@@ -251,9 +255,7 @@ def build_prompt_context(
     if snippets:
         parts.append("\nRelevant snippets:")
         for sn in snippets:
-            header = (
-                f"# {sn.get('file')} :: {sn.get('name', '').strip()} ({sn.get('type', '')})".strip()
-            )
+            header = f"# {sn.get('file')} :: {sn.get('name', '').strip()} ({sn.get('type', '')})".strip()
             parts.append(header)
             parts.append("```\n" + sn.get("snippet", "").strip() + "\n```")
 

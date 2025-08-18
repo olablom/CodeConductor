@@ -114,7 +114,9 @@ class EnsembleEngine:
         rlhf_disabled_env = os.getenv("RLHF_DISABLE", "0").strip() == "1"
         self.use_rlhf = (use_rlhf and RLHF_AVAILABLE) and (not rlhf_disabled_env)
         # Respect ALLOW_NET: when set to '0', disable RAG completely
-        self.use_rag = use_rag and RAG_AVAILABLE and (os.getenv("ALLOW_NET", "0") != "0")
+        self.use_rag = (
+            use_rag and RAG_AVAILABLE and (os.getenv("ALLOW_NET", "0") != "0")
+        )
         self.use_code_reviewer = use_code_reviewer and CODE_REVIEWER_AVAILABLE
         self.rlhf_agent = None
         self.rag_system = None
@@ -208,11 +210,15 @@ class EnsembleEngine:
             if consensus_obj is not None:
                 consensus_dump.update(
                     {
-                        "confidence": float(getattr(consensus_obj, "confidence", 0.0) or 0.0),
+                        "confidence": float(
+                            getattr(consensus_obj, "confidence", 0.0) or 0.0
+                        ),
                         "code_quality": float(
                             getattr(consensus_obj, "code_quality_score", 0.0) or 0.0
                         ),
-                        "syntax_valid": bool(getattr(consensus_obj, "syntax_valid", False)),
+                        "syntax_valid": bool(
+                            getattr(consensus_obj, "syntax_valid", False)
+                        ),
                         # Include generated code content for downstream exporters/materialization
                         "consensus": getattr(consensus_obj, "consensus", "") or "",
                     }
@@ -298,7 +304,9 @@ class EnsembleEngine:
             self.code_reviewer = CodeReviewer(models)
             logger.info("CodeReviewer initialized successfully")
         except Exception as e:
-            logger.warning(f"Failed to initialize CodeReviewer: {e}. Disabling CodeReviewer.")
+            logger.warning(
+                f"Failed to initialize CodeReviewer: {e}. Disabling CodeReviewer."
+            )
             self.use_code_reviewer = False
 
     def _select_models_with_rlhf(
@@ -534,7 +542,9 @@ class EnsembleEngine:
             response = await self._process_request_internal(request)
             return self._convert_response_to_dict(response)
 
-    async def _process_request_internal(self, request: EnsembleRequest) -> EnsembleResponse:
+    async def _process_request_internal(
+        self, request: EnsembleRequest
+    ) -> EnsembleResponse:
         """Process a task request through the ensemble."""
         start_time = asyncio.get_event_loop().time()
         wall_start_iso = datetime.utcnow().replace(tzinfo=None).isoformat() + "Z"
@@ -546,7 +556,9 @@ class EnsembleEngine:
         augmented_task = request.task_description
         if self.use_rag and self.rag_system:
             try:
-                augmented_task = self.rag_system.augment_prompt(request.task_description)
+                augmented_task = self.rag_system.augment_prompt(
+                    request.task_description
+                )
                 logger.info("Task description augmented with RAG context")
             except Exception as e:
                 logger.warning(f"Failed to augment task with RAG: {e}")
@@ -574,11 +586,15 @@ class EnsembleEngine:
                     loading_config = config
                     break
 
-            logger.info(f"🎯 Using {loading_config} config for complexity {task_complexity:.2f}")
+            logger.info(
+                f"🎯 Using {loading_config} config for complexity {task_complexity:.2f}"
+            )
 
             # Use memory-safe loading for RTX 5090 and ensure 3-5 models when possible
-            loaded_model_ids = await self.model_manager.ensure_models_loaded_with_memory_check(
-                loading_config
+            loaded_model_ids = (
+                await self.model_manager.ensure_models_loaded_with_memory_check(
+                    loading_config
+                )
             )
 
             # Prefer 3 models (up to 5 if aggressive load), else fallback to available
@@ -604,7 +620,9 @@ class EnsembleEngine:
                 fallback_cap = max_env if max_env > 0 else 3
                 fallback_k = min(fallback_cap, len(available_model_ids))
                 selected_model_ids = available_model_ids[:fallback_k]
-                logger.info(f"⚠️ Using fallback models (cap={fallback_cap}): {selected_model_ids}")
+                logger.info(
+                    f"⚠️ Using fallback models (cap={fallback_cap}): {selected_model_ids}"
+                )
 
             # Get model objects from model manager
             all_models = await self.model_manager.list_models()
@@ -613,7 +631,9 @@ class EnsembleEngine:
             # Model selection policy ordering + sampling
             policy = self._get_selector_policy()
             prompt_text = (
-                augmented_task if isinstance(augmented_task, str) else request.task_description
+                augmented_task
+                if isinstance(augmented_task, str)
+                else request.task_description
             )
             prompt_len = len(prompt_text or "")
             selection = self.model_selector.select(
@@ -635,7 +655,9 @@ class EnsembleEngine:
             id_to_model = {m.id: m for m in models}
             ordered_ids = [
                 mid
-                for mid, _ in sorted(selection.scores.items(), key=lambda kv: kv[1], reverse=True)
+                for mid, _ in sorted(
+                    selection.scores.items(), key=lambda kv: kv[1], reverse=True
+                )
             ]
             models = [id_to_model[mid] for mid in ordered_ids if mid in id_to_model]
 
@@ -653,7 +675,9 @@ class EnsembleEngine:
                     "w",
                     encoding="utf-8",
                 ) as f:
-                    _json.dump(self.last_selector_decision, f, ensure_ascii=False, indent=2)
+                    _json.dump(
+                        self.last_selector_decision, f, ensure_ascii=False, indent=2
+                    )
             except Exception:
                 pass
 
@@ -708,7 +732,9 @@ class EnsembleEngine:
             # Dispatch queries in parallel with timeout
             async with QueryDispatcher(timeout=request.timeout) as dispatcher:
                 raw_results = await asyncio.wait_for(
-                    dispatcher.dispatch_parallel(models, augmented_task, request.context),
+                    dispatcher.dispatch_parallel(
+                        models, augmented_task, request.context
+                    ),
                     timeout=request.timeout + 10.0,  # Add extra buffer
                 )
                 logger.info(f"🔍 Raw results from dispatch_parallel: {raw_results}")
@@ -719,7 +745,9 @@ class EnsembleEngine:
             # Handle empty results path with optional single-consensus fallback
             if not formatted_results:
                 if os.getenv("CONSENSUS_ALLOW_SINGLE", "0") == "1":
-                    logger.warning("CONSENSUS_ALLOW_SINGLE=1 — writing degraded consensus artifact")
+                    logger.warning(
+                        "CONSENSUS_ALLOW_SINGLE=1 — writing degraded consensus artifact"
+                    )
                     try:
                         self._save_run_artifacts(
                             prompt_text or "",
@@ -750,7 +778,9 @@ class EnsembleEngine:
                     raise Exception("No model results available for consensus")
 
             # Calculate consensus (majority/best-score handled inside calculator)
-            consensus_result = self.consensus_calculator.calculate_consensus(formatted_results)
+            consensus_result = self.consensus_calculator.calculate_consensus(
+                formatted_results
+            )
             # Make consensus content available for downstream steps (tests, review)
             generated_code = consensus_result.consensus
 
@@ -791,7 +821,9 @@ class EnsembleEngine:
                         content = item.get("content", "") or ""
                         score = float(model_scores.get(model_id, 0.0))
                         output_sha = (
-                            hashlib.sha256(content.encode("utf-8")).hexdigest() if content else None
+                            hashlib.sha256(content.encode("utf-8")).hexdigest()
+                            if content
+                            else None
                         )
                         candidates.append(
                             {
@@ -836,7 +868,8 @@ class EnsembleEngine:
                 # --- KPI writing (after consensus) ---
                 try:
                     run_dir = Path(
-                        self.last_artifacts_dir or os.getenv("ARTIFACTS_DIR", "artifacts")
+                        self.last_artifacts_dir
+                        or os.getenv("ARTIFACTS_DIR", "artifacts")
                     )
                     tests_dir = run_dir / "tests"
                     tests_dir.mkdir(parents=True, exist_ok=True)
@@ -848,7 +881,9 @@ class EnsembleEngine:
                         suite_name="pytest", total=0, passed=0, failed=0, skipped=0
                     )
 
-                    pr = PytestRunner(prompt=request.task_description, code=generated_code or "")
+                    pr = PytestRunner(
+                        prompt=request.task_description, code=generated_code or ""
+                    )
                     pr_res = pr.run()
                     total = int(pr_res.get("total_tests", 0))
                     passed = int(pr_res.get("passed_tests", 0))
@@ -875,7 +910,9 @@ class EnsembleEngine:
 
                     # Mark first green
                     if after.total > 0 and after.failed == 0:
-                        t_first_green_iso = datetime.utcnow().replace(tzinfo=None).isoformat() + "Z"
+                        t_first_green_iso = (
+                            datetime.utcnow().replace(tzinfo=None).isoformat() + "Z"
+                        )
 
                     # KPI fields
                     sampling = (
@@ -885,7 +922,9 @@ class EnsembleEngine:
                     )
                     codebleu_weights_env = os.getenv("CODEBLEU_WEIGHTS")
                     codebleu_lang_env = (
-                        os.getenv("CODEBLEU_LANG") or os.getenv("CODEBLEU_LANGUAGE") or "python"
+                        os.getenv("CODEBLEU_LANG")
+                        or os.getenv("CODEBLEU_LANGUAGE")
+                        or "python"
                     )
 
                     # Exit status
@@ -906,7 +945,9 @@ class EnsembleEngine:
                         artifacts_dir=run_dir,
                         t_start_iso=wall_start_iso,
                         t_first_green_iso=t_first_green_iso,
-                        ttft_ms=int((asyncio.get_event_loop().time() - start_time) * 1000.0),
+                        ttft_ms=int(
+                            (asyncio.get_event_loop().time() - start_time) * 1000.0
+                        ),
                         tests_before=before,
                         tests_after=after,
                         winner_model=winner_obj.get("model"),
@@ -918,7 +959,9 @@ class EnsembleEngine:
                         exit_status=exit_status,
                     )
                     write_json(run_dir / "kpi.json", kpi)
-                    logger.info(f"KPI written: {run_dir / 'kpi.json'} run_id={kpi.get('run_id')}")
+                    logger.info(
+                        f"KPI written: {run_dir / 'kpi.json'} run_id={kpi.get('run_id')}"
+                    )
                 except Exception as e:  # pragma: no cover
                     logger.warning(f"KPI writing failed: {e}")
             except Exception:
@@ -953,10 +996,14 @@ class EnsembleEngine:
 
             # Compute a simple agreement heuristic from model scores
             try:
-                scores_list = sorted((consensus_result.model_scores or {}).values(), reverse=True)
+                scores_list = sorted(
+                    (consensus_result.model_scores or {}).values(), reverse=True
+                )
                 if len(scores_list) >= 2:
                     # High agreement when top two scores are close
-                    model_agreement = max(0.0, min(1.0, 1.0 - (scores_list[0] - scores_list[1])))
+                    model_agreement = max(
+                        0.0, min(1.0, 1.0 - (scores_list[0] - scores_list[1]))
+                    )
                 elif len(scores_list) == 1:
                     model_agreement = 1.0
                 else:
@@ -988,11 +1035,17 @@ class EnsembleEngine:
             try:
                 base = os.getenv("ARTIFACTS_DIR", "artifacts")
                 ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-                run_dir = Path(self.last_artifacts_dir or os.path.join(base, "runs", ts))
+                run_dir = Path(
+                    self.last_artifacts_dir or os.path.join(base, "runs", ts)
+                )
                 run_dir.mkdir(parents=True, exist_ok=True)
                 self.last_artifacts_dir = str(run_dir)
-                before = TestSummary(suite_name="pytest", total=0, passed=0, failed=0, skipped=0)
-                after = TestSummary(suite_name="pytest", total=0, passed=0, failed=0, skipped=0)
+                before = TestSummary(
+                    suite_name="pytest", total=0, passed=0, failed=0, skipped=0
+                )
+                after = TestSummary(
+                    suite_name="pytest", total=0, passed=0, failed=0, skipped=0
+                )
                 sampling = (
                     self.last_selector_decision.get("sampling", {})
                     if isinstance(self.last_selector_decision, dict)
@@ -1012,7 +1065,9 @@ class EnsembleEngine:
                     sampling=sampling,
                     codebleu_weights_env=os.getenv("CODEBLEU_WEIGHTS"),
                     codebleu_lang_env=(
-                        os.getenv("CODEBLEU_LANG") or os.getenv("CODEBLEU_LANGUAGE") or "python"
+                        os.getenv("CODEBLEU_LANG")
+                        or os.getenv("CODEBLEU_LANGUAGE")
+                        or "python"
                     ),
                     exit_status={
                         "patched": False,
@@ -1037,14 +1092,18 @@ class EnsembleEngine:
                 selected_model=None,
             )
 
-    def _format_results_for_consensus(self, raw_results: dict[str, Any]) -> list[dict[str, Any]]:
+    def _format_results_for_consensus(
+        self, raw_results: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         """Convert raw dispatch results to format expected by consensus calculator."""
         formatted_results: list[dict[str, Any]] = []
         logger.info(f"🔍 Formatting raw_results: {raw_results}")
 
         # Support either {model_id: response} or dispatcher summary {successful:{}, failed:{}}
         source_mapping: dict[str, Any] = {}
-        if isinstance(raw_results, dict) and isinstance(raw_results.get("successful"), dict):
+        if isinstance(raw_results, dict) and isinstance(
+            raw_results.get("successful"), dict
+        ):
             source_mapping = raw_results.get("successful", {})  # type: ignore[assignment]
         elif isinstance(raw_results, dict):
             source_mapping = raw_results
@@ -1058,9 +1117,14 @@ class EnsembleEngine:
                     if isinstance(response_data, dict)
                     else ""
                 )
-                success = isinstance(response_data, dict) and ("error" not in response_data)
+                success = isinstance(response_data, dict) and (
+                    "error" not in response_data
+                )
                 # Explicitly mark empty content cases from dispatcher
-                if isinstance(response_data, dict) and response_data.get("empty_content") is True:
+                if (
+                    isinstance(response_data, dict)
+                    and response_data.get("empty_content") is True
+                ):
                     success = False
                     content = ""
                 result_dict = {
@@ -1147,7 +1211,9 @@ class EnsembleEngine:
 
         return health_status
 
-    async def _process_request_fast_priority(self, request: EnsembleRequest) -> dict[str, Any]:
+    async def _process_request_fast_priority(
+        self, request: EnsembleRequest
+    ) -> dict[str, Any]:
         """Process request prioritizing fast models (Ollama)."""
         logger.info("⚡ Using fast model priority strategy")
 
@@ -1179,12 +1245,16 @@ class EnsembleEngine:
 
             # Format and return results
             formatted_results = self._format_results_for_consensus(raw_results)
-            consensus_result = self.consensus_calculator.calculate_consensus(formatted_results)
+            consensus_result = self.consensus_calculator.calculate_consensus(
+                formatted_results
+            )
 
             return {
                 "generated_code": consensus_result.consensus,
                 "confidence": consensus_result.confidence,
-                "selected_model": (selected_models[0].id if selected_models else "unknown"),
+                "selected_model": (
+                    selected_models[0].id if selected_models else "unknown"
+                ),
                 "strategy": "fast_priority",
                 "models_used": [m.id for m in selected_models],
                 "success": True,
@@ -1200,14 +1270,18 @@ class EnsembleEngine:
                 "success": False,
             }
 
-    async def process_request_with_fallback(self, task_description: str) -> dict[str, Any]:
+    async def process_request_with_fallback(
+        self, task_description: str
+    ) -> dict[str, Any]:
         """Process request with intelligent fallback strategies - ALL MODELS."""
         logger.info("🔄 Using intelligent fallback strategy with all available models")
 
         # Try standard processing first (all models) with timeout
         try:
             result = await asyncio.wait_for(
-                self.process_request(task_description, timeout=30, prefer_fast_models=False),
+                self.process_request(
+                    task_description, timeout=30, prefer_fast_models=False
+                ),
                 timeout=45.0,  # Add extra timeout wrapper
             )
             if result.get("success"):
@@ -1223,7 +1297,9 @@ class EnsembleEngine:
             logger.info("🔄 Trying fallback with reduced requirements")
 
             # Get available models with timeout
-            all_models = await asyncio.wait_for(self.model_manager.list_models(), timeout=10.0)
+            all_models = await asyncio.wait_for(
+                self.model_manager.list_models(), timeout=10.0
+            )
             healthy_models = await asyncio.wait_for(
                 self.model_manager.list_healthy_models(), timeout=10.0
             )
@@ -1250,12 +1326,16 @@ class EnsembleEngine:
 
             # Format and return results
             formatted_results = self._format_results_for_consensus(raw_results)
-            consensus_result = self.consensus_calculator.calculate_consensus(formatted_results)
+            consensus_result = self.consensus_calculator.calculate_consensus(
+                formatted_results
+            )
 
             return {
                 "generated_code": consensus_result.consensus,
                 "confidence": consensus_result.confidence,
-                "selected_model": (available_models[0].id if available_models else "unknown"),
+                "selected_model": (
+                    available_models[0].id if available_models else "unknown"
+                ),
                 "strategy": "fallback_reduced_requirements",
                 "models_used": [m.id for m in available_models],
                 "success": True,
@@ -1271,7 +1351,9 @@ class EnsembleEngine:
             logger.info("🔄 Trying single model fallback")
 
             # Get any available model with timeout
-            all_models = await asyncio.wait_for(self.model_manager.list_models(), timeout=10.0)
+            all_models = await asyncio.wait_for(
+                self.model_manager.list_models(), timeout=10.0
+            )
             if not all_models:
                 raise Exception("No models available")
 

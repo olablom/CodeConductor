@@ -119,7 +119,9 @@ def build_kpi(
         "ttft_ms": int(max(0, ttft_ms)),
         "t_start": t_start_iso,
         "t_first_green": t_first_green_iso or t_start_iso,
-        "first_prompt_success": bool((tests_after.failed == 0) and (tests_after.total > 0)),
+        "first_prompt_success": bool(
+            (tests_after.failed == 0) and (tests_after.total > 0)
+        ),
         "tests_before": {
             "suite_name": tests_before.suite_name,
             "total": tests_before.total,

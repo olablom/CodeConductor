@@ -66,7 +66,9 @@ class TreeSitterAnalyzer:
         try:
             import tree_sitter_typescript
 
-            TS_LANGUAGE = tree_sitter.Language(tree_sitter_typescript.language_typescript())
+            TS_LANGUAGE = tree_sitter.Language(
+                tree_sitter_typescript.language_typescript()
+            )
             ts_parser = tree_sitter.Parser(TS_LANGUAGE)
             self.parsers["typescript"] = ts_parser
             self.parsers["ts"] = ts_parser
@@ -135,7 +137,9 @@ class TreeSitterAnalyzer:
             "statistics": {
                 "total_files": file_count,
                 "languages": language_stats,
-                "total_functions": len([e for e in all_elements if e.type == "function"]),
+                "total_functions": len(
+                    [e for e in all_elements if e.type == "function"]
+                ),
                 "total_classes": len([e for e in all_elements if e.type == "class"]),
                 "total_methods": len([e for e in all_elements if e.type == "method"]),
             },
@@ -183,7 +187,9 @@ class TreeSitterAnalyzer:
 
         return code_files
 
-    def _extract_python_elements(self, tree, content: str, file_path: str) -> list[CodeElement]:
+    def _extract_python_elements(
+        self, tree, content: str, file_path: str
+    ) -> list[CodeElement]:
         """Extract Python code elements using Tree-sitter queries"""
         elements = []
 
@@ -214,7 +220,9 @@ class TreeSitterAnalyzer:
                                     file_path=file_path,
                                     language="python",
                                     metadata={
-                                        "decorators": self._extract_decorators(node, content)
+                                        "decorators": self._extract_decorators(
+                                            node, content
+                                        )
                                     },
                                 )
                             )
@@ -228,7 +236,9 @@ class TreeSitterAnalyzer:
                                     file_path=file_path,
                                     language="python",
                                     metadata={
-                                        "decorators": self._extract_decorators(node, content)
+                                        "decorators": self._extract_decorators(
+                                            node, content
+                                        )
                                     },
                                 )
                             )
@@ -248,7 +258,9 @@ class TreeSitterAnalyzer:
                                 file_path=file_path,
                                 language="python",
                                 metadata={
-                                    "decorators": self._extract_decorators(node, content),
+                                    "decorators": self._extract_decorators(
+                                        node, content
+                                    ),
                                     "bases": self._extract_class_bases(node, content),
                                 },
                             )
@@ -262,7 +274,9 @@ class TreeSitterAnalyzer:
         walk_node(tree.root_node)
         return elements
 
-    def _extract_javascript_elements(self, tree, content: str, file_path: str) -> list[CodeElement]:
+    def _extract_javascript_elements(
+        self, tree, content: str, file_path: str
+    ) -> list[CodeElement]:
         """Extract JavaScript/TypeScript code elements"""
         elements = []
 
@@ -354,7 +368,9 @@ class TreeSitterAnalyzer:
 
         return cross_refs
 
-    def _build_class_hierarchy(self, classes: list[CodeElement]) -> dict[str, list[str]]:
+    def _build_class_hierarchy(
+        self, classes: list[CodeElement]
+    ) -> dict[str, list[str]]:
         """Build class inheritance hierarchy"""
         hierarchy = {}
 
@@ -401,10 +417,14 @@ class FastAPITreeSitterAnalyzer(TreeSitterAnalyzer):
 
         return routes
 
-    def _parse_route_decorator(self, decorator: str, element: CodeElement) -> dict[str, Any] | None:
+    def _parse_route_decorator(
+        self, decorator: str, element: CodeElement
+    ) -> dict[str, Any] | None:
         """Parse FastAPI route decorator to extract route information"""
         # Match patterns like @app.get("/path") or @router.post("/path", ...)
-        pattern = r'@(?:app|router)\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']'
+        pattern = (
+            r'@(?:app|router)\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']'
+        )
         match = re.search(pattern, decorator)
 
         if match:
