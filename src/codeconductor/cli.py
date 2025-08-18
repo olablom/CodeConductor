@@ -556,10 +556,7 @@ Examples:
         print(f"CURSOR_API_BASE   : {cursor_api_base}")
 
         if not Path(result["log_path"]).exists():
-            print("diagnose_latest.txt not found. Run the PowerShell script:")
-            print(
-                "  powershell -NoProfile -ExecutionPolicy Bypass -File scripts/diagnose_cursor.ps1 -Ports 11434 3000"
-            )
+            print("diagnose_latest.txt not found")
             return 0
 
         print("")

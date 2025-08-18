@@ -1,0 +1,22 @@
+import os, sys
+# Ensure repository root is on path
+root = __file__
+try:
+	# __file__ is path to this .pth in site-packages; we do not rely on it.
+	pass
+except Exception:
+	pass
+
+# Execute guard bootstrap from project scripts directory if present
+try:
+	# Compute project root from current working directory as we run tests from repo root
+	cwd = os.getcwd()
+	candidate = os.path.join(cwd, 'scripts', '_cpu_guard_bootstrap.py')
+	if os.path.isfile(candidate):
+		with open(candidate, 'r', encoding='utf-8') as f:
+			src = f.read()
+		code = compile(src, candidate, 'exec')
+		exec(code, {'__name__': '__cpu_guard_bootstrap__'})
+except Exception as e:
+	# Silent fallback to avoid import errors during setup
+	pass

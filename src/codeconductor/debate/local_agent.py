@@ -39,7 +39,7 @@ class LocalAIAgent:
         # Kontrollera GPU_DISABLED först
         if self._check_gpu_disabled():
             return f"[MOCKED] {self.name} response to: {user_input}"
-        
+
         self.add_message("user", user_input)
 
         try:
@@ -56,60 +56,86 @@ class LocalAIAgent:
                 self.add_message("assistant", reply)
                 return reply
             else:
-                logger.error(f"Failed to get response from ensemble for {self.name}")
-                return f"Error: Could not generate response for {self.name}"
+                logger.error("Failed to get response from ensemble for " + self.name)
+            return "Error: Could not generate response for " + self.name
 
         except Exception as e:
-            logger.error(f"Error generating response for {self.name}: {e}")
-            return f"Error: {str(e)}"
+            logger.error("Error generating response for " + self.name + ": " + str(e))
+            return "Error: " + str(e)
 
     # Nya debate-metoder för att vara kompatibel med CodeConductorDebateManager
     def propose(self, prompt: str, **kw) -> Dict[str, Any]:
         """Generate initial proposal - kompatibel med nya debate-systemet"""
         if self._check_gpu_disabled():
-            return {"content": f"[MOCKED] {prompt}", "agent": self.name, "type": "proposal"}
-        
+            return {
+                "content": "[MOCKED] " + prompt,
+                "agent": self.name,
+                "type": "proposal",
+            }
+
         # Använd generate_response som fallback
         try:
             import asyncio
+
             response = asyncio.run(self.generate_response(prompt))
             return {"content": response, "agent": self.name, "type": "proposal"}
         except Exception as e:
-            return {"content": f"Error: {str(e)}", "agent": self.name, "type": "proposal"}
+            return {
+                "content": f"Error: {str(e)}",
+                "agent": self.name,
+                "type": "proposal",
+            }
 
     def rebuttal(self, state: Dict[str, Any], **kw) -> Dict[str, Any]:
         """Generate rebuttal - kompatibel med nya debate-systemet"""
         if self._check_gpu_disabled():
-            return {"content": f"[MOCKED] rebuttal for debate state", "agent": self.name, "type": "rebuttal"}
-        
+            return {
+                "content": "[MOCKED] rebuttal for debate state",
+                "agent": self.name,
+                "type": "rebuttal",
+            }
+
         # Skapa prompt från state
         prompt = "Provide your rebuttal to the other proposals."
         if isinstance(state, dict) and "prompt" in state:
             prompt = state["prompt"]
-        
+
         try:
             import asyncio
+
             response = asyncio.run(self.generate_response(prompt))
             return {"content": response, "agent": self.name, "type": "rebuttal"}
         except Exception as e:
-            return {"content": f"Error: {str(e)}", "agent": self.name, "type": "rebuttal"}
+            return {
+                "content": f"Error: {str(e)}",
+                "agent": self.name,
+                "type": "rebuttal",
+            }
 
     def finalize(self, state: Dict[str, Any], **kw) -> Dict[str, Any]:
         """Generate final recommendation - kompatibel med nya debate-systemet"""
         if self._check_gpu_disabled():
-            return {"content": f"[MOCKED] final recommendation for debate", "agent": self.name, "type": "final"}
-        
+            return {
+                "content": "[MOCKED] final recommendation for debate",
+                "agent": self.name,
+                "type": "final",
+            }
+
         # Skapa prompt från state
-        prompt = "Based on the debate so far, what is your final recommendation for the code implementation?"
+        prompt = (
+            "Based on the debate so far, what is your final recommendation "
+            "for the code implementation?"
+        )
         if isinstance(state, dict) and "prompt" in state:
             prompt = state["prompt"]
-        
+
         try:
             import asyncio
+
             response = asyncio.run(self.generate_response(prompt))
             return {"content": response, "agent": self.name, "type": "final"}
         except Exception as e:
-            return {"content": f"Error: {str(e)}", "agent": self.name, "type": "final"}
+            return {"content": "Error: " + str(e), "agent": self.name, "type": "final"}
 
     def get_conversation_history(self) -> list:
         """Get full conversation history"""

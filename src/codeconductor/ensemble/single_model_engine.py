@@ -52,17 +52,19 @@ class SingleModelEngine:
         """Initialize the single model engine."""
         try:
             logger.info("🚀 Initializing Single Model Engine...")
-            
+
             # Kontrollera GPU_DISABLED först
             if os.getenv("CC_GPU_DISABLED", "0") == "1":
                 logger.info(
-                    "[MOCK] CC_GPU_DISABLED=1 active — skipping model loading (SingleModelEngine.initialize)"
+                    "[MOCK] CC_GPU_DISABLED=1 active — skipping model loading "
+                    "(SingleModelEngine.initialize)"
                 )
                 return True
-            
+
             if self._quick:
                 logger.info(
-                    "[MOCK] CC_QUICK_CI=1 active — skipping model loading (SingleModelEngine.initialize)"
+                    "[MOCK] CC_QUICK_CI=1 active — skipping model loading "
+                    "(SingleModelEngine.initialize)"
                 )
                 return True
 
@@ -71,8 +73,10 @@ class SingleModelEngine:
 
             # Load the preferred model
             loaded_models = (
-                await self.model_manager.ensure_models_loaded_with_memory_check(
-                    "light_load"
+                await (
+                    self.model_manager.ensure_models_loaded_with_memory_check(
+                        "light_load"
+                    )
                 )
             )
             if not loaded_models:
@@ -104,7 +108,8 @@ class SingleModelEngine:
         # Kontrollera GPU_DISABLED först
         if os.getenv("CC_GPU_DISABLED", "0") == "1":
             logger.info(
-                "[MOCK] CC_GPU_DISABLED=1 active — returning mock content (SingleModelEngine.process_request)"
+                "[MOCK] CC_GPU_DISABLED=1 active — returning mock content "
+                "(SingleModelEngine.process_request)"
             )
             content = self._mock_content_for(request.task_description)
             execution_time = asyncio.get_event_loop().time() - start_time
@@ -116,12 +121,14 @@ class SingleModelEngine:
 
         try:
             logger.info(
-                f"Processing single model request: {request.task_description[:50]}..."
+                f"Processing single model request: "
+                f"{request.task_description[:50]}..."
             )
             if self._quick:
                 # Deterministic mock path for CI
                 logger.info(
-                    "[MOCK] CC_QUICK_CI=1 active — returning mock content (SingleModelEngine.process_request)"
+                    "[MOCK] CC_QUICK_CI=1 active — returning mock content "
+                    "(SingleModelEngine.process_request)"
                 )
                 content = self._mock_content_for(request.task_description)
                 execution_time = asyncio.get_event_loop().time() - start_time
@@ -151,7 +158,8 @@ class SingleModelEngine:
                     execution_time = asyncio.get_event_loop().time() - start_time
 
                     logger.info(
-                        f"✅ Single model request completed in {execution_time:.2f}s"
+                        f"✅ Single model request completed in "
+                        f"{execution_time:.2f}s"
                     )
 
                     return SingleModelResponse(
@@ -208,7 +216,8 @@ class SingleModelEngine:
             return (
                 "jsx = '\n"
                 "import { useState } from \\'react\\';\n"
-                "export function Todo(){const [items,setItems]=useState([]);return <div/>}\n"
+                "export function Todo(){const [items,setItems]=useState([]);"
+                "return <div/>}\n"
                 "'\n"
             )
         # Binary search implementation

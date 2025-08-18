@@ -12,8 +12,15 @@ import sys
 import time
 from datetime import datetime
 
-import GPUtil
 import psutil
+
+# Soft import GPUtil - optional dependency
+try:
+    import GPUtil
+    GPUTIL_AVAILABLE = True
+except ImportError:
+    GPUTIL_AVAILABLE = False
+    GPUtil = None
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
@@ -77,16 +84,22 @@ class MasterTestSuite:
             memory = psutil.virtual_memory()
 
             # GPU metrics
-            gpus = GPUtil.getGPUs()
             gpu_metrics = {}
-            if gpus:
-                gpu = gpus[0]  # Primary GPU
-                gpu_metrics = {
-                    "gpu_load": gpu.load * 100,
-                    "gpu_memory_used": gpu.memoryUsed,
-                    "gpu_memory_total": gpu.memoryTotal,
-                    "gpu_memory_percent": (gpu.memoryUsed / gpu.memoryTotal) * 100,
-                }
+            if GPUTIL_AVAILABLE and GPUtil:
+                try:
+                    gpus = GPUtil.getGPUs()
+                    if gpus:
+                        gpu = gpus[0]  # Primary GPU
+                        gpu_metrics = {
+                            "gpu_load": gpu.load * 100,
+                            "gpu_memory_used": gpu.memoryUsed,
+                            "gpu_memory_total": gpu.memoryTotal,
+                            "gpu_memory_percent": (gpu.memoryUsed / gpu.memoryTotal) * 100,
+                        }
+                except Exception as e:
+                    print(f"GPU metrics unavailable: {e}")
+            else:
+                print("GPUtil not available, skipping GPU metrics")
 
             return {
                 "cpu_percent": cpu_percent,

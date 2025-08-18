@@ -22,9 +22,7 @@ try:
     STABLE_BASELINES_AVAILABLE = True
 except ImportError:
     STABLE_BASELINES_AVAILABLE = False
-    print(
-        "⚠️ stable-baselines3 not available. Install with: pip install stable-baselines3"
-    )
+    print("WARNING: stable-baselines3 not available. Install with: pip install stable-baselines3")
 
 try:
     from gymnasium import Env, spaces
@@ -32,33 +30,44 @@ try:
     GYM_AVAILABLE = True
 except ImportError:
     GYM_AVAILABLE = False
-    print("⚠️ gymnasium not available. Install with: pip install gymnasium")
+    print("WARNING: gymnasium not available. Install with: pip install gymnasium")
 
 logger = logging.getLogger(__name__)
 
 
-class TrainingCallback(BaseCallback):
-    """Custom callback for tracking training progress"""
+if STABLE_BASELINES_AVAILABLE:
 
-    def __init__(self, verbose: int = 0):
-        super().__init__(verbose)
-        self.episode_rewards = []
-        self.episode_count = 0
+    class TrainingCallback(BaseCallback):
+        """Custom callback for tracking training progress"""
 
-    def _on_step(self) -> bool:
-        # Check if episode is done
-        if self.locals.get("dones"):
-            reward = self.locals.get("rewards", 0)
-            self.episode_rewards.append(reward)
-            self.episode_count += 1
+        def __init__(self, verbose: int = 0):
+            super().__init__(verbose)
+            self.episode_rewards = []
+            self.episode_count = 0
 
-            if self.episode_count % 10 == 0:
-                avg_reward = np.mean(self.episode_rewards[-10:])
-                logger.info(
-                    f"Episode {self.episode_count}, Avg Reward: {avg_reward:.3f}"
-                )
+        def _on_step(self) -> bool:
+            # Check if episode is done
+            if self.locals.get("dones"):
+                reward = self.locals.get("rewards", 0)
+                self.episode_rewards.append(reward)
+                self.episode_count += 1
 
-        return True
+                if self.episode_count % 10 == 0:
+                    avg_reward = np.mean(self.episode_rewards[-10:])
+                    logger.info(f"Episode {self.episode_count}, Avg Reward: {avg_reward:.3f}")
+
+            return True
+else:
+    # Fallback stub class when stable-baselines3 is not available
+    class TrainingCallback:
+        """Stub callback when stable-baselines3 is not available"""
+
+        def __init__(self, verbose: int = 0):
+            self.episode_rewards = []
+            self.episode_count = 0
+
+        def _on_step(self) -> bool:
+            return True
 
 
 class CodeConductorEnv(Env):
@@ -105,16 +114,13 @@ class CodeConductorEnv(Env):
             valid_patterns = [
                 p
                 for p in patterns
-                if p.get("reward") is not None
-                and isinstance(p.get("reward"), int | float)
+                if p.get("reward") is not None and isinstance(p.get("reward"), int | float)
             ]
 
             if len(valid_patterns) > self.max_patterns:
                 valid_patterns = valid_patterns[-self.max_patterns :]
 
-            logger.info(
-                f"Loaded {len(valid_patterns)} valid patterns for RLHF training"
-            )
+            logger.info(f"Loaded {len(valid_patterns)} valid patterns for RLHF training")
             return valid_patterns
 
         except Exception as e:
@@ -159,9 +165,7 @@ class CodeConductorEnv(Env):
 
         # Factors that indicate good code
         has_functions = any("def " in line for line in non_empty_lines)
-        has_imports = any(
-            "import " in line or "from " in line for line in non_empty_lines
-        )
+        has_imports = any("import " in line or "from " in line for line in non_empty_lines)
         has_docstrings = any('"""' in line or "'''" in line for line in non_empty_lines)
         has_type_hints = any(":" in line and "->" in line for line in non_empty_lines)
 
@@ -209,9 +213,7 @@ class CodeConductorEnv(Env):
         prompt_lower = prompt.lower()
 
         # Count complexity indicators
-        complex_count = sum(
-            1 for keyword in complex_keywords if keyword in prompt_lower
-        )
+        complex_count = sum(1 for keyword in complex_keywords if keyword in prompt_lower)
         simple_count = sum(1 for keyword in simple_keywords if keyword in prompt_lower)
 
         # Calculate complexity score
@@ -254,9 +256,7 @@ class CodeConductorEnv(Env):
         adjusted_reward = base_reward * action_multiplier
 
         # Add exploration bonus for trying different actions
-        exploration_bonus = (
-            0.01 if action != 0 else 0.0
-        )  # Small bonus for non-default action
+        exploration_bonus = 0.01 if action != 0 else 0.0  # Small bonus for non-default action
 
         # Exec-feedback: favor higher test coverage, penalize runtime if present in pattern
         runtime_ms = float(pattern.get("runtime_ms", 0.0))
@@ -338,9 +338,7 @@ class RLHFAgent:
 
         try:
             # Create environment
-            self.env = make_vec_env(
-                lambda: CodeConductorEnv(str(self.patterns_file)), n_envs=1
-            )
+            self.env = make_vec_env(lambda: CodeConductorEnv(str(self.patterns_file)), n_envs=1)
 
             # Create model
             self.model = PPO("MlpPolicy", self.env, verbose=1, learning_rate=0.0003)
@@ -381,9 +379,7 @@ class RLHFAgent:
                 logger.info(f"Model loaded from {self.model_path}")
                 return True
             else:
-                logger.warning(
-                    f"Model file {self.model_path} or {model_path_zip} not found."
-                )
+                logger.warning(f"Model file {self.model_path} or {model_path_zip} not found.")
                 return False
         except Exception as e:
             logger.error(f"Error loading model: {e}")
@@ -446,9 +442,7 @@ def demo_rlhf_training():
 
         # Test prediction
         print("\n🧪 Testing predictions...")
-        test_observation = np.array(
-            [0.5, 0.7, 0.8, 0.6], dtype=np.float32
-        )  # Example observation
+        test_observation = np.array([0.5, 0.7, 0.8, 0.6], dtype=np.float32)  # Example observation
         action, states = agent.predict_action(test_observation)
         action_desc = agent.get_action_description(action)
 

@@ -4,6 +4,7 @@ Test script to check available models with VRAM monitoring
 """
 
 import asyncio
+import os
 import subprocess
 
 from src.codeconductor.ensemble.model_manager import ModelManager
@@ -36,33 +37,36 @@ async def test_models():
     """Test available models with performance metrics"""
     mm = ModelManager()
 
-    print("🔍 Checking available models...")
+    print("Checking available models...")
     models = await mm.list_models()
 
-    print(f"\n📦 Found {len(models)} models:")
+    print(f"\nFound {len(models)} models:")
     for model in models:
         print(f"  - {model.id} ({model.provider})")
 
-    print("\n🎯 Agent model recommendations:")
+    print("\nAgent model recommendations:")
     config = mm.get_agent_model_config()
     for agent_type, preferred_models in config.items():
         print(f"  {agent_type}: {preferred_models}")
 
-    print("\n⚡ Testing model selection:")
+    print("\nTesting model selection:")
     for agent_type in ["coder", "architect", "tester", "reviewer"]:
         selected_models = await mm.get_models_for_agent(agent_type, 2)
         print(f"  {agent_type}: {selected_models}")
 
-    # VRAM monitoring
-    print("\n📊 VRAM Monitoring:")
-    used, total = get_vram_usage()
-    if used and total:
-        print(f"  Current VRAM: {used}MB / {total}MB ({used/total*100:.1f}%)")
-        print(f"  Available: {total-used}MB")
-        print(f"  Buffer for models: {total-used}MB")
+    # VRAM monitoring (only if GPU is available)
+    print("\nVRAM Monitoring:")
+    if os.getenv("CC_GPU_DISABLED") != "1":
+        used, total = get_vram_usage()
+        if used and total:
+            print(f"  Current VRAM: {used}MB / {total}MB ({used/total*100:.1f}%)")
+            print(f"  Available: {total-used}MB")
+            print(f"  Buffer for models: {total-used}MB")
+    else:
+        print("  GPU disabled in test mode, skipping VRAM check")
 
     # Performance test
-    print("\n🚀 Performance Test:")
+    print("\nPerformance Test:")
     print("  Testing model response times...")
 
     # Test each model type

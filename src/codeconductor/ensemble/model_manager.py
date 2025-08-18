@@ -20,9 +20,21 @@ import re
 
 import aiohttp
 
+# --- HARD CPU-ONLY GUARD (måste ligga allra först) ---
+CC_HARD_CPU_ONLY = os.getenv("CC_HARD_CPU_ONLY", "0") == "1"
+
+
+def _gpu_off() -> bool:
+    return (
+        os.getenv("CC_GPU_DISABLED", "0") == "1"
+        or CC_HARD_CPU_ONLY
+        or os.getenv("CUDA_VISIBLE_DEVICES", "") == ""
+    )
+
+
 # Safety check for testing environment
 TESTING_MODE = os.getenv("CC_TESTING_MODE", "0") == "1"
-GPU_DISABLED = os.getenv("CC_GPU_DISABLED", "0") == "1"
+GPU_DISABLED = _gpu_off()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -145,16 +157,12 @@ class ModelManager:
         # Backend gating
         backends_raw = (os.getenv("ENGINE_BACKENDS") or "").strip().lower()
         if backends_raw:
-            self._engine_backends = {
-                b.strip() for b in backends_raw.split(",") if b.strip()
-            }
+            self._engine_backends = {b.strip() for b in backends_raw.split(",") if b.strip()}
         else:
             # Default: allow both when not specified
             self._engine_backends = {"lmstudio", "ollama"}
         self._lmstudio_disable = os.getenv("LMSTUDIO_DISABLE", "0").strip() == "1"
-        self._lmstudio_cli_disable = (
-            os.getenv("LMSTUDIO_CLI_DISABLE", "0").strip() == "1"
-        )
+        self._lmstudio_cli_disable = os.getenv("LMSTUDIO_CLI_DISABLE", "0").strip() == "1"
         # Strict selector settings
         self._strict_selector = (
             os.getenv("MODEL_SELECTOR_STRICT", "0").strip() == "1"
@@ -250,9 +258,7 @@ class ModelManager:
             if forced:
                 forced = forced.strip()
                 required_models = [forced]
-                logger.info(
-                    f"🔒 Strict selector active — using forced model only: {forced}"
-                )
+                logger.info(f"🔒 Strict selector active — using forced model only: {forced}")
 
         logger.info(f"🎯 Ensuring models loaded: {required_models}")
 
@@ -277,9 +283,7 @@ class ModelManager:
                         self._lru_order.remove(model_key)
                     self._lru_order.append(model_key)
                 else:
-                    logger.warning(
-                        f"⚠️ Failed to load {model_key}, will try JIT loading"
-                    )
+                    logger.warning(f"⚠️ Failed to load {model_key}, will try JIT loading")
 
             except Exception as e:
                 logger.warning(f"⚠️ Error loading {model_key}: {e}")
@@ -303,9 +307,7 @@ class ModelManager:
         logger.info(f"🎯 Final loaded models: {loaded_models}")
         return loaded_models
 
-    async def ensure_models_loaded_with_memory_check(
-        self, loading_config: str
-    ) -> list[str]:
+    async def ensure_models_loaded_with_memory_check(self, loading_config: str) -> list[str]:
         """
         Wrapper that loads models according to MEMORY_CONFIGS and evicts via simple LRU
         if VRAM usage is expected to exceed the configured cap.
@@ -349,16 +351,84 @@ class ModelManager:
 
     async def emergency_unload_all(self) -> int:
         """
-        Unload all currently tracked models.
+        Attempt to unload all models and report VRAM before/after.
+        Returns number of models the manager believes it unloaded. Returns 0 on NO-OP
+        when LM Studio CLI is disabled; returns -1 on error.
         """
+        # Capture VRAM snapshot before
+        try:
+            before = await self.get_gpu_memory_info()
+        except Exception:
+            before = {
+                "used_gb": None,
+                "total_gb": None,
+                "free_gb": None,
+                "usage_percent": None,
+                "method": "n/a",
+            }
+
+        # If CLI is disabled, this is a NO-OP by design
+        if not self._lmstudio_cli_enabled():
+            logger.warning(
+                "emergency_unload_all(): LM Studio CLI disabled -> NO-OP. "
+                "Enable by setting ENGINE_BACKENDS to include 'lmstudio' and ensure 'lms' is on PATH."
+            )
+            return 0
+
         count = 0
-        for model in list(self.loaded_models):
+        try:
+            # Unload any models we are tracking first
+            for model in list(self.loaded_models):
+                try:
+                    if await self.unload_model_via_cli(model):
+                        count += 1
+                except Exception:
+                    # best-effort; continue unloading others
+                    pass
+
+            # Best-effort safety: attempt a global unload to catch any strays
+            # even if our internal tracking is empty/out-of-sync.
             try:
-                if await self.unload_model_via_cli(model):
-                    count += 1
-            except Exception:
-                continue
-        self._lru_order.clear()
+                result = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    lambda: subprocess.run(
+                        ["lms", "unload", "--all"],
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        errors="ignore",
+                        timeout=30,
+                    ),
+                )
+                if result.returncode == 0:
+                    logger.info("emergency_unload_all(): 'lms unload --all' completed successfully")
+                else:
+                    logger.warning(
+                        "emergency_unload_all(): 'lms unload --all' returned %s: %s",
+                        result.returncode,
+                        result.stderr,
+                    )
+            except Exception as e:
+                logger.debug("emergency_unload_all(): global unload attempt skipped: %s", e)
+
+            # Clear LRU regardless; we attempted unload
+            self._lru_order.clear()
+        except Exception as e:
+            logger.exception("emergency_unload_all() failed: %s", e)
+            return -1
+
+        # Capture VRAM snapshot after
+        try:
+            after = await self.get_gpu_memory_info()
+            logger.info(
+                "emergency_unload_all(): VRAM before=%s after=%s (unloaded=%s)",
+                before,
+                after,
+                count,
+            )
+        except Exception:
+            pass
+
         return count
 
     async def unload_model_via_cli(self, model_key: str) -> bool:
@@ -502,9 +572,7 @@ class ModelManager:
             )
             if forced:
                 forced = forced.strip()
-                logger.info(
-                    f"🔒 Discovery disabled/strict — using forced model only: {forced}"
-                )
+                logger.info(f"🔒 Discovery disabled/strict — using forced model only: {forced}")
                 return [
                     ModelInfo(
                         id=forced,
@@ -526,39 +594,29 @@ class ModelManager:
             tasks.append(
                 (
                     "lmstudio",
-                    asyncio.wait_for(
-                        self._discover_lm_studio_models(), timeout=self.timeout
-                    ),
+                    asyncio.wait_for(self._discover_lm_studio_models(), timeout=self.timeout),
                 )
             )
         if "ollama" in self._engine_backends:
             tasks.append(
                 (
                     "ollama",
-                    asyncio.wait_for(
-                        self._discover_ollama_models(), timeout=self.timeout
-                    ),
+                    asyncio.wait_for(self._discover_ollama_models(), timeout=self.timeout),
                 )
             )
 
         if tasks:
             try:
-                results = await asyncio.gather(
-                    *[t[1] for t in tasks], return_exceptions=True
-                )
+                results = await asyncio.gather(*[t[1] for t in tasks], return_exceptions=True)
                 for (name, _), res in zip(tasks, results, strict=False):
                     if name == "lmstudio":
                         lm_studio_models = res
                     elif name == "ollama":
                         ollama_models = res
             except TimeoutError:
-                logger.warning(
-                    "⚠️ Model discovery timed out, using available models only"
-                )
+                logger.warning("⚠️ Model discovery timed out, using available models only")
         else:
-            logger.info(
-                "No backends enabled via ENGINE_BACKENDS; returning empty model list"
-            )
+            logger.info("No backends enabled via ENGINE_BACKENDS; returning empty model list")
             return []
 
         # Handle exceptions gracefully
@@ -642,9 +700,7 @@ class ModelManager:
         health_tasks = []
         for model in models:
             # Add timeout to each health check
-            task = asyncio.wait_for(
-                self.check_health(model), timeout=self.health_timeout
-            )
+            task = asyncio.wait_for(self.check_health(model), timeout=self.health_timeout)
             health_tasks.append(task)
 
         health_results = await asyncio.gather(*health_tasks, return_exceptions=True)
@@ -654,23 +710,17 @@ class ModelManager:
             if isinstance(result, bool):
                 health_status[model.id] = result
                 status = "✅" if result else "❌"
-                logger.info(
-                    f"{status} {model.id}: {'healthy' if result else 'unhealthy'}"
-                )
+                logger.info(f"{status} {model.id}: {'healthy' if result else 'unhealthy'}")
             else:
                 health_status[model.id] = False
                 logger.warning(f"❌ {model.id}: health check failed - {result}")
 
         healthy_count = sum(health_status.values())
-        logger.info(
-            f"📊 Health check complete: {healthy_count}/{len(models)} models healthy"
-        )
+        logger.info(f"📊 Health check complete: {healthy_count}/{len(models)} models healthy")
 
         return health_status
 
-    async def get_best_models(
-        self, min_models: int = 2, max_models: int = 5
-    ) -> list[ModelInfo]:
+    async def get_best_models(self, min_models: int = 2, max_models: int = 5) -> list[ModelInfo]:
         """
         Get the best available models for ensemble.
 
@@ -685,9 +735,7 @@ class ModelManager:
 
         # Use all available models for best performance
         if len(all_models) < min_models:
-            logger.warning(
-                f"⚠️ Only {len(all_models)} models available, need {min_models}"
-            )
+            logger.warning(f"⚠️ Only {len(all_models)} models available, need {min_models}")
             return all_models
 
         # Score models based on provider, size, and specialty
@@ -803,9 +851,7 @@ class ModelManager:
                 # For now, just log the attempt
                 logger.info(f"📝 Manual restart required for {model_id}")
             elif model_info.provider == "lm_studio":
-                logger.info(
-                    f"📝 Manual restart required for LM Studio model {model_id}"
-                )
+                logger.info(f"📝 Manual restart required for LM Studio model {model_id}")
         except Exception as e:
             logger.warning(f"⚠️ Recovery attempt failed: {e}")
 
@@ -834,9 +880,7 @@ class ModelManager:
             healthy_models = await self.list_healthy_models()
 
             # Filter to healthy models
-            available_models = [
-                model.id for model in all_models if model.id in healthy_models
-            ]
+            available_models = [model.id for model in all_models if model.id in healthy_models]
 
             return available_models
         except Exception as e:
@@ -867,9 +911,7 @@ class ModelManager:
             start_time = asyncio.get_event_loop().time()
 
             if model_info.provider == "lm_studio":
-                result = await self._test_lm_studio_response(
-                    model_info, prompt, timeout
-                )
+                result = await self._test_lm_studio_response(model_info, prompt, timeout)
             elif model_info.provider == "ollama":
                 result = await self._test_ollama_response(model_info, prompt, timeout)
             else:
@@ -937,9 +979,7 @@ class ModelManager:
     async def _discover_lm_studio_models(self) -> list[ModelInfo]:
         """Discover models from LM Studio."""
         if not self._lmstudio_enabled():
-            logger.info(
-                "LM Studio backend disabled by configuration — skipping discovery"
-            )
+            logger.info("LM Studio backend disabled by configuration — skipping discovery")
             return []
         try:
             async with aiohttp.ClientSession() as session:
@@ -962,16 +1002,12 @@ class ModelManager:
 
                         # TEMPORARY FIX: Skip codellama models that cause crashes
                         if "codellama" in model_id.lower():
-                            logger.info(
-                                f"🐛 DEBUG: Skipping codellama model: {model_id}"
-                            )
+                            logger.info(f"🐛 DEBUG: Skipping codellama model: {model_id}")
                             continue
 
                         # Skip duplicate models with numbered suffixes (e.g., :2, :3, :4, :5)
                         if ":" in model_id and model_id.split(":")[-1].isdigit():
-                            logger.info(
-                                f"🐛 DEBUG: Skipping duplicate model: {model_id}"
-                            )
+                            logger.info(f"🐛 DEBUG: Skipping duplicate model: {model_id}")
                             continue
 
                         model_info = ModelInfo(
@@ -1057,9 +1093,7 @@ class ModelManager:
             logger.warning(f"⚠️ LM Studio health check timed out for {model_info.id}")
             return False
         except aiohttp.ClientError as e:
-            logger.warning(
-                f"⚠️ LM Studio health check connection error for {model_info.id}: {e}"
-            )
+            logger.warning(f"⚠️ LM Studio health check connection error for {model_info.id}: {e}")
             return False
         except Exception as e:
             logger.error(f"LM Studio health check error for {model_info.id}: {e}")
@@ -1084,9 +1118,7 @@ class ModelManager:
             logger.warning(f"⚠️ Ollama health check timed out for {model_info.id}")
             return False
         except aiohttp.ClientError as e:
-            logger.warning(
-                f"⚠️ Ollama health check connection error for {model_info.id}: {e}"
-            )
+            logger.warning(f"⚠️ Ollama health check connection error for {model_info.id}: {e}")
             return False
         except Exception as e:
             logger.error(f"Ollama health check error for {model_info.id}: {e}")
@@ -1097,54 +1129,44 @@ class ModelManager:
         Smart GPU memory detection with multiple fallback methods
         Priority: pynvml > pytorch > nvidia-smi > powershell
         """
-        
+
         # Safety check - disable GPU operations during testing
-        if TESTING_MODE or GPU_DISABLED:
-            logger.info("🎮 GPU operations disabled during testing")
+        if _gpu_off():
+            logger.info("GPU operations disabled during testing (hard CPU-only mode)")
             return {
-                "total_gb": 32.0,
+                "total_gb": 0.0,
                 "used_gb": 0.0,
-                "free_gb": 32.0,
+                "free_gb": 0.0,
                 "usage_percent": 0.0,
-                "method": "mock"
+                "method": "hard_cpu_only",
             }
 
         # Method 1: pynvml (Mest pålitlig för NVIDIA)
         memory_info = await self.get_gpu_memory_info_pynvml()
         if memory_info:
-            logger.info(
-                f"🎮 GPU memory detected via pynvml: {memory_info['usage_percent']}%"
-            )
+            logger.info(f"GPU memory detected via pynvml: {memory_info['usage_percent']}%")
             return memory_info
 
         # Method 2: PyTorch CUDA (Om tillgängligt)
         memory_info = await self.get_gpu_memory_info_pytorch()
         if memory_info:
-            logger.info(
-                f"🎮 GPU memory detected via PyTorch: {memory_info['usage_percent']}%"
-            )
+            logger.info(f"GPU memory detected via PyTorch: {memory_info['usage_percent']}%")
             return memory_info
 
         # Method 3: nvidia-smi with Windows fixes
         memory_info = await self.get_gpu_memory_info_nvidia_smi_fixed()
         if memory_info:
-            logger.info(
-                f"🎮 GPU memory detected via nvidia-smi: {memory_info['usage_percent']}%"
-            )
+            logger.info(f"GPU memory detected via nvidia-smi: {memory_info['usage_percent']}%")
             return memory_info
 
         # Method 4: PowerShell WMI (Baseline fallback)
         memory_info = await self.get_gpu_memory_info_powershell()
         if memory_info:
-            logger.info(
-                f"🎮 GPU memory detected via PowerShell: {memory_info['usage_percent']}%"
-            )
+            logger.info(f"GPU memory detected via PowerShell: {memory_info['usage_percent']}%")
             return memory_info
 
         # Method 5: Static fallback för RTX 5090
-        logger.warning(
-            "🎮 All GPU memory detection methods failed, using RTX 5090 defaults"
-        )
+        logger.warning("All GPU memory detection methods failed, using RTX 5090 defaults")
         return {
             "used_gb": 5.0,  # Conservative estimate
             "total_gb": 32.0,  # RTX 5090 has 32GB
@@ -1181,7 +1203,7 @@ class ModelManager:
             }
 
         except Exception as e:
-            logger.error(f"🎮 pynvml GPU memory check failed: {e}")
+            logger.error(f"pynvml GPU memory check failed: {e}")
             return None
 
     async def get_gpu_memory_info_pytorch(self):
@@ -1235,9 +1257,7 @@ class ModelManager:
                 timeout=15,  # Longer timeout for Windows
                 shell=False,  # Don't use shell on Windows
                 creationflags=(
-                    subprocess.CREATE_NO_WINDOW
-                    if hasattr(subprocess, "CREATE_NO_WINDOW")
-                    else 0
+                    subprocess.CREATE_NO_WINDOW if hasattr(subprocess, "CREATE_NO_WINDOW") else 0
                 ),
             )
 
@@ -1257,9 +1277,7 @@ class ModelManager:
                         "method": "nvidia_smi_fixed",
                     }
                 except ValueError:
-                    logger.error(
-                        f"🎮 Failed to parse nvidia-smi output: {result.stdout}"
-                    )
+                    logger.error(f"🎮 Failed to parse nvidia-smi output: {result.stdout}")
 
         except subprocess.TimeoutExpired:
             logger.error("🎮 nvidia-smi command timed out (15s)")
@@ -1326,9 +1344,7 @@ class ModelManager:
             int: Number of models unloaded
         """
         try:
-            logger.info(
-                f"🧹 Starting smart memory cleanup (target: {target_vram_percent}%)"
-            )
+            logger.info(f"🧹 Starting smart memory cleanup (target: {target_vram_percent}%)")
 
             # Get current VRAM usage
             gpu_info = await self.get_gpu_memory_info()
@@ -1443,19 +1459,13 @@ class ModelManager:
         """Smart fallback based on available GPU memory for RTX 5090"""
         if available_gb >= 21:
             logger.info("🔄 Falling back to medium_load config")
-            return await self.ensure_models_loaded(
-                MEMORY_CONFIGS["medium_load"]["models"]
-            )
+            return await self.ensure_models_loaded(MEMORY_CONFIGS["medium_load"]["models"])
         elif available_gb >= 13:
             logger.info("🔄 Falling back to light_load config")
-            return await self.ensure_models_loaded(
-                MEMORY_CONFIGS["light_load"]["models"]
-            )
+            return await self.ensure_models_loaded(MEMORY_CONFIGS["light_load"]["models"])
         elif available_gb >= 6:
             logger.info("🔄 Loading single model only")
-            return await self.ensure_models_loaded(
-                [MEMORY_CONFIGS["light_load"]["models"][0]]
-            )
+            return await self.ensure_models_loaded([MEMORY_CONFIGS["light_load"]["models"][0]])
         else:
             logger.warning("❌ Insufficient GPU memory for any models")
             return []
@@ -1469,18 +1479,16 @@ class ModelManager:
                 "pynvml": {"method": "mock", "usage_percent": 0.0},
                 "pytorch": {"method": "mock", "usage_percent": 0.0},
                 "nvidia_smi": {"method": "mock", "usage_percent": 0.0},
-                "powershell": {"method": "mock", "usage_percent": 0.0}
+                "powershell": {"method": "mock", "usage_percent": 0.0},
             }
-            
+
         results = {}
 
         # Test pynvml
         try:
             pynvml_result = await self.get_gpu_memory_info_pynvml()
             results["pynvml"] = pynvml_result
-            logger.info(
-                f"🎮 pynvml test: {'✅ SUCCESS' if pynvml_result else '❌ FAILED'}"
-            )
+            logger.info(f"🎮 pynvml test: {'✅ SUCCESS' if pynvml_result else '❌ FAILED'}")
         except Exception as e:
             results["pynvml"] = None
             logger.error(f"🎮 pynvml test failed: {e}")
@@ -1489,9 +1497,7 @@ class ModelManager:
         try:
             pytorch_result = await self.get_gpu_memory_info_pytorch()
             results["pytorch"] = pytorch_result
-            logger.info(
-                f"🎮 PyTorch test: {'✅ SUCCESS' if pytorch_result else '❌ FAILED'}"
-            )
+            logger.info(f"🎮 PyTorch test: {'✅ SUCCESS' if pytorch_result else '❌ FAILED'}")
         except Exception as e:
             results["pytorch"] = None
             logger.error(f"🎮 PyTorch test failed: {e}")
@@ -1500,9 +1506,7 @@ class ModelManager:
         try:
             nvidia_result = await self.get_gpu_memory_info_nvidia_smi_fixed()
             results["nvidia_smi"] = nvidia_result
-            logger.info(
-                f"🎮 nvidia-smi test: {'✅ SUCCESS' if nvidia_result else '❌ FAILED'}"
-            )
+            logger.info(f"🎮 nvidia-smi test: {'✅ SUCCESS' if nvidia_result else '❌ FAILED'}")
         except Exception as e:
             results["nvidia_smi"] = None
             logger.error(f"🎮 nvidia-smi test failed: {e}")
@@ -1511,9 +1515,7 @@ class ModelManager:
         try:
             ps_result = await self.get_gpu_memory_info_powershell()
             results["powershell"] = ps_result
-            logger.info(
-                f"🎮 PowerShell test: {'✅ SUCCESS' if ps_result else '❌ FAILED'}"
-            )
+            logger.info(f"🎮 PowerShell test: {'✅ SUCCESS' if ps_result else '❌ FAILED'}")
         except Exception as e:
             results["powershell"] = None
             logger.error(f"🎮 PowerShell test failed: {e}")
@@ -1559,9 +1561,7 @@ class ModelManager:
             ],
         }
 
-    async def get_models_for_agent(
-        self, agent_type: str, num_models: int = 2
-    ) -> list[str]:
+    async def get_models_for_agent(self, agent_type: str, num_models: int = 2) -> list[str]:
         """
         Get best models for a specific agent type.
 
@@ -1580,18 +1580,12 @@ class ModelManager:
         available_ids = [model.id for model in available_models]
 
         # Filter to only available models
-        available_preferred = [
-            model for model in preferred_models if model in available_ids
-        ]
+        available_preferred = [model for model in preferred_models if model in available_ids]
 
         # If not enough preferred models, add any available
         if len(available_preferred) < num_models:
-            other_available = [
-                model for model in available_ids if model not in available_preferred
-            ]
-            available_preferred.extend(
-                other_available[: num_models - len(available_preferred)]
-            )
+            other_available = [model for model in available_ids if model not in available_preferred]
+            available_preferred.extend(other_available[: num_models - len(available_preferred)])
 
         return available_preferred[:num_models]
 

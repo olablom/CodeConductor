@@ -1,3 +1,14 @@
+# --- HARD CPU-ONLY GUARD (måste ligga allra först) ---
+import os
+if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+    # Tvinga RAG till mock-läge
+    os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
+    os.environ.setdefault("VLLM_NO_CUDA", "1")
+    os.environ["CC_GPU_DISABLED"] = "1"
+    os.environ["CC_TESTING_MODE"] = "1"
+    os.environ["CC_ULTRA_MOCK"] = "1"
+# ------------------------------------------------------
+
 """
 RAG (Retrieval-Augmented Generation) System for CodeConductor
 
@@ -84,6 +95,14 @@ class RAGSystem:
         self.vector_db_path = Path(vector_db_path)
         self.vector_db_path.mkdir(exist_ok=True)
 
+        # FORCE MOCK MODE IN TEST ENVIRONMENT
+        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+            logger.info("RAG system forced to mock mode for testing")
+            self.embedding_model = None
+            self.text_splitter = None
+            self.vector_store = None
+            return
+
         # Check if RAG dependencies are available
         if not RAG_AVAILABLE:
             logger.warning(
@@ -119,6 +138,12 @@ class RAGSystem:
 
     def _initialize_vector_store(self):
         """Initialize or load existing vector store."""
+        # FORCE MOCK MODE IN TEST ENVIRONMENT
+        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+            logger.info("Vector store initialization skipped - test mode")
+            self.vector_store = None
+            return
+            
         if not RAG_AVAILABLE or not self.embedding_model:
             logger.warning("Vector store initialization skipped - RAG not available")
             self.vector_store = None
@@ -145,6 +170,11 @@ class RAGSystem:
 
     def _index_project_files(self):
         """Index project files for context retrieval."""
+        # FORCE MOCK MODE IN TEST ENVIRONMENT
+        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+            logger.info("Project indexing skipped - test mode")
+            return
+            
         if not self.vector_store or not self.text_splitter:
             logger.warning("Project indexing skipped - RAG not available")
             return
@@ -169,58 +199,39 @@ class RAGSystem:
                     )
                     documents.append(doc)
                 except Exception as e:
-                    logger.warning(f"Could not read {py_file}: {e}")
+                    logger.warning(f"Failed to index {py_file}: {e}")
 
-        # Index README and documentation
-        for doc_file in self.project_root.glob("*.md"):
-            try:
-                with open(doc_file, encoding="utf-8") as f:
-                    content = f.read()
+        # Index markdown files
+        for md_file in self.project_root.rglob("*.md"):
+            if "venv" not in str(md_file) and "node_modules" not in str(md_file):
+                try:
+                    with open(md_file, encoding="utf-8") as f:
+                        content = f.read()
 
-                doc = Document(
-                    page_content=content,
-                    metadata={
-                        "source": str(doc_file),
-                        "type": "documentation",
-                        "filename": doc_file.name,
-                    },
-                )
-                documents.append(doc)
-            except Exception as e:
-                logger.warning(f"Could not read {doc_file}: {e}")
+                    # Create document with metadata
+                    doc = Document(
+                        page_content=content,
+                        metadata={
+                            "source": str(md_file),
+                            "type": "documentation",
+                            "filename": md_file.name,
+                        },
+                    )
+                    documents.append(doc)
+                except Exception as e:
+                    logger.warning(f"Failed to index {md_file}: {e}")
 
-        # Index JSON files (patterns, configs)
-        for json_file in self.project_root.glob("*.json"):
-            try:
-                with open(json_file, encoding="utf-8") as f:
-                    data = json.load(f)
-
-                # Convert JSON to readable text
-                content = json.dumps(data, indent=2)
-                doc = Document(
-                    page_content=content,
-                    metadata={
-                        "source": str(json_file),
-                        "type": "json_data",
-                        "filename": json_file.name,
-                    },
-                )
-                documents.append(doc)
-            except Exception as e:
-                logger.warning(f"Could not read {json_file}: {e}")
-
+        # Add documents to vector store
         if documents:
             try:
-                # Split documents into chunks
-                split_docs = self.text_splitter.split_documents(documents)
-
-                # Add to vector store
-                self.vector_store.add_documents(split_docs)
+                chunks = self.text_splitter.split_documents(documents)
+                self.vector_store.add_documents(chunks)
                 self.vector_store.persist()
-
-                logger.info(f"Indexed {len(split_docs)} document chunks")
+                logger.info(f"Indexed {len(documents)} files into vector store")
             except Exception as e:
-                logger.error(f"Error indexing documents: {e}")
+                logger.error(f"Failed to add documents to vector store: {e}")
+        else:
+            logger.warning("No documents found to index")
 
     def retrieve_context(
         self, task_description: str, k: int = 5
@@ -235,6 +246,23 @@ class RAGSystem:
         Returns:
             List of relevant documents with metadata
         """
+        # FORCE MOCK MODE IN TEST ENVIRONMENT
+        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+            logger.info("Context retrieval returning mock data - test mode")
+            return [
+                {
+                    "content": f"[MOCK] Test context for: {task_description}",
+                    "metadata": {
+                        "source": "mock",
+                        "type": "test_data",
+                        "filename": "mock_context.py",
+                    },
+                    "relevance_score": 0.85,
+                    "source": "mock",
+                }
+                for _ in range(min(k, 3))
+            ]
+            
         context_docs = []
 
         # Retrieve from local vectorstore
@@ -432,6 +460,11 @@ class RAGSystem:
             content: Document content
             metadata: Optional metadata dictionary
         """
+        # FORCE MOCK MODE IN TEST ENVIRONMENT
+        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+            logger.info(f"Document addition skipped - test mode (would add: {doc_id})")
+            return
+            
         if not self.vector_store or not RAG_AVAILABLE:
             logger.warning("Document addition skipped - RAG not available")
             return
@@ -467,6 +500,23 @@ class RAGSystem:
         Returns:
             List of relevant documents with metadata
         """
+        # FORCE MOCK MODE IN TEST ENVIRONMENT
+        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+            logger.info("Search returning mock data - test mode")
+            return [
+                {
+                    "id": f"mock_{i+1}",
+                    "content": f"[MOCK] Test result for query: {query}",
+                    "metadata": {
+                        "source": "mock",
+                        "type": "test_data",
+                        "filename": f"mock_result_{i+1}.py",
+                    },
+                    "relevance_score": 0.8 - (i * 0.1),
+                }
+                for i in range(min(top_k, 3))
+            ]
+            
         if not self.vector_store:
             logger.warning("Search skipped - RAG not available")
             return []
@@ -507,6 +557,14 @@ class RAGSystem:
         Returns:
             List of external content strings
         """
+        # FORCE MOCK MODE IN TEST ENVIRONMENT
+        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+            logger.info("External search returning mock data - test mode")
+            return [
+                f"[MOCK] External result for query: {query} - Result {i+1}"
+                for i in range(min(max_results, 2))
+            ]
+            
         try:
             return self.fetch_external_context(query, max_results=max_results)
         except Exception as e:
@@ -533,6 +591,11 @@ class RAGSystem:
         Args:
             pattern: Pattern data from learning system
         """
+        # FORCE MOCK MODE IN TEST ENVIRONMENT
+        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+            logger.info("Pattern addition skipped - test mode")
+            return
+            
         if not self.vector_store or not RAG_AVAILABLE:
             logger.info("Pattern addition skipped - RAG not available")
             return

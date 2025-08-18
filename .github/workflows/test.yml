@@ -9,6 +9,21 @@ on:
 env:
     PYTHONHASHSEED: 0
     CODECONDUCTOR_SEED: 1337
+    # Global CPU-lock environment variables
+    CC_TESTING_MODE: "1"
+    CC_GPU_DISABLED: "1"
+    CC_FORCE_GPU: "0"
+    CC_HARD_CPU_ONLY: "1"
+    CUDA_VISIBLE_DEVICES: ""
+    HF_HUB_OFFLINE: "1"
+    TORCH_USE_CUDA_DISABLED: "1"
+    VLLM_NO_CUDA: "1"
+    # Block LM Studio during testing
+    ENGINE_BACKENDS: "ollama"
+    LMSTUDIO_DISABLE: "1"
+    LMSTUDIO_CLI_DISABLE: "1"
+    DISCOVERY_DISABLE: "1"
+    ENGINE_DISCOVERY_MODE: "preloaded_only"
 
 jobs:
     test:
@@ -42,7 +57,7 @@ jobs:
 
             - name: Install package in editable mode
               run: |
-                  pip install -e .
+                  pip install -e .[test]
 
             - name: Run linting
               run: |
@@ -50,22 +65,18 @@ jobs:
                   black --check src/
                   flake8 src/ --max-line-length=88
 
-            - name: Run unit tests with JSON report
+            - name: Run CPU-locked unit tests with JSON report
               env:
                   PYTHONPATH: ${{ github.workspace }}/src
-                  CC_TESTING_MODE: 1
-                  CC_GPU_DISABLED: 1
               run: |
                   mkdir -p .artifacts
-                  python -m pytest tests/ -q --json-report --json-report-file .artifacts/report.json
+                  python -m pytest tests/ -q -m "not gpu and not vllm" --json-report --json-report-file .artifacts/report.json
 
-            - name: Run tests with coverage
+            - name: Run CPU-locked tests with coverage
               env:
                   PYTHONPATH: ${{ github.workspace }}/src
-                  CC_TESTING_MODE: 1
-                  CC_GPU_DISABLED: 1
               run: |
-                  python -m pytest --cov=codeconductor --cov-config=.coveragerc --cov-report=term-missing --cov-report=html
+                  python -m pytest -m "not gpu and not vllm" --cov=codeconductor --cov-config=.coveragerc --cov-report=term-missing --cov-report=html
 
             - name: Verify test results
               run: |
@@ -77,8 +88,9 @@ jobs:
                       passed = len([t for t in tests if t.get("outcome") == "passed"])
                       failed = len([t for t in tests if t.get("outcome") == "failed"])
                       skipped = len([t for t in tests if t.get("outcome") == "skipped"])
+                      xfailed = len([t for t in tests if t.get("outcome") == "xfailed"])
 
-                      print(f"Test Results: {passed} passed, {failed} failed, {skipped} skipped")
+                      print(f"Test Results: {passed} passed, {failed} failed, {skipped} skipped, {xfailed} xfailed")
 
                       if failed > 0:
                           print("❌ Tests failed!")

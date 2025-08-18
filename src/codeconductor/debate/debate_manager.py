@@ -38,7 +38,9 @@ class SingleModelDebateManager:
         output_file = output_dir / filename
 
         payload = {
-            "agents": ([getattr(a, "name", str(a)) for a in self.agents] if self.agents else []),
+            "agents": (
+                [getattr(a, "name", str(a)) for a in self.agents] if self.agents else []
+            ),
             "turns": self.transcript,
             "timestamp": datetime.now().isoformat(),
             "model": self.model_name or "unknown",
@@ -67,7 +69,9 @@ class CodeConductorDebateManager:
 
     async def _run_phase(self, calls: list[Any]) -> list[Any]:
         """Kör en fas av debatten med normaliserade awaitables"""
-        return await asyncio.gather(*[self._awaitable(c) for c in calls], return_exceptions=False)
+        return await asyncio.gather(
+            *[self._awaitable(c) for c in calls], return_exceptions=False
+        )
 
     def _default_agents(self) -> list[LocalAIAgent]:
         """Minimal set för tester; kan vara mockade eller enkla lokala agenter"""
@@ -84,13 +88,14 @@ class CodeConductorDebateManager:
             "has_propose": hasattr(agent, "propose") and callable(agent.propose),
             "has_rebuttal": hasattr(agent, "rebuttal") and callable(agent.rebuttal),
             "has_finalize": hasattr(agent, "finalize") and callable(agent.finalize),
-            "has_generate_response": hasattr(agent, "generate_response") and callable(agent.generate_response),
+            "has_generate_response": hasattr(agent, "generate_response")
+            and callable(agent.generate_response),
         }
 
     def _get_agent_response(self, agent, method: str, *args, **kwargs):
         """Hämta svar från agent baserat på tillgängliga metoder"""
         capabilities = self._check_agent_capabilities(agent)
-        
+
         if method == "propose" and capabilities["has_propose"]:
             return agent.propose(*args, **kwargs)
         elif method == "rebuttal" and capabilities["has_rebuttal"]:
@@ -107,11 +112,13 @@ class CodeConductorDebateManager:
                 prompt = "Provide your final recommendation."
             else:
                 prompt = "Provide your response."
-            
+
             # Använd generate_response som fallback
             return agent.generate_response(prompt)
         else:
-            raise AttributeError(f"Agent {agent.name} has no suitable method for {method}")
+            raise AttributeError(
+                f"Agent {agent.name} has no suitable method for {method}"
+            )
 
     async def conduct_debate(self, user_prompt: str) -> dict[str, Any]:
         """Conduct a multi-agent debate for code generation (FIXED VERSION)"""
@@ -121,14 +128,19 @@ class CodeConductorDebateManager:
             print("\n--- Initial Proposals ---\n")
 
             # Använd adapter för att hantera olika agent-typer
-            proposal_calls = [self._get_agent_response(agent, "propose", user_prompt) for agent in self.agents]
+            proposal_calls = [
+                self._get_agent_response(agent, "propose", user_prompt)
+                for agent in self.agents
+            ]
             proposals = await self._run_phase(proposal_calls)
 
             # Hantera resultaten
             for i, response in enumerate(proposals):
                 if isinstance(response, Exception):
                     print(f"❌ {self.agents[i].name} error during proposal: {response}")
-                    response = f"{self.agents[i].name} encountered an error: {str(response)}"
+                    response = (
+                        f"{self.agents[i].name} encountered an error: {str(response)}"
+                    )
                 else:
                     # Hantera både dict-format och str-format
                     if isinstance(response, dict) and "content" in response:
@@ -138,7 +150,11 @@ class CodeConductorDebateManager:
                     print(f"{self.agents[i].name}:\n{content}\n")
 
                 self.full_transcript.append(
-                    {"agent": self.agents[i].name, "turn": "proposal", "content": content if 'content' in locals() else str(response)}
+                    {
+                        "agent": self.agents[i].name,
+                        "turn": "proposal",
+                        "content": content if "content" in locals() else str(response),
+                    }
                 )
 
             # 2. Rebuttal round: each agent sees others' proposals
@@ -156,17 +172,27 @@ class CodeConductorDebateManager:
                         (
                             entry["content"]
                             for entry in reversed(self.full_transcript)
-                            if entry["agent"] == other.name and entry["turn"] == "proposal"
+                            if entry["agent"] == other.name
+                            and entry["turn"] == "proposal"
                         ),
                         "",
                     )
                     rebuttal_prompt += f"{other.name}: {last_proposal}\n"
 
                 rebuttal_prompt += "Please provide your rebuttal or counter-argument."
-                
+
                 # Skapa state för rebuttal
-                state = {"prompt": rebuttal_prompt, "proposals": [entry["content"] for entry in self.full_transcript if entry["turn"] == "proposal"]}
-                rebuttal_calls.append(self._get_agent_response(agent, "rebuttal", state))
+                state = {
+                    "prompt": rebuttal_prompt,
+                    "proposals": [
+                        entry["content"]
+                        for entry in self.full_transcript
+                        if entry["turn"] == "proposal"
+                    ],
+                }
+                rebuttal_calls.append(
+                    self._get_agent_response(agent, "rebuttal", state)
+                )
 
             # Kör alla rebuttals parallellt
             rebuttals = await self._run_phase(rebuttal_calls)
@@ -175,7 +201,10 @@ class CodeConductorDebateManager:
             for i, response in enumerate(rebuttals):
                 if isinstance(response, Exception):
                     print(f"❌ {self.agents[i].name} error during rebuttal: {response}")
-                    response = f"{self.agents[i].name} encountered an error during rebuttal: {str(response)}"
+                    response = (
+                        f"{self.agents[i].name} encountered an error during rebuttal: "
+                        f"{str(response)}"
+                    )
                 else:
                     # Hantera både dict-format och str-format
                     if isinstance(response, dict) and "content" in response:
@@ -185,7 +214,11 @@ class CodeConductorDebateManager:
                     print(f"{self.agents[i].name} (rebuttal):\n{content}\n")
 
                 self.full_transcript.append(
-                    {"agent": self.agents[i].name, "turn": "rebuttal", "content": content if 'content' in locals() else str(response)}
+                    {
+                        "agent": self.agents[i].name,
+                        "turn": "rebuttal",
+                        "content": content if "content" in locals() else str(response),
+                    }
                 )
 
             # 3. Final recommendations
@@ -196,9 +229,20 @@ class CodeConductorDebateManager:
             for agent in self.agents:
                 # Skapa state för final recommendation
                 state = {
-                    "prompt": "Based on the debate so far, what is your final recommendation for the code implementation?",
-                    "proposals": [entry["content"] for entry in self.full_transcript if entry["turn"] == "proposal"],
-                    "rebuttals": [entry["content"] for entry in self.full_transcript if entry["turn"] == "rebuttal"]
+                    "prompt": (
+                        "Based on the debate so far, what is your final recommendation "
+                        "for the code implementation?"
+                    ),
+                    "proposals": [
+                        entry["content"]
+                        for entry in self.full_transcript
+                        if entry["turn"] == "proposal"
+                    ],
+                    "rebuttals": [
+                        entry["content"]
+                        for entry in self.full_transcript
+                        if entry["turn"] == "rebuttal"
+                    ],
                 }
                 final_calls.append(self._get_agent_response(agent, "finalize", state))
 
@@ -208,8 +252,14 @@ class CodeConductorDebateManager:
             # Hantera resultaten
             for i, response in enumerate(finals):
                 if isinstance(response, Exception):
-                    print(f"❌ {self.agents[i].name} error during final recommendation: {response}")
-                    response = f"{self.agents[i].name} encountered an error during final recommendation generation."
+                    print(
+                        f"❌ {self.agents[i].name} error during final recommendation: "
+                        f"{response}"
+                    )
+                    response = (
+                        f"{self.agents[i].name} encountered an error during final "
+                        f"recommendation generation."
+                    )
                 else:
                     # Hantera både dict-format och str-format
                     if isinstance(response, dict) and "content" in response:
@@ -222,7 +272,7 @@ class CodeConductorDebateManager:
                     {
                         "agent": self.agents[i].name,
                         "turn": "final_recommendation",
-                        "content": content if 'content' in locals() else str(response),
+                        "content": content if "content" in locals() else str(response),
                     }
                 )
 
@@ -264,7 +314,9 @@ class CodeConductorDebateManager:
         artifacts_file = output_dir / f"debate_transcript_{int(time.time())}.json"
 
         payload = {
-            "agents": ([agent.name for agent in self.agents] if hasattr(self, "agents") else []),
+            "agents": (
+                [agent.name for agent in self.agents] if hasattr(self, "agents") else []
+            ),
             "turns": self.full_transcript,
             "timestamp": datetime.now().isoformat(),
             "model": getattr(self, "model_name", "unknown"),

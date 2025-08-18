@@ -6,16 +6,14 @@ A simple agent that uses local models, following the same structure as the OpenA
 
 import asyncio
 import logging
-import os
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any
+
+from .base_agent import BaseAIAgent
 
 if TYPE_CHECKING:  # type hints only, avoid heavy imports at runtime
     from ..ensemble.single_model_engine import SingleModelEngine
 
 logger = logging.getLogger(__name__)
-
-
-from .base_agent import BaseAIAgent
 
 
 class LocalAIAgent(BaseAIAgent):
@@ -31,7 +29,7 @@ class LocalAIAgent(BaseAIAgent):
         self.persona = persona
         self.conversation_history = [{"role": "system", "content": persona}]
         self.shared_engine = None  # Will be set by debate manager
-        
+
         # VIKTIGT: Wrappa metoderna EFTER att alla är definierade
         self._wrap_methods()
 
@@ -47,51 +45,90 @@ class LocalAIAgent(BaseAIAgent):
         """Generate initial proposal"""
         # Kontrollera GPU_DISABLED först
         if self._check_gpu_disabled():
-            return {"content": f"[MOCKED] {prompt}", "agent": self.name, "type": "proposal"}
-        
+            return {
+                "content": "[MOCKED] " + prompt,
+                "agent": self.name,
+                "type": "proposal",
+            }
+
         # Riktig implementation endast om GPU är tillgänglig
         if self.shared_engine is None:
-            return {"content": f"Error: No shared engine set for {self.name}", "agent": self.name, "type": "proposal"}
-        
+            return {
+                "content": "Error: No shared engine set for " + self.name,
+                "agent": self.name,
+                "type": "proposal",
+            }
+
         try:
             response = asyncio.run(self.generate_response(prompt))
             return {"content": response, "agent": self.name, "type": "proposal"}
         except Exception as e:
-            return {"content": f"Error: {str(e)}", "agent": self.name, "type": "proposal"}
+            return {
+                "content": "Error: " + str(e),
+                "agent": self.name,
+                "type": "proposal",
+            }
 
     def rebuttal(self, state: dict[str, Any], **kw) -> dict[str, Any]:
         """Generate rebuttal based on other agents' proposals"""
         # Kontrollera GPU_DISABLED först
         if self._check_gpu_disabled():
-            return {"content": f"[MOCKED] rebuttal for debate state", "agent": self.name, "type": "rebuttal"}
-        
-        prompt = f"Based on the debate state: {state}, provide your rebuttal."
-        
+            return {
+                "content": "[MOCKED] rebuttal for debate state",
+                "agent": self.name,
+                "type": "rebuttal",
+            }
+
+        prompt = (
+            "Based on the debate state: " + str(state) +
+            ", provide your rebuttal."
+        )
+
         if self.shared_engine is None:
-            return {"content": f"Error: No shared engine set for {self.name}", "agent": self.name, "type": "rebuttal"}
-        
+            return {
+                "content": "Error: No shared engine set for " + self.name,
+                "agent": self.name,
+                "type": "rebuttal",
+            }
+
         try:
             response = asyncio.run(self.generate_response(prompt))
             return {"content": response, "agent": self.name, "type": "rebuttal"}
         except Exception as e:
-            return {"content": f"Error: {str(e)}", "agent": self.name, "type": "rebuttal"}
+            return {
+                "content": "Error: " + str(e),
+                "agent": self.name,
+                "type": "rebuttal",
+            }
 
     def finalize(self, state: dict[str, Any], **kw) -> dict[str, Any]:
         """Generate final recommendation"""
         # Kontrollera GPU_DISABLED först
         if self._check_gpu_disabled():
-            return {"content": f"[MOCKED] final recommendation for debate", "agent": self.name, "type": "final"}
-        
-        prompt = f"Based on the debate state: {state}, provide your final recommendation."
-        
+            return {
+                "content": "[MOCKED] final recommendation for debate",
+                "agent": self.name,
+                "type": "final",
+            }
+
+        prompt = (
+            "Based on the debate state: "
+            + str(state)
+            + ", provide your final recommendation."
+        )
+
         if self.shared_engine is None:
-            return {"content": f"Error: No shared engine set for {self.name}", "agent": self.name, "type": "final"}
-        
+            return {
+                "content": "Error: No shared engine set for " + self.name,
+                "agent": self.name,
+                "type": "final",
+            }
+
         try:
             response = asyncio.run(self.generate_response(prompt))
             return {"content": response, "agent": self.name, "type": "final"}
         except Exception as e:
-            return {"content": f"Error: {str(e)}", "agent": self.name, "type": "final"}
+            return {"content": "Error: " + str(e), "agent": self.name, "type": "final"}
 
     async def generate_response(self, user_prompt: str, timeout: float = 120.0) -> str:
         """
@@ -106,14 +143,25 @@ class LocalAIAgent(BaseAIAgent):
         """
         # Kontrollera GPU_DISABLED först
         if self._check_gpu_disabled():
-            return f"[MOCKED] {self.name} response to: {user_prompt}"
-        
+            return "[MOCKED] " + self.name + " response to: " + user_prompt
+
         try:
             # Create the full prompt with persona
-            full_prompt = f"System: {self.persona}\n\nUser: {user_prompt}\n\n{self.name}:"
+            full_prompt = (
+                "System: "
+                + self.persona
+                + "\n\nUser: "
+                + user_prompt
+                + "\n\n"
+                + self.name
+                + ":"
+            )
 
             logger.info(
-                f"[PERSONA] {self.name}: {self.persona.splitlines()[0] if self.persona else ''}"
+                "[PERSONA] "
+                + self.name
+                + ": "
+                + (self.persona.splitlines()[0] if self.persona else "")
             )
             logger.info(f"{self.name} generating response...")
 
@@ -207,7 +255,9 @@ class LocalDebateManager:
                     {
                         "agent": agent.name,
                         "turn": "proposal",
-                        "content": f"{agent.name} timed out during proposal generation.",
+                        "content": (
+                            f"{agent.name} timed out during proposal generation."
+                        ),
                     }
                 )
             except Exception as e:
@@ -231,14 +281,22 @@ class LocalDebateManager:
                         for r in debate_responses
                         if r["turn"] == "proposal" and r["agent"] != agent.name
                     ]
-                    rebuttal_prompt = f"User: {user_prompt}\n\nOther agents' proposals:\n"
+                    rebuttal_prompt = (
+                        f"User: {user_prompt}\n\nOther agents' proposals:\n"
+                    )
                     for prop in other_proposals:
-                        rebuttal_prompt += f"- {prop['agent']}: {prop['content'][:200]}...\n\n"
-                    rebuttal_prompt += "Please provide your rebuttal to these proposals:"
+                        rebuttal_prompt += (
+                            f"- {prop['agent']}: " f"{prop['content'][:200]}...\n\n"
+                        )
+                    rebuttal_prompt += (
+                        "Please provide your rebuttal to these proposals:"
+                    )
 
                     logger.info(f"{agent.name} making rebuttal...")
                     response = await asyncio.wait_for(
-                        agent.generate_response(rebuttal_prompt, timeout=timeout_per_turn),
+                        agent.generate_response(
+                            rebuttal_prompt, timeout=timeout_per_turn
+                        ),
                         timeout=timeout_per_turn,
                     )
                     debate_responses.append(
@@ -255,7 +313,9 @@ class LocalDebateManager:
                         {
                             "agent": agent.name,
                             "turn": "rebuttal",
-                            "content": f"{agent.name} timed out during rebuttal generation.",
+                            "content": (
+                                f"{agent.name} timed out during rebuttal generation."
+                            ),
                         }
                     )
                 except Exception as e:
@@ -274,7 +334,10 @@ class LocalDebateManager:
             for agent in self.agents:
                 try:
                     # Create final recommendation prompt
-                    final_prompt = f"User: {user_prompt}\n\nBased on all the proposals and rebuttals, provide your final recommendation:"
+                    final_prompt = (
+                        f"User: {user_prompt}\n\nBased on all the proposals and "
+                        f"rebuttals, provide your final recommendation:"
+                    )
 
                     logger.info(f"{agent.name} making final recommendation...")
                     response = await asyncio.wait_for(
@@ -295,7 +358,10 @@ class LocalDebateManager:
                         {
                             "agent": agent.name,
                             "turn": "final_recommendation",
-                            "content": f"{agent.name} timed out during final recommendation generation.",
+                            "content": (
+                            f"{agent.name} timed out during final recommendation "
+                            f"generation."
+                        ),
                         }
                     )
                 except Exception as e:

@@ -13,12 +13,13 @@ class BaseAIAgent:
         # Detta görs i en separat metod som subklassen anropar
 
     def _wrap_methods(self):
-        """Wrappa alla metoder med ensure_async - anropa detta i subklassens __init__ sist"""
+        """Wrappa alla metoder med ensure_async - anropa detta i subklassens
+        __init__ sist"""
         # Spara original-metoderna
         self._propose_original = self.propose
         self._rebuttal_original = self.rebuttal
         self._finalize_original = self.finalize
-        
+
         # Wrappa med ensure_async
         self.propose = ensure_async(self._propose_original)
         self.rebuttal = ensure_async(self._rebuttal_original)
@@ -29,17 +30,29 @@ class BaseAIAgent:
         return os.getenv("CC_GPU_DISABLED", "0") == "1"
 
     # Subklasser definierar dessa (sync eller async går bra)
-    def propose(self, prompt: str, **kw) -> Dict[str, Any]: 
+    def propose(self, prompt: str, **kw) -> Dict[str, Any]:
         if self._check_gpu_disabled():
-            return {"content": f"[MOCKED] {prompt}", "agent": self.name, "type": "proposal"}
+            return {
+                "content": "[MOCKED] " + str(prompt),
+                "agent": self.name,
+                "type": "proposal",
+            }
         raise NotImplementedError("Subklasser måste implementera propose")
-    
-    def rebuttal(self, state: Dict[str, Any], **kw) -> Dict[str, Any]: 
+
+    def rebuttal(self, state: Dict[str, Any], **kw) -> Dict[str, Any]:
         if self._check_gpu_disabled():
-            return {"content": f"[MOCKED] rebuttal for {state}", "agent": self.name, "type": "rebuttal"}
+            return {
+                "content": "[MOCKED] rebuttal for " + str(state),
+                "agent": self.name,
+                "type": "rebuttal",
+            }
         raise NotImplementedError("Subklasser måste implementera rebuttal")
-    
-    def finalize(self, state: Dict[str, Any], **kw) -> Dict[str, Any]: 
+
+    def finalize(self, state: Dict[str, Any], **kw) -> Dict[str, Any]:
         if self._check_gpu_disabled():
-            return {"content": f"[MOCKED] final for {state}", "agent": self.name, "type": "final"}
+            return {
+                "content": "[MOCKED] final for " + str(state),
+                "agent": self.name,
+                "type": "final",
+            }
         raise NotImplementedError("Subklasser måste implementera finalize")

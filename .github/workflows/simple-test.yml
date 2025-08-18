@@ -7,8 +7,24 @@ on:
         branches: [main]
 
 jobs:
-    simple-test:
+    test:
         runs-on: ubuntu-latest
+        env:
+            # CPU-lock environment variables
+            CC_TESTING_MODE: "1"
+            CC_GPU_DISABLED: "1"
+            CC_FORCE_GPU: "0"
+            CC_HARD_CPU_ONLY: "1"
+            CUDA_VISIBLE_DEVICES: ""
+            HF_HUB_OFFLINE: "1"
+            TORCH_USE_CUDA_DISABLED: "1"
+            VLLM_NO_CUDA: "1"
+            # Block LM Studio during testing
+            ENGINE_BACKENDS: "ollama"
+            LMSTUDIO_DISABLE: "1"
+            LMSTUDIO_CLI_DISABLE: "1"
+            DISCOVERY_DISABLE: "1"
+            ENGINE_DISCOVERY_MODE: "preloaded_only"
         steps:
             - uses: actions/checkout@v4
 
@@ -19,8 +35,12 @@ jobs:
             - name: Install
               run: |
                   python -m pip install --upgrade pip
-                  pip install -e .
+                  pip install -e .[test]
 
             - name: Test import
               run: |
                   python -c "import codeconductor; print('✅ CodeConductor imports successfully')"
+
+            - name: Quick CPU-locked test
+              run: |
+                  python -m pytest tests/ -q -m "not gpu and not vllm" --maxfail=1 --tb=short

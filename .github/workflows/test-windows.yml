@@ -1,114 +1,126 @@
 name: CodeConductor Tests (Windows)
 
 on:
-  pull_request:
-    branches: [ main, develop ]
-  push:
-    branches: [ main ]
+    pull_request:
+        branches: [main, develop]
+    push:
+        branches: [main]
 
 env:
-  PYTHONHASHSEED: 0
-  CODECONDUCTOR_SEED: 1337
+    PYTHONHASHSEED: 0
+    CODECONDUCTOR_SEED: 1337
+    # Global CPU-lock environment variables
+    CC_TESTING_MODE: "1"
+    CC_GPU_DISABLED: "1"
+    CC_FORCE_GPU: "0"
+    CC_HARD_CPU_ONLY: "1"
+    CUDA_VISIBLE_DEVICES: ""
+    HF_HUB_OFFLINE: "1"
+    TORCH_USE_CUDA_DISABLED: "1"
+    VLLM_NO_CUDA: "1"
+    # Block LM Studio during testing
+    ENGINE_BACKENDS: "ollama"
+    LMSTUDIO_DISABLE: "1"
+    LMSTUDIO_CLI_DISABLE: "1"
+    DISCOVERY_DISABLE: "1"
+    ENGINE_DISCOVERY_MODE: "preloaded_only"
 
 jobs:
-  test-windows:
-    runs-on: windows-latest
+    test-windows:
+        runs-on: windows-latest
 
-    strategy:
-      matrix:
-        python-version: [3.11]
+        strategy:
+            matrix:
+                python-version: [3.11]
 
-    steps:
-    - uses: actions/checkout@v4
+        steps:
+            - uses: actions/checkout@v4
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
+            - name: Set up Python ${{ matrix.python-version }}
+              uses: actions/setup-python@v4
+              with:
+                  python-version: ${{ matrix.python-version }}
 
-    - name: Cache pip dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+            - name: Cache pip dependencies
+              uses: actions/cache@v4
+              with:
+                  path: ~/.cache/pip
+                  key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pip-
 
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest-json-report pytest-cov pytest-timeout
-        
-    - name: Install package in editable mode
-      run: |
-        pip install -e .
+            - name: Install Python dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install -r requirements.txt
+                  pip install pytest-json-report pytest-cov pytest-timeout
 
-    - name: Run tests with JSON report
-      env:
-        PYTHONPATH: ${{ github.workspace }}/src
-        CC_TESTING_MODE: 1
-        CC_GPU_DISABLED: 1
-      run: |
-        mkdir -p .artifacts
-        python -m pytest tests/ -q --json-report --json-report-file .artifacts/report.json
+            - name: Install package in editable mode
+              run: |
+                  pip install -e .[test]
 
-    - name: Verify Windows-specific test results
-      run: |
-        python - <<'PY'
-        import json, sys
-        try:
-            d = json.load(open(".artifacts/report.json", "r", encoding="utf-8"))
-            tests = d.get("tests", [])
-            passed = len([t for t in tests if t.get("outcome") == "passed"])
-            failed = len([t for t in tests if t.get("outcome") == "failed"])
-            skipped = len([t for t in tests if t.get("outcome") == "skipped"])
+            - name: Run CPU-locked tests with JSON report
+              env:
+                  PYTHONPATH: ${{ github.workspace }}/src
+              run: |
+                  mkdir -p .artifacts
+                  python -m pytest tests/ -q -m "not gpu and not vllm" --json-report --json-report-file .artifacts/report.json
 
-            print(f"Windows Test Results: {passed} passed, {failed} failed, {skipped} skipped")
+            - name: Verify Windows-specific test results
+              run: |
+                  python - <<'PY'
+                  import json, sys
+                  try:
+                      d = json.load(open(".artifacts/report.json", "r", encoding="utf-8"))
+                      tests = d.get("tests", [])
+                      passed = len([t for t in tests if t.get("outcome") == "passed"])
+                      failed = len([t for t in tests if t.get("outcome") == "failed"])
+                      skipped = len([t for t in tests if t.get("outcome") == "skipped"])
+                      xfailed = len([t for t in tests if t.get("outcome") == "xfailed"])
 
-            # On Windows, we expect some vLLM skips (but be flexible)
-            if skipped > 0:
-                print(f"ℹ️ {skipped} tests skipped (expected on Windows due to vLLM dependencies)")
+                      print(f"Windows Test Results: {passed} passed, {failed} failed, {skipped} skipped, {xfailed} xfailed")
 
-            if failed > 0:
-                print("❌ Tests failed!")
-                sys.exit(1)
+                      # On Windows, we expect some vLLM skips (but be flexible)
+                      if skipped > 0:
+                          print(f"ℹ️ {skipped} tests skipped (expected on Windows due to vLLM dependencies)")
 
-            print("✅ Windows tests: All passed!")
+                      if failed > 0:
+                          print("❌ Tests failed!")
+                          sys.exit(1)
 
-        except Exception as e:
-            print(f"❌ Error reading test report: {e}")
-            sys.exit(1)
-        PY
+                      print("✅ Windows tests: All passed!")
 
-    - name: Run tests with coverage
-      env:
-        PYTHONPATH: ${{ github.workspace }}/src
-        CC_TESTING_MODE: 1
-        CC_GPU_DISABLED: 1
-      run: |
-        python -m pytest --cov=codeconductor --cov-config=.coveragerc --cov-report=term-missing --cov-report=html
+                  except Exception as e:
+                      print(f"❌ Error reading test report: {e}")
+                      sys.exit(1)
+                  PY
 
-    - name: Upload test report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-report-windows
-        path: .artifacts/report.json
+            - name: Run CPU-locked tests with coverage
+              env:
+                  PYTHONPATH: ${{ github.workspace }}/src
+              run: |
+                  python -m pytest -m "not gpu and not vllm" --cov=codeconductor --cov-config=.coveragerc --cov-report=term-missing --cov-report=html
 
-    - name: Upload coverage HTML
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-html-windows
-        path: htmlcov/
+            - name: Upload test report
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: test-report-windows
+                  path: .artifacts/report.json
 
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-results-windows
-        path: |
-          .artifacts/
-          htmlcov/
-          *.log
+            - name: Upload coverage HTML
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: coverage-html-windows
+                  path: htmlcov/
+
+            - name: Upload test results
+              uses: actions/upload-artifact@v4
+              if: always()
+              with:
+                  name: test-results-windows
+                  path: |
+                      .artifacts/
+                      htmlcov/
+                      *.log
