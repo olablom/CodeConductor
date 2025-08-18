@@ -7,13 +7,12 @@ Provides user feedback with toast notifications and sounds.
 
 import logging
 import time
-from typing import Optional
-from pathlib import Path
 
 # Windows-specific imports
 try:
-    from win10toast import ToastNotifier
     import winsound
+
+    from win10toast import ToastNotifier
 
     WINDOWS_AVAILABLE = True
 except ImportError:
@@ -44,7 +43,7 @@ class NotificationManager:
         title: str,
         message: str,
         duration: int = 5,
-        icon_path: Optional[str] = None,
+        icon_path: str | None = None,
         sound: bool = True,
     ):
         """
@@ -113,9 +112,7 @@ class NotificationManager:
         if file_count > 0:
             message = f"Code detected! Extracted {file_count} files."
 
-        self.show_notification(
-            title="🤖 CodeConductor", message=message, duration=5, sound=True
-        )
+        self.show_notification(title="🤖 CodeConductor", message=message, duration=5, sound=True)
 
     def tests_running(self):
         """Notify that tests are running."""
@@ -132,9 +129,7 @@ class NotificationManager:
         if test_count > 0:
             message = f"Tests passed! ({test_count} tests) ✅"
 
-        self.show_notification(
-            title="✅ CodeConductor", message=message, duration=8, sound=True
-        )
+        self.show_notification(title="✅ CodeConductor", message=message, duration=8, sound=True)
 
     def tests_failed(self, error_count: int = 0):
         """Notify that tests failed."""
@@ -142,9 +137,7 @@ class NotificationManager:
         if error_count > 0:
             message = f"Tests failed! ({error_count} errors) ❌"
 
-        self.show_notification(
-            title="❌ CodeConductor", message=message, duration=10, sound=True
-        )
+        self.show_notification(title="❌ CodeConductor", message=message, duration=10, sound=True)
 
     def pipeline_complete(self, success: bool = True):
         """Notify that pipeline is complete."""
@@ -178,7 +171,7 @@ class NotificationManager:
 
 
 # Global notification manager
-_global_notifications: Optional[NotificationManager] = None
+_global_notifications: NotificationManager | None = None
 
 
 def get_notification_manager() -> NotificationManager:

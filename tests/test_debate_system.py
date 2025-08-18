@@ -12,7 +12,7 @@ from pathlib import Path
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
 
-from codeconductor.debate import LocalAIAgent, CodeConductorDebateManager
+from codeconductor.debate import CodeConductorDebateManager, LocalAIAgent
 
 
 async def test_debate_system():
@@ -63,7 +63,7 @@ async def test_debate_system():
         # Conduct debate with timeout
         result = await asyncio.wait_for(
             debate_manager.conduct_debate(test_prompt),
-            timeout=60.0  # 60 second timeout
+            timeout=60.0,  # 60 second timeout
         )
 
         print("\n" + "=" * 50)
@@ -82,7 +82,7 @@ async def test_debate_system():
 
         return True
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         print("⏰ Debate timed out after 60 seconds")
         return False
     except Exception as e:
@@ -92,16 +92,16 @@ async def test_debate_system():
         # Cleanup: Unload all models and free memory
         try:
             print("\n🧹 Cleaning up resources...")
-            
+
             # Get the ensemble engine from the first agent
-            if hasattr(debate_manager, 'agents') and debate_manager.agents:
+            if hasattr(debate_manager, "agents") and debate_manager.agents:
                 first_agent = debate_manager.agents[0]
-                if hasattr(first_agent, 'ensemble_engine') and first_agent.ensemble_engine:
+                if hasattr(first_agent, "ensemble_engine") and first_agent.ensemble_engine:
                     await first_agent.ensemble_engine.cleanup()
                     print("✅ Ensemble engine cleanup completed")
-            
+
             print("✅ Cleanup completed")
-            
+
         except Exception as e:
             print(f"⚠️ Cleanup warning: {e}")
 

@@ -5,20 +5,21 @@ This module provides context-aware code generation by retrieving relevant
 documentation, code examples, and patterns based on task descriptions.
 """
 
-import os
 import json
-import requests
-from typing import List, Dict, Any, Optional
-from pathlib import Path
 import logging
+import os
+from pathlib import Path
+from typing import Any
 from urllib.parse import quote_plus
+
+import requests
 
 # Graceful fallback for optional dependencies
 try:
+    from langchain.schema import Document
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
     from langchain_chroma import Chroma
     from langchain_huggingface import HuggingFaceEmbeddings
-    from langchain.text_splitter import RecursiveCharacterTextSplitter
-    from langchain.schema import Document
 
     RAG_AVAILABLE = True
 except ImportError as e:
@@ -85,9 +86,7 @@ class RAGSystem:
 
         # Check if RAG dependencies are available
         if not RAG_AVAILABLE:
-            logger.warning(
-                "RAG system initialized in disabled mode - dependencies not available"
-            )
+            logger.warning("RAG system initialized in disabled mode - dependencies not available")
             self.embedding_model = None
             self.text_splitter = None
             self.vector_store = None
@@ -154,7 +153,7 @@ class RAGSystem:
         for py_file in self.project_root.rglob("*.py"):
             if "venv" not in str(py_file) and "node_modules" not in str(py_file):
                 try:
-                    with open(py_file, "r", encoding="utf-8") as f:
+                    with open(py_file, encoding="utf-8") as f:
                         content = f.read()
 
                     # Create document with metadata
@@ -173,7 +172,7 @@ class RAGSystem:
         # Index README and documentation
         for doc_file in self.project_root.glob("*.md"):
             try:
-                with open(doc_file, "r", encoding="utf-8") as f:
+                with open(doc_file, encoding="utf-8") as f:
                     content = f.read()
 
                 doc = Document(
@@ -191,7 +190,7 @@ class RAGSystem:
         # Index JSON files (patterns, configs)
         for json_file in self.project_root.glob("*.json"):
             try:
-                with open(json_file, "r", encoding="utf-8") as f:
+                with open(json_file, encoding="utf-8") as f:
                     data = json.load(f)
 
                 # Convert JSON to readable text
@@ -221,9 +220,7 @@ class RAGSystem:
             except Exception as e:
                 logger.error(f"Error indexing documents: {e}")
 
-    def retrieve_context(
-        self, task_description: str, k: int = 5
-    ) -> List[Dict[str, Any]]:
+    def retrieve_context(self, task_description: str, k: int = 5) -> list[dict[str, Any]]:
         """
         Retrieve relevant context for a task description.
 
@@ -287,7 +284,7 @@ class RAGSystem:
 
     def fetch_external_context(
         self, query: str, source: str = "stackoverflow", max_results: int = 3
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Fetch external context from various sources.
 
@@ -313,27 +310,21 @@ class RAGSystem:
             logger.error(f"Error fetching external context from {source}: {e}")
             return []
 
-    def _fetch_stackoverflow_context(
-        self, query: str, max_results: int = 3
-    ) -> List[str]:
+    def _fetch_stackoverflow_context(self, query: str, max_results: int = 3) -> list[str]:
         """Fetch context from Stack Overflow API with optional key and disk cache."""
         try:
             import hashlib
             import json as _json
-            import time as _time
-            from pathlib import Path as _Path
             import random as _random
             import re
+            import time as _time
+            from pathlib import Path as _Path
 
             # Env controls
             timeout_s = float(os.getenv("NET_TIMEOUT_S", "10") or "10")
             max_retries = max(0, int(os.getenv("NET_MAX_RETRIES", "2") or "2"))
-            cache_ttl = max(
-                0, int(os.getenv("NET_CACHE_TTL_SECONDS", "3600") or "3600")
-            )
-            pagesize = max(
-                1, int(os.getenv("SO_PAGESIZE", str(max_results)) or str(max_results))
-            )
+            cache_ttl = max(0, int(os.getenv("NET_CACHE_TTL_SECONDS", "3600") or "3600"))
+            pagesize = max(1, int(os.getenv("SO_PAGESIZE", str(max_results)) or str(max_results)))
             stack_key = (os.getenv("STACKEXCHANGE_KEY") or "").strip()
             cache_dir = _Path(os.getenv("NET_CACHE_DIR", "artifacts/net_cache"))
             cache_dir.mkdir(parents=True, exist_ok=True)
@@ -387,15 +378,11 @@ class RAGSystem:
                         return results
                     elif response.status_code in (429, 502, 503):
                         # backoff with jitter
-                        delay = min(
-                            60.0, (1.0 * (2**attempt)) + _random.uniform(0.0, 0.5)
-                        )
+                        delay = min(60.0, (1.0 * (2**attempt)) + _random.uniform(0.0, 0.5))
                         _time.sleep(delay)
                         last_error = RuntimeError(f"HTTP {response.status_code}")
                     else:
-                        logger.warning(
-                            f"Stack Overflow API returned status {response.status_code}"
-                        )
+                        logger.warning(f"Stack Overflow API returned status {response.status_code}")
                         return []
                 except Exception as e:
                     last_error = e
@@ -408,21 +395,19 @@ class RAGSystem:
             logger.error(f"Error fetching Stack Overflow context: {e}")
             return []
 
-    def _fetch_github_context(self, query: str, max_results: int = 3) -> List[str]:
+    def _fetch_github_context(self, query: str, max_results: int = 3) -> list[str]:
         """Fetch context from GitHub (placeholder for future implementation)."""
         # TODO: Implement GitHub API integration
         logger.info("GitHub context fetching not yet implemented")
         return []
 
-    def _fetch_documentation_context(
-        self, query: str, max_results: int = 3
-    ) -> List[str]:
+    def _fetch_documentation_context(self, query: str, max_results: int = 3) -> list[str]:
         """Fetch context from documentation sites (placeholder)."""
         # TODO: Implement documentation site scraping
         logger.info("Documentation context fetching not yet implemented")
         return []
 
-    def add_document(self, doc_id: str, content: str, metadata: Dict[str, Any] = None):
+    def add_document(self, doc_id: str, content: str, metadata: dict[str, Any] = None):
         """
         Add a document to the vector database.
 
@@ -455,7 +440,7 @@ class RAGSystem:
         except Exception as e:
             logger.error(f"Error adding document '{doc_id}': {e}")
 
-    def search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
+    def search(self, query: str, top_k: int = 5) -> list[dict[str, Any]]:
         """
         Search for relevant documents in the vector database.
 
@@ -472,9 +457,7 @@ class RAGSystem:
 
         try:
             # Search vector store
-            results = self.vector_store.similarity_search_with_relevance_scores(
-                query, k=top_k
-            )
+            results = self.vector_store.similarity_search_with_relevance_scores(query, k=top_k)
 
             # Format results
             formatted_results = []
@@ -495,7 +478,7 @@ class RAGSystem:
             logger.error(f"Error searching documents: {e}")
             return []
 
-    def search_external(self, query: str, max_results: int = 3) -> List[str]:
+    def search_external(self, query: str, max_results: int = 3) -> list[str]:
         """
         Search external sources (Stack Overflow, etc.).
 
@@ -512,7 +495,7 @@ class RAGSystem:
             logger.error(f"Error searching external sources: {e}")
             return []
 
-    def get_context(self, task_description: str, k: int = 5) -> List[Dict[str, Any]]:
+    def get_context(self, task_description: str, k: int = 5) -> list[dict[str, Any]]:
         """
         Get context for a task description (alias for retrieve_context).
 
@@ -525,7 +508,7 @@ class RAGSystem:
         """
         return self.retrieve_context(task_description, k)
 
-    def add_pattern_to_context(self, pattern: Dict[str, Any]):
+    def add_pattern_to_context(self, pattern: dict[str, Any]):
         """
         Add a successful pattern to the context database.
 
@@ -573,7 +556,7 @@ Rating: {pattern.get("user_rating", 0)}/5
         except Exception as e:
             logger.error(f"Error adding pattern to context: {e}")
 
-    def format_context_for_prompt(self, context_docs: List[Dict[str, Any]]) -> str:
+    def format_context_for_prompt(self, context_docs: list[dict[str, Any]]) -> str:
         """
         Format retrieved context for inclusion in LLM prompts.
 
@@ -592,18 +575,20 @@ Rating: {pattern.get("user_rating", 0)}/5
             metadata = doc["metadata"]
             content = doc["content"][:500]  # Limit content length
 
-            context_parts.append(f"""
+            context_parts.append(
+                f"""
 ### Context {i} (Score: {doc["relevance_score"]:.3f})
 **Source:** {metadata.get("filename", metadata.get("source", "Unknown"))}
 **Type:** {metadata.get("type", "Unknown")}
 
 {content}
 ...
-""")
+"""
+            )
 
         return "\n".join(context_parts)
 
-    def get_context_summary(self, task_description: str) -> Dict[str, Any]:
+    def get_context_summary(self, task_description: str) -> dict[str, Any]:
         """
         Get a summary of available context for a task.
 
@@ -618,18 +603,17 @@ Rating: {pattern.get("user_rating", 0)}/5
         return {
             "context_available": len(context_docs) > 0,
             "context_count": len(context_docs),
-            "avg_relevance": sum(doc["relevance_score"] for doc in context_docs)
-            / len(context_docs)
-            if context_docs
-            else 0,
+            "avg_relevance": (
+                sum(doc["relevance_score"] for doc in context_docs) / len(context_docs)
+                if context_docs
+                else 0
+            ),
             "context_types": list(
                 set(doc["metadata"].get("type", "Unknown") for doc in context_docs)
             ),
         }
 
-    def augment_prompt(
-        self, task_description: str, include_external: bool = True
-    ) -> str:
+    def augment_prompt(self, task_description: str, include_external: bool = True) -> str:
         """
         Augment a task description with relevant context.
 

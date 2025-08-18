@@ -12,14 +12,12 @@ import asyncio
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import List
 
 import streamlit as st  # pragma: no cover
 
-from codeconductor.debate.personas import load_personas_yaml, build_agents_from_personas
 from codeconductor.debate.local_ai_agent import LocalDebateManager
+from codeconductor.debate.personas import build_agents_from_personas, load_personas_yaml
 from codeconductor.ensemble.single_model_engine import SingleModelEngine
-
 
 ARTIFACTS_DIR = Path("artifacts/streamlit_runs")
 
@@ -29,13 +27,9 @@ def run_sync(coro):
 
 
 def main() -> None:  # pragma: no cover
-    st.set_page_config(
-        page_title="CodeConductor – Personas", page_icon="🎭", layout="wide"
-    )
+    st.set_page_config(page_title="CodeConductor – Personas", page_icon="🎭", layout="wide")
     st.title("🎭 CodeConductor – Personas Runner")
-    st.caption(
-        "Pick personas and run a quick debate; results saved under artifacts/streamlit_runs"
-    )
+    st.caption("Pick personas and run a quick debate; results saved under artifacts/streamlit_runs")
 
     with st.sidebar:
         st.header("Configuration")
@@ -54,7 +48,7 @@ def main() -> None:  # pragma: no cover
             st.error(f"Failed to load personas: {e}")
             roles_available = []
 
-        roles_selected: List[str] = st.multiselect(
+        roles_selected: list[str] = st.multiselect(
             "Select agents (roles)",
             roles_available,
             default=[r for r in roles_available[:2]],

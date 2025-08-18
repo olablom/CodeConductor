@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from collections import OrderedDict
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional, Tuple
 import os
 import time as _time
+from collections import OrderedDict
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -24,7 +25,7 @@ class LRUCacheTTL:
     ) -> None:
         self.max_entries = max(1, int(max_entries))
         self.ttl_seconds = max(1, int(ttl_seconds))
-        self._store: OrderedDict[str, Tuple[float, Any]] = OrderedDict()
+        self._store: OrderedDict[str, tuple[float, Any]] = OrderedDict()
         self._now = time_provider or _time.time
         self.stats = CacheStats()
         self.namespace = namespace
@@ -57,7 +58,7 @@ class LRUCacheTTL:
         persona: str,
         policy: str,
         model: str,
-        params: Dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
     ) -> str:
         p = params or {}
         parts = [
@@ -71,7 +72,7 @@ class LRUCacheTTL:
         ]
         return "|".join(parts)
 
-    def get(self, key: str) -> Optional[Any]:
+    def get(self, key: str) -> Any | None:
         if self.bypass:
             self.stats.misses += 1
             return None

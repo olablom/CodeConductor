@@ -1,5 +1,3 @@
-import pytest
-
 from codeconductor.utils.extract import extract_code, normalize_python
 
 

@@ -4,13 +4,12 @@ Simple Master Integration Test for CodeConductor Systems
 Tests RAG + Ensemble + Validation working together end-to-end
 """
 
+import asyncio
 import os
 import sys
+import threading
 import time
 import warnings
-import asyncio
-import threading
-from datetime import datetime
 
 # Suppress warnings for clean output
 warnings.filterwarnings("ignore")
@@ -34,8 +33,8 @@ class SimpleMasterIntegrationTest:
 
         try:
             # Test RAG System
-            import sys
             import os
+            import sys
 
             sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -69,8 +68,8 @@ class SimpleMasterIntegrationTest:
         print("\n🧪 Test 2: RAG + Ensemble Integration")
 
         try:
-            import sys
             import os
+            import sys
 
             sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -111,8 +110,8 @@ class SimpleMasterIntegrationTest:
         print("\n🧪 Test 3: Validation Integration")
 
         try:
-            import sys
             import os
+            import sys
 
             sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -122,9 +121,7 @@ class SimpleMasterIntegrationTest:
 
             # Test manual task logging
             task_id_manual = "Manual_Integration_001"
-            logger.log_task_start(
-                task_id_manual, "Manual integration test task", "Manual"
-            )
+            logger.log_task_start(task_id_manual, "Manual integration test task", "Manual")
             time.sleep(0.1)  # Simulate task execution
             logger.log_task_complete(task_id_manual, satisfaction=0.85)
 
@@ -158,8 +155,8 @@ class SimpleMasterIntegrationTest:
         print("\n🧪 Test 4: End-to-End Workflow")
 
         try:
-            import sys
             import os
+            import sys
 
             sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -217,8 +214,8 @@ class SimpleMasterIntegrationTest:
         print("\n🧪 Test 5: Dashboard Rendering")
 
         try:
-            import sys
             import os
+            import sys
 
             sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -265,8 +262,8 @@ class SimpleMasterIntegrationTest:
         print("\n🧪 Test 6: Concurrent Operations")
 
         try:
-            import sys
             import os
+            import sys
 
             sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -277,9 +274,7 @@ class SimpleMasterIntegrationTest:
             def concurrent_task(task_id):
                 """Simulate concurrent task execution"""
                 try:
-                    logger.log_task_start(
-                        task_id, f"Concurrent task {task_id}", "CodeConductor"
-                    )
+                    logger.log_task_start(task_id, f"Concurrent task {task_id}", "CodeConductor")
                     time.sleep(0.01)  # Simulate work
                     logger.log_task_complete(task_id, satisfaction=0.85)
                     return True
@@ -310,9 +305,7 @@ class SimpleMasterIntegrationTest:
                 self.test_results.append(("Concurrent Operations", "PASSED"))
                 return True
             else:
-                self.test_results.append(
-                    ("Concurrent Operations", "FAILED: Too many failures")
-                )
+                self.test_results.append(("Concurrent Operations", "FAILED: Too many failures"))
                 return False
 
         except Exception as e:
@@ -325,8 +318,8 @@ class SimpleMasterIntegrationTest:
         print("\n🧪 Test 7: Error Handling")
 
         try:
-            import sys
             import os
+            import sys
 
             sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -355,9 +348,7 @@ class SimpleMasterIntegrationTest:
                 except Exception as e:
                     print(f"    ❌ {test_name} failed: {e}")
 
-            print(
-                f"  ✅ {successful_tests}/{len(test_cases)} error handling tests passed"
-            )
+            print(f"  ✅ {successful_tests}/{len(test_cases)} error handling tests passed")
 
             if successful_tests >= len(test_cases) - 1:  # Allow 1 failure
                 self.test_results.append(("Error Handling", "PASSED"))
@@ -428,7 +419,7 @@ class SimpleMasterIntegrationTest:
                 print(f"    Reason: {result}")
 
         # System status
-        print(f"\n🏆 SYSTEM STATUS:")
+        print("\n🏆 SYSTEM STATUS:")
         if passed_tests == total_tests:
             print("  🎉 ALL SYSTEMS INTEGRATED SUCCESSFULLY!")
             print("  ✅ Ready for production integration")
@@ -440,7 +431,7 @@ class SimpleMasterIntegrationTest:
             print("  🔧 Review failed tests before integration")
 
         # Recommendations
-        print(f"\n💡 RECOMMENDATIONS:")
+        print("\n💡 RECOMMENDATIONS:")
         if passed_tests == total_tests:
             print("  🚀 Proceed with main CodeConductor integration")
             print("  📊 Start real-world validation testing")

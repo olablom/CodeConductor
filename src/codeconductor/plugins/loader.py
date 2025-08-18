@@ -3,12 +3,11 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import List
 
 from .base import AgentPlugin
 
 
-def load_plugins(plugins_dir: str | Path = "plugins") -> List[AgentPlugin]:
+def load_plugins(plugins_dir: str | Path = "plugins") -> list[AgentPlugin]:
     """
     Autoload plugins from a directory. Returns instantiated plugins.
     """
@@ -16,7 +15,7 @@ def load_plugins(plugins_dir: str | Path = "plugins") -> List[AgentPlugin]:
     if not dir_path.exists():
         return []
 
-    plugins: List[AgentPlugin] = []
+    plugins: list[AgentPlugin] = []
     for py_file in dir_path.glob("*.py"):
         if py_file.name in {"base.py", "loader.py", "__init__.py"}:
             continue

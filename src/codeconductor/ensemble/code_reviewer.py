@@ -5,13 +5,15 @@ Uses RLHF to select the best model for code review and provides actionable feedb
 """
 
 import logging
-import numpy as np
-import tempfile
 import os
-import subprocess
 import re
-from typing import List, Dict, Any, Optional
+import subprocess
+import tempfile
+from typing import Any
+
+import numpy as np
 from stable_baselines3 import PPO
+
 from codeconductor.context.rag_system import RAGSystem
 
 logger = logging.getLogger(__name__)
@@ -35,9 +37,7 @@ class CodeReviewer:
     Multi-agent code reviewer that uses RLHF to select the best model for review.
     """
 
-    def __init__(
-        self, models: List[str], ppo_model_path: str = "ppo_codeconductor.zip"
-    ):
+    def __init__(self, models: list[str], ppo_model_path: str = "ppo_codeconductor.zip"):
         """
         Initialize the code reviewer.
 
@@ -60,7 +60,7 @@ class CodeReviewer:
         self,
         task_description: str,
         code: str,
-        test_results: Optional[List[Dict]] = None,
+        test_results: list[dict] | None = None,
     ) -> str:
         """
         Select the best model for code review using RLHF.
@@ -85,9 +85,7 @@ class CodeReviewer:
         task_complexity = self.estimate_task_complexity(task_description)
 
         # Create observation vector
-        observation = np.array(
-            [test_reward, code_quality, 0.0, task_complexity], dtype=np.float32
-        )
+        observation = np.array([test_reward, code_quality, 0.0, task_complexity], dtype=np.float32)
 
         # Get action from RLHF agent to select reviewer
         action, _ = self.rlhf_agent.predict(observation)
@@ -100,8 +98,8 @@ class CodeReviewer:
         self,
         task_description: str,
         code: str,
-        test_results: Optional[List[Dict]] = None,
-    ) -> Dict[str, Any]:
+        test_results: list[dict] | None = None,
+    ) -> dict[str, Any]:
         """
         Review code using the selected model and RAG context.
 
@@ -135,7 +133,7 @@ class CodeReviewer:
             "test_reward": self.calculate_test_reward(test_results or []),
         }
 
-    def calculate_test_reward(self, test_results: List[Dict]) -> float:
+    def calculate_test_reward(self, test_results: list[dict]) -> float:
         """
         Calculate reward based on test results.
 
@@ -169,9 +167,7 @@ class CodeReviewer:
         # Use pylint for accurate code quality assessment
         if PYLINT_AVAILABLE:
             try:
-                with tempfile.NamedTemporaryFile(
-                    mode="w", suffix=".py", delete=False
-                ) as temp_file:
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as temp_file:
                     temp_file.write(code)
                     temp_file_path = temp_file.name
 
@@ -193,9 +189,7 @@ class CodeReviewer:
                 os.unlink(temp_file_path)
 
                 # Extract score from output
-                score_match = re.search(
-                    r"Your code has been rated at ([0-9.]+)/10", result.stdout
-                )
+                score_match = re.search(r"Your code has been rated at ([0-9.]+)/10", result.stdout)
                 if score_match:
                     score = float(score_match.group(1)) / 10.0
                     logger.info(f"📊 Pylint score: {score:.2f}/1.0")
@@ -278,9 +272,7 @@ class CodeReviewer:
         ]
 
         task_lower = task_description.lower()
-        complexity_score = sum(
-            1 for keyword in complex_keywords if keyword in task_lower
-        )
+        complexity_score = sum(1 for keyword in complex_keywords if keyword in task_lower)
 
         # Normalize to 0.0-1.0 range
         return min(1.0, complexity_score / len(complex_keywords))
@@ -308,7 +300,7 @@ class CodeReviewer:
         else:
             return f"Review by {model}:\n- Code is readable and follows basic conventions.\n- Add more comprehensive documentation.\n- Consider edge cases in input validation."
 
-    def extract_suggested_fixes(self, review: str) -> List[str]:
+    def extract_suggested_fixes(self, review: str) -> list[str]:
         """
         Extract actionable fixes from review text.
 
@@ -344,7 +336,7 @@ class CodeReviewer:
 
         return fixes[:5]  # Limit to 5 fixes
 
-    def get_review_summary(self, review_results: Dict[str, Any]) -> str:
+    def get_review_summary(self, review_results: dict[str, Any]) -> str:
         """
         Generate a summary of the review results.
 
@@ -359,7 +351,7 @@ class CodeReviewer:
         test_reward = review_results.get("test_reward", 0.0)
         fixes_count = len(review_results.get("suggested_fixes", []))
 
-        summary = f"📋 Review Summary:\n"
+        summary = "📋 Review Summary:\n"
         summary += f"  🤖 Reviewer: {reviewer}\n"
         summary += f"  📊 Code Quality: {quality_score:.2f}/1.0\n"
         summary += f"  🧪 Test Reward: {test_reward:.2f}/1.0\n"
@@ -370,7 +362,7 @@ class CodeReviewer:
 
 # Convenience function
 def create_code_reviewer(
-    models: List[str], ppo_model_path: str = "ppo_codeconductor.zip"
+    models: list[str], ppo_model_path: str = "ppo_codeconductor.zip"
 ) -> CodeReviewer:
     """
     Create a CodeReviewer instance.

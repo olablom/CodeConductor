@@ -5,8 +5,6 @@ Generates prompts for basic coding tasks without assuming specific project conte
 """
 
 import logging
-from typing import Dict, List, Any, Optional
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -28,33 +26,33 @@ class SimplePromptGenerator:
     def generate_prompt(self, task: str, task_type: str = "class") -> str:
         """
         Generate a simple, focused prompt for the given task
-        
+
         Args:
             task: The task description
             task_type: Type of task (class, function, script, api)
-            
+
         Returns:
             Generated prompt string
         """
         logger.info(f"🎯 Generating simple prompt for task: {task[:50]}...")
-        
+
         # Determine task type if not specified
         if task_type == "auto":
             task_type = self._detect_task_type(task)
-        
+
         # Get appropriate template
         template_func = self.templates.get(task_type, self._class_template)
-        
+
         # Generate prompt
         prompt = template_func(task)
-        
+
         logger.info(f"✅ Generated prompt ({len(prompt)} chars)")
         return prompt
 
     def _detect_task_type(self, task: str) -> str:
         """Detect the type of task based on keywords"""
         task_lower = task.lower()
-        
+
         if any(word in task_lower for word in ["class", "todo", "list", "manager"]):
             return "class"
         elif any(word in task_lower for word in ["function", "def", "method"]):
@@ -127,31 +125,34 @@ Requirements:
 
 Please provide the complete API implementation including necessary imports."""
 
-    def generate_multiple_prompts(self, task: str, count: int = 3) -> List[str]:
+    def generate_multiple_prompts(self, task: str, count: int = 3) -> list[str]:
         """
         Generate multiple variations of prompts for the same task
-        
+
         Args:
             task: The task description
             count: Number of prompt variations to generate
-            
+
         Returns:
             List of generated prompts
         """
         prompts = []
-        
+
         # Generate different approaches
         approaches = [
             ("class", "Create a simple, clean implementation"),
             ("class", "Create a robust implementation with error handling"),
-            ("class", "Create an optimized implementation with performance considerations"),
+            (
+                "class",
+                "Create an optimized implementation with performance considerations",
+            ),
         ]
-        
+
         for i, (task_type, approach) in enumerate(approaches[:count]):
             base_prompt = self._class_template(task)
             enhanced_prompt = f"{base_prompt}\n\nApproach: {approach}"
             prompts.append(enhanced_prompt)
-        
+
         return prompts
 
 
@@ -159,4 +160,4 @@ Please provide the complete API implementation including necessary imports."""
 def generate_simple_prompt(task: str, task_type: str = "auto") -> str:
     """Convenience function to generate a simple prompt"""
     generator = SimplePromptGenerator()
-    return generator.generate_prompt(task, task_type) 
+    return generator.generate_prompt(task, task_type)

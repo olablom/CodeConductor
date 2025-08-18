@@ -1,16 +1,14 @@
 from __future__ import annotations
 
+import difflib
 import hashlib
 import json
 import os
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, List, Tuple
 import time
 import zipfile
-import difflib
 from datetime import datetime
-
+from pathlib import Path
+from typing import Any
 
 SENSITIVE_KEYS = (
     "API",
@@ -30,14 +28,12 @@ def _sha256_file(path: Path) -> str:
 
 
 def _latest_run_dir(artifacts_dir: Path) -> Path | None:
-    runs = sorted(
-        (artifacts_dir / "runs").glob("*"), key=lambda p: p.name, reverse=True
-    )
+    runs = sorted((artifacts_dir / "runs").glob("*"), key=lambda p: p.name, reverse=True)
     return runs[0] if runs else None
 
 
-def _redact_env(env: Dict[str, Any]) -> Dict[str, Any]:
-    redacted: Dict[str, Any] = {}
+def _redact_env(env: dict[str, Any]) -> dict[str, Any]:
+    redacted: dict[str, Any] = {}
     for k, v in (env or {}).items():
         if any(s in k.upper() for s in SENSITIVE_KEYS):
             redacted[k] = "***REDACTED***"
@@ -52,7 +48,7 @@ def _redact_env(env: Dict[str, Any]) -> Dict[str, Any]:
     return redacted
 
 
-def _read_json(path: Path) -> Dict[str, Any]:
+def _read_json(path: Path) -> dict[str, Any]:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
@@ -60,9 +56,9 @@ def _read_json(path: Path) -> Dict[str, Any]:
 
 
 def _manifest_for_files(
-    files: List[Path], overlays: Dict[str, bytes] | None = None
-) -> List[Dict[str, Any]]:
-    entries: List[Dict[str, Any]] = []
+    files: list[Path], overlays: dict[str, bytes] | None = None
+) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
     for p in files:
         try:
             if overlays and p.name in overlays:
@@ -96,7 +92,7 @@ def export_latest_run(
     cache_hit: bool | None = None,
     app_version: str | None = None,
     git_commit: str | None = None,
-) -> Tuple[str, Dict[str, Any]]:
+) -> tuple[str, dict[str, Any]]:
     """
     Create a zip bundle for the latest run directory and return (zip_path, manifest).
     """
@@ -112,8 +108,8 @@ def export_latest_run(
     def is_raw(p: Path) -> bool:
         return p.suffix.lower() in {".log", ".txt", ".md"}
 
-    files_to_add: List[Path] = []
-    excluded: List[Dict[str, Any]] = []
+    files_to_add: list[Path] = []
+    excluded: list[dict[str, Any]] = []
     size_limit_bytes = size_limit_mb * 1024 * 1024
 
     for p in candidates:
@@ -136,19 +132,17 @@ def export_latest_run(
         pass
 
     # Prepare sanitized overlays
-    overlays: Dict[str, bytes] = {}
+    overlays: dict[str, bytes] = {}
     rc_path = run_dir / "run_config.json"
     if rc_path.exists():
         rc = _read_json(rc_path)
         if redact_env and isinstance(rc.get("env"), dict):
             rc["env"] = _redact_env(rc["env"])  # type: ignore[index]
-        overlays["run_config.json"] = json.dumps(
-            rc, ensure_ascii=False, indent=2
-        ).encode("utf-8")
+        overlays["run_config.json"] = json.dumps(rc, ensure_ascii=False, indent=2).encode("utf-8")
 
     # Build manifest
     file_entries = _manifest_for_files(files_to_add, overlays)
-    manifest: Dict[str, Any] = {
+    manifest: dict[str, Any] = {
         "run_dir": str(run_dir),
         "created_at": int(time.time()),
         "policy": policy,
@@ -171,9 +165,7 @@ def export_latest_run(
 
     # Write atomically via temporary file then replace
     tmp_path = zip_path.with_suffix(".zip.tmp")
-    with zipfile.ZipFile(
-        tmp_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
-    ) as z:
+    with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         # Add files (with optional overlays)
         for p in files_to_add:
             arcname = p.name
@@ -215,13 +207,13 @@ def export_latest_run(
     return str(zip_path), manifest
 
 
-def verify_manifest(zip_path: str) -> Dict[str, Any]:
+def verify_manifest(zip_path: str) -> dict[str, Any]:
     """
     Verify MANIFEST.json inside the zip by recomputing SHA256 for included files.
 
     Returns: { verified: bool, mismatches: [ {file, expected, actual} ] }
     """
-    mismatches: List[Dict[str, str]] = []
+    mismatches: list[dict[str, str]] = []
     try:
         with zipfile.ZipFile(zip_path, "r") as z:
             data = z.read("MANIFEST.json")
@@ -268,17 +260,13 @@ def _write_temp(z: zipfile.ZipFile, arcname: str, content: str) -> None:
     z.writestr(arcname, content.encode("utf-8"))
 
 
-def _unified_diff(
-    a: str, b: str, fromfile: str = "before", tofile: str = "after"
-) -> str:
+def _unified_diff(a: str, b: str, fromfile: str = "before", tofile: str = "after") -> str:
     a_lines = a.splitlines(keepends=True)
     b_lines = b.splitlines(keepends=True)
-    return "".join(
-        difflib.unified_diff(a_lines, b_lines, fromfile=fromfile, tofile=tofile)
-    )
+    return "".join(difflib.unified_diff(a_lines, b_lines, fromfile=fromfile, tofile=tofile))
 
 
-def _safe_json_load(path: Path) -> Dict[str, Any]:
+def _safe_json_load(path: Path) -> dict[str, Any]:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
@@ -286,7 +274,7 @@ def _safe_json_load(path: Path) -> Dict[str, Any]:
 
 
 def _build_readme_case(
-    kpi: Dict[str, Any],
+    kpi: dict[str, Any],
     *,
     privacy_level: str,
     raw: bool,
@@ -303,7 +291,7 @@ def _build_readme_case(
     cm = kpi.get("consensus_method")
     samp = kpi.get("sampling", {})
     lines = []
-    lines.append(f"# Case: 30s local fix\n")
+    lines.append("# Case: 30s local fix\n")
     lines.append("\n## KPI\n")
     lines.append("| Metric | Value |\n|---|---|\n")
     lines.append(f"| ttft_ms | {ttft} |\n")
@@ -339,7 +327,7 @@ def export_case_bundle(
     privacy_level: str = "public_safe",
     size_limit_mb: int = 5,
     include_raw: bool | None = None,
-) -> Tuple[str, Dict[str, Any]]:
+) -> tuple[str, dict[str, Any]]:
     """
     Build a case bundle zip according to manifest schema (public_safe v1).
 
@@ -367,9 +355,7 @@ def export_case_bundle(
     warnings: list[str] = []
     valid_levels = {"public_safe", "team_safe", "full_internal"}
     if level not in valid_levels:
-        warnings.append(
-            f"Unknown privacy_level '{privacy_level}', falling back to public_safe"
-        )
+        warnings.append(f"Unknown privacy_level '{privacy_level}', falling back to public_safe")
         level = "public_safe"
 
     if include_raw is None:
@@ -395,14 +381,12 @@ def export_case_bundle(
     )
 
     # For v1, we may not have real before/after files; create placeholders
-    before_files: List[Tuple[str, bytes]] = []
-    after_files: List[Tuple[str, bytes]] = []
-    diffs_files: List[Tuple[str, bytes]] = []
-    logs_files: List[Tuple[str, bytes]] = [
-        ("pipeline.txt", b"pipeline log N/A in v1\n")
-    ]
+    before_files: list[tuple[str, bytes]] = []
+    after_files: list[tuple[str, bytes]] = []
+    diffs_files: list[tuple[str, bytes]] = []
+    logs_files: list[tuple[str, bytes]] = [("pipeline.txt", b"pipeline log N/A in v1\n")]
     tests_dir = run_dir / "tests"
-    tests_files: List[Path] = []
+    tests_files: list[Path] = []
     if tests_dir.exists():
         tests_files = list(tests_dir.glob("*.json"))
 
@@ -422,23 +406,15 @@ def export_case_bundle(
         after_files.append(("generated.py", cons_code.encode("utf-8")))
 
     size_limit_bytes = size_limit_mb * 1024 * 1024
-    files_index: List[Dict[str, Any]] = []
-    hashes: Dict[str, str] = {}
-    code_hashes: Dict[str, str] = {}
+    files_index: list[dict[str, Any]] = []
+    hashes: dict[str, str] = {}
+    code_hashes: dict[str, str] = {}
 
-    with zipfile.ZipFile(
-        zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
-    ) as z:
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         # Add zip comment for quick sanity check
-        z.comment = (
-            f"run_id={run_id};privacy={level};schema=kpi@1.0.0,manifest@1.0.0".encode(
-                "utf-8"
-            )
-        )
+        z.comment = f"run_id={run_id};privacy={level};schema=kpi@1.0.0,manifest@1.0.0".encode()
         # Core JSONs
-        core_files = [
-            ("kpi.json", json.dumps(kpi, ensure_ascii=False, indent=2).encode("utf-8"))
-        ]
+        core_files = [("kpi.json", json.dumps(kpi, ensure_ascii=False, indent=2).encode("utf-8"))]
         if consensus:
             core_files.append(
                 (

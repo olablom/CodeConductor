@@ -1,9 +1,7 @@
-import os
-from typing import List
+import sys
+from pathlib import Path
 
 import pytest
-from pathlib import Path
-import sys
 
 # Ensure local src is importable
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -14,8 +12,8 @@ if str(SRC_DIR) not in sys.path:
 
 def test_sampling_override_applied_env(monkeypatch):
     from codeconductor.ensemble.query_dispatcher import (
-        _apply_sampling_overrides,
         BASE_MODEL_CONFIGS,
+        _apply_sampling_overrides,
     )
 
     # Set env overrides
@@ -32,7 +30,7 @@ def test_sampling_override_applied_env(monkeypatch):
 
 
 def test_model_manager_strict_forced_single(monkeypatch):
-    from codeconductor.ensemble.model_manager import ModelManager, ModelInfo
+    from codeconductor.ensemble.model_manager import ModelInfo, ModelManager
 
     # Strict locking env
     monkeypatch.setenv("MODEL_SELECTOR_STRICT", "1")
@@ -84,8 +82,9 @@ def test_model_manager_strict_forced_single(monkeypatch):
 
 
 def test_kpi_first_prompt_success_logic():
-    from codeconductor.utils.kpi import TestSummary, build_kpi
     from pathlib import Path
+
+    from codeconductor.utils.kpi import TestSummary, build_kpi
 
     before = TestSummary(suite_name="pytest", total=0, passed=0, failed=0, skipped=0)
 
@@ -115,9 +114,7 @@ def test_kpi_first_prompt_success_logic():
     assert kpi_ok["first_prompt_success"] is True
 
     # Case 2: After has no tests -> success False
-    after_none = TestSummary(
-        suite_name="pytest", total=0, passed=0, failed=0, skipped=0
-    )
+    after_none = TestSummary(suite_name="pytest", total=0, passed=0, failed=0, skipped=0)
     kpi_no = build_kpi(
         run_id="r2",
         artifacts_dir=Path("artifacts/runs/r2"),

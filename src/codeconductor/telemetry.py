@@ -5,7 +5,7 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class JsonlLogger:
@@ -15,7 +15,7 @@ class JsonlLogger:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.lock = threading.Lock()
 
-    def log(self, event: str, payload: Dict[str, Any]) -> None:
+    def log(self, event: str, payload: dict[str, Any]) -> None:
         if not self.enabled:
             return
         rec = {"ts": time.time(), "event": event, **payload}
@@ -25,7 +25,7 @@ class JsonlLogger:
                 f.write(line + "\n")
 
 
-_LOGGER: Optional[JsonlLogger] = None
+_LOGGER: JsonlLogger | None = None
 
 
 def get_logger() -> JsonlLogger:

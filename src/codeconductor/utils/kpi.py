@@ -11,20 +11,20 @@ break the main flow; on any failure it logs and returns gracefully.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
 import hashlib
 import json
 import os
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 
 def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
 
-def _parse_codebleu_weights(env_val: Optional[str]) -> Tuple[float, float, float]:
+def _parse_codebleu_weights(env_val: str | None) -> tuple[float, float, float]:
     if not env_val:
         return (0.5, 0.3, 0.2)
     try:
@@ -39,7 +39,7 @@ def _parse_codebleu_weights(env_val: Optional[str]) -> Tuple[float, float, float
         return (0.5, 0.3, 0.2)
 
 
-def calc_pass_rate(passed: int, failed: int) -> Optional[float]:
+def calc_pass_rate(passed: int, failed: int) -> float | None:
     denom = passed + failed
     if denom <= 0:
         return None
@@ -75,28 +75,28 @@ def build_kpi(
     run_id: str,
     artifacts_dir: Path,
     t_start_iso: str,
-    t_first_green_iso: Optional[str],
+    t_first_green_iso: str | None,
     ttft_ms: int,
     tests_before: TestSummary,
     tests_after: TestSummary,
     winner_model: str,
     winner_score: float,
     consensus_method: str,
-    sampling: Dict[str, Any],
-    codebleu_weights_env: Optional[str],
-    codebleu_lang_env: Optional[str],
-    exit_status: Dict[str, Any],
-    agent_config: Optional[list[dict]] = None,
-    models: Optional[list[dict]] = None,
-    engine: Optional[dict] = None,
-    hardware: Optional[dict] = None,
-    latency_ms: Optional[dict] = None,
-    token_usage: Optional[dict] = None,
-    safety: Optional[dict] = None,
-    dataset_tags: Optional[list[str]] = None,
-) -> Dict[str, Any]:
+    sampling: dict[str, Any],
+    codebleu_weights_env: str | None,
+    codebleu_lang_env: str | None,
+    exit_status: dict[str, Any],
+    agent_config: list[dict] | None = None,
+    models: list[dict] | None = None,
+    engine: dict | None = None,
+    hardware: dict | None = None,
+    latency_ms: dict | None = None,
+    token_usage: dict | None = None,
+    safety: dict | None = None,
+    dataset_tags: list[str] | None = None,
+) -> dict[str, Any]:
     # Normalize sampling to schema keys
-    sampling_out: Dict[str, Any] = {
+    sampling_out: dict[str, Any] = {
         "temperature": sampling.get("temperature"),
         "top_p": sampling.get("top_p"),
         "top_k": sampling.get("top_k", None),
@@ -111,7 +111,7 @@ def build_kpi(
     pr_before = calc_pass_rate(tests_before.passed, tests_before.failed)
     pr_after = calc_pass_rate(tests_after.passed, tests_after.failed)
 
-    kpi: Dict[str, Any] = {
+    kpi: dict[str, Any] = {
         "kpi_schema_version": "1.0.0",
         "run_id": run_id,
         "ts": _utc_now_iso(),
@@ -119,9 +119,7 @@ def build_kpi(
         "ttft_ms": int(max(0, ttft_ms)),
         "t_start": t_start_iso,
         "t_first_green": t_first_green_iso or t_start_iso,
-        "first_prompt_success": bool(
-            (tests_after.failed == 0) and (tests_after.total > 0)
-        ),
+        "first_prompt_success": bool((tests_after.failed == 0) and (tests_after.total > 0)),
         "tests_before": {
             "suite_name": tests_before.suite_name,
             "total": tests_before.total,

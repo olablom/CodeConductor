@@ -8,11 +8,9 @@ Platform-specific - excluded from coverage on Windows
 
 import asyncio
 import logging
-from typing import List, Dict, Optional, Any, Union
-from pathlib import Path
-import torch
+from typing import Any
+
 from vllm import LLM, SamplingParams  # pragma: no cover
-from vllm.model_executor.models import MODEL_CONFIGS
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +45,7 @@ class VLLMEngine:
         self.trust_remote_code = trust_remote_code
         self.dtype = dtype
 
-        self.llm: Optional[LLM] = None
+        self.llm: LLM | None = None
         self._initialized = False
 
     async def initialize(self) -> None:
@@ -88,7 +86,7 @@ class VLLMEngine:
         prompt: str,
         max_tokens: int = 2048,
         temperature: float = 0.1,
-        stop_tokens: Optional[List[str]] = None,
+        stop_tokens: list[str] | None = None,
     ) -> str:
         """
         Generate code using vLLM engine.
@@ -134,7 +132,7 @@ class VLLMEngine:
         prompt: str,
         num_models: int = 3,
         temperature_range: tuple = (0.1, 0.3, 0.5),
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Generate code with ensemble consensus using multiple temperature settings.
 
@@ -184,7 +182,7 @@ class VLLMEngine:
             "best_generation": self._select_best_generation(results),
         }
 
-    def _calculate_consensus_metrics(self, results: List[Dict]) -> Dict[str, Any]:
+    def _calculate_consensus_metrics(self, results: list[dict]) -> dict[str, Any]:
         """Calculate consensus metrics for generated code."""
         if not results:
             return {}
@@ -222,7 +220,7 @@ class VLLMEngine:
 
         return intersection / union if union > 0 else 0.0
 
-    def _calculate_variance(self, values: List[float]) -> float:
+    def _calculate_variance(self, values: list[float]) -> float:
         """Calculate variance of a list of values."""
         if not values:
             return 0.0
@@ -231,7 +229,7 @@ class VLLMEngine:
         squared_diff_sum = sum((x - mean) ** 2 for x in values)
         return squared_diff_sum / len(values)
 
-    def _select_best_generation(self, results: List[Dict]) -> Optional[Dict]:
+    def _select_best_generation(self, results: list[dict]) -> dict | None:
         """Select the best generation based on quality metrics."""
         if not results:
             return None
@@ -254,7 +252,7 @@ class VLLMEngine:
 
         return best_result
 
-    def get_model_info(self) -> Dict[str, Any]:
+    def get_model_info(self) -> dict[str, Any]:
         """Get information about the loaded model."""
         if not self._initialized or not self.llm:
             return {"error": "Model not initialized"}
@@ -284,9 +282,7 @@ class VLLMEngine:
 
 
 # Factory function for creating vLLM engines
-async def create_vllm_engine(
-    model_name: str = "microsoft/DialoGPT-medium", **kwargs
-) -> VLLMEngine:
+async def create_vllm_engine(model_name: str = "microsoft/DialoGPT-medium", **kwargs) -> VLLMEngine:
     """Create and initialize a vLLM engine."""
     engine = VLLMEngine(model_name=model_name, **kwargs)
     await engine.initialize()

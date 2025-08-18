@@ -19,7 +19,6 @@ import threading
 import time
 from pathlib import Path
 from statistics import median
-from typing import Optional, List
 
 import requests
 
@@ -32,7 +31,9 @@ def start_server_in_thread(host: str, port: int) -> threading.Thread:
         sys.path.insert(0, str(repo_root / "src"))
     from codeconductor.api.server import app  # type: ignore
 
-    config = uvicorn.Config(app, host=host, port=port, workers=1, log_level="warning", loop="asyncio")
+    config = uvicorn.Config(
+        app, host=host, port=port, workers=1, log_level="warning", loop="asyncio"
+    )
     server = uvicorn.Server(config)
     t = threading.Thread(target=server.run, daemon=True)
     t.start()
@@ -40,10 +41,10 @@ def start_server_in_thread(host: str, port: int) -> threading.Thread:
     return t
 
 
-def run_once(host: str, port: int, prompt: str, timeout: float) -> Optional[int]:
+def run_once(host: str, port: int, prompt: str, timeout: float) -> int | None:
     url = f"http://{host}:{port}/stream"
     params = {"prompt": prompt}
-    ttft_ms: Optional[int] = None
+    ttft_ms: int | None = None
     try:
         with requests.get(url, params=params, stream=True, timeout=(2, timeout)) as r:
             r.raise_for_status()
@@ -76,7 +77,7 @@ def main() -> int:
     p.add_argument("--prompts", type=int, default=5, help="number of prompts")
     args = p.parse_args()
 
-    server_thread: Optional[threading.Thread] = None
+    server_thread: threading.Thread | None = None
     if args.start_server:
         try:
             server_thread = start_server_in_thread(args.host, args.port)
@@ -84,7 +85,7 @@ def main() -> int:
             print(f"Failed to start server: {e}")
             return 1
 
-    prompts: List[str] = [
+    prompts: list[str] = [
         "warmup: quick fox",
         "warmup: hello world",
         "warmup: fibonacci 10",
@@ -94,7 +95,7 @@ def main() -> int:
     if args.prompts > 0 and args.prompts != len(prompts):
         prompts = (prompts * ((args.prompts + len(prompts) - 1) // len(prompts)))[: args.prompts]
 
-    ttfts: List[int] = []
+    ttfts: list[int] = []
     for pr in prompts:
         ms = run_once(args.host, args.port, pr, args.timeout)
         if ms is not None:
@@ -124,5 +125,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-

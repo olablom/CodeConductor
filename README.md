@@ -111,9 +111,9 @@ Expected warm baseline: TTFT p50 ≈ 2.5–3.0 s (after warmup), CodeBLEU ≈ 0.
 
 ## **Current Status (Production Ready)**
 
-[![Tests](https://github.com/olabl/CodeConductor/actions/workflows/test.yml/badge.svg)](https://github.com/olabl/CodeConductor/actions)
-[![Windows Tests](https://github.com/olabl/CodeConductor/actions/workflows/test-windows.yml/badge.svg)](https://github.com/olabl/CodeConductor/actions)
-[![Coverage](https://img.shields.io/codecov/c/github/olabl/CodeConductor)](https://github.com/olabl/CodeConductor/actions)
+[![Tests](https://github.com/olablom/CodeConductor/actions/workflows/test.yml/badge.svg)](https://github.com/olablom/CodeConductor/actions)
+[![Windows Tests](https://github.com/olablom/CodeConductor/actions/workflows/test-windows.yml/badge.svg)](https://github.com/olablom/CodeConductor/actions)
+[![Coverage](https://img.shields.io/codecov/c/github/olablom/CodeConductor)](https://github.com/olablom/CodeConductor/actions)
 
 - **✅ Test Suite**: 51 passed, 11 skipped (vLLM), 0 failed
 - **🔒 Deterministic**: All tests run consistently with fixed seeds

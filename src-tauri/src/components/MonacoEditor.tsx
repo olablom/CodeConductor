@@ -42,7 +42,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
     textarea.style.fontSize = '14px'
     textarea.style.backgroundColor = theme === 'vs-dark' ? '#1e1e1e' : '#ffffff'
     textarea.style.color = theme === 'vs-dark' ? '#ffffff' : '#000000'
-    
+
     textarea.addEventListener('input', (e) => {
       onChange((e.target as HTMLTextAreaElement).value)
     })
@@ -167,9 +167,9 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
 
   return (
     <div className="w-full h-full min-h-[300px] flex flex-col">
-      <div className="flex-1" 
+      <div className="flex-1"
         ref={editorRef}
-        style={{ 
+        style={{
           backgroundColor: theme === 'vs-dark' ? '#1e1e1e' : '#ffffff',
           color: theme === 'vs-dark' ? '#ffffff' : '#000000'
         }}
@@ -183,4 +183,4 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
   )
 }
 
-export default MonacoEditor 
+export default MonacoEditor

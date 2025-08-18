@@ -124,5 +124,3 @@ Write-Log ' - See docs/README_TROUBLESHOOTING_LINKS.md'
 
 Copy-Item -Path $log -Destination $latest -Force -ErrorAction SilentlyContinue | Out-Null
 Write-Host 'Diagnostics written to log file' -ForegroundColor Cyan
-
-

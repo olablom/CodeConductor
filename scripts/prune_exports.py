@@ -19,12 +19,11 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
+import time
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-import zipfile
-import time
-import shutil
 
 
 @dataclass
@@ -32,10 +31,10 @@ class BundleInfo:
     path: Path
     is_full: bool
     reason: str
-    run_id: Optional[str]
+    run_id: str | None
 
 
-def _read_manifest(z: zipfile.ZipFile) -> Tuple[Optional[dict], str]:
+def _read_manifest(z: zipfile.ZipFile) -> tuple[dict | None, str]:
     # Try lowercase first (our current exporter), then uppercase (older flow)
     for name in ("manifest.json", "MANIFEST.json"):
         try:
@@ -76,7 +75,7 @@ def classify_bundle(zip_path: Path) -> BundleInfo:
                 )
 
             # Verify files exist inside the zip
-            missing_files: List[str] = []
+            missing_files: list[str] = []
             for k in required_keys:
                 p = str(paths.get(k))
                 if not p or not _zip_has(z, p):
@@ -90,9 +89,7 @@ def classify_bundle(zip_path: Path) -> BundleInfo:
                 )
 
             # Consider as full if required files exist; tests/diffs may be optional v1
-            return BundleInfo(
-                zip_path, is_full=True, reason="ok", run_id=manifest.get("run_id")
-            )
+            return BundleInfo(zip_path, is_full=True, reason="ok", run_id=manifest.get("run_id"))
 
     except Exception as e:
         return BundleInfo(zip_path, is_full=False, reason=f"zip_error:{e}", run_id=None)
@@ -130,7 +127,7 @@ def prune_exports(
     keep_full: int,
     delete_minimal: bool,
     dry_run: bool,
-) -> Dict[str, any]:
+) -> dict[str, any]:
     # Acquire lock
     artifacts_root = exports_dir.parent
     lock_dir = artifacts_root / ".prune.lock"
@@ -138,10 +135,8 @@ def prune_exports(
         print(json.dumps({"locked": True, "where": str(lock_dir)}))
         return {"locked": True}
 
-    zips = sorted(
-        exports_dir.glob("*.zip"), key=lambda p: p.stat().st_mtime, reverse=True
-    )
-    infos: List[BundleInfo] = [classify_bundle(p) for p in zips]
+    zips = sorted(exports_dir.glob("*.zip"), key=lambda p: p.stat().st_mtime, reverse=True)
+    infos: list[BundleInfo] = [classify_bundle(p) for p in zips]
 
     full = [b for b in infos if b.is_full]
     minimal = [b for b in infos if not b.is_full]
@@ -153,7 +148,7 @@ def prune_exports(
     pin_str = os.getenv("PIN_EXPORTS", "").strip()
     pinned: set[str] = set([x for x in pin_str.split(";") if x]) if pin_str else set()
 
-    to_delete: List[BundleInfo] = []
+    to_delete: list[BundleInfo] = []
     to_delete.extend(overflow_full)
     if delete_minimal:
         to_delete.extend(minimal)
@@ -175,7 +170,7 @@ def prune_exports(
         return total
 
     cap_gb_str = os.getenv("EXPORT_SIZE_CAP_GB", "").strip()
-    extra_delete: List[BundleInfo] = []
+    extra_delete: list[BundleInfo] = []
     before_bytes = _dir_size_bytes(exports_dir)
     if cap_gb_str:
         try:
@@ -220,7 +215,7 @@ def prune_exports(
             return summary
 
     # Apply deletions (retention + cap)
-    deleted: List[str] = []
+    deleted: list[str] = []
     if not dry_run:
         trash_dir = exports_dir / ".trash"
         trash_dir.mkdir(parents=True, exist_ok=True)
@@ -307,9 +302,7 @@ def main() -> int:
         action="store_true",
         help="Delete minimal/incomplete bundles as well",
     )
-    parser.add_argument(
-        "--dry-run", action="store_true", help="Show actions without deleting"
-    )
+    parser.add_argument("--dry-run", action="store_true", help="Show actions without deleting")
 
     args = parser.parse_args()
     artifacts = Path(args.artifacts_dir).resolve()

@@ -7,24 +7,22 @@ optimal model selection and code generation strategies based on Test-as-Reward d
 """
 
 import json
-import numpy as np
-import os
-from typing import Dict, List, Any, Optional, Tuple
-from pathlib import Path
 import logging
+from pathlib import Path
+from typing import Any
+
+import numpy as np
 
 # Try to import stable-baselines3, but provide fallback if not available
 try:
     from stable_baselines3 import PPO
-    from stable_baselines3.common.env_util import make_vec_env
     from stable_baselines3.common.callbacks import BaseCallback
+    from stable_baselines3.common.env_util import make_vec_env
 
     STABLE_BASELINES_AVAILABLE = True
 except ImportError:
     STABLE_BASELINES_AVAILABLE = False
-    print(
-        "⚠️ stable-baselines3 not available. Install with: pip install stable-baselines3"
-    )
+    print("⚠️ stable-baselines3 not available. Install with: pip install stable-baselines3")
 
 try:
     import gymnasium as gym
@@ -55,9 +53,7 @@ class TrainingCallback(BaseCallback):
 
             if self.episode_count % 10 == 0:
                 avg_reward = np.mean(self.episode_rewards[-10:])
-                logger.info(
-                    f"Episode {self.episode_count}, Avg Reward: {avg_reward:.3f}"
-                )
+                logger.info(f"Episode {self.episode_count}, Avg Reward: {avg_reward:.3f}")
 
         return True
 
@@ -90,7 +86,7 @@ class CodeConductorEnv(Env):
         self.current_step = 0
         self.max_steps = 10  # Maximum steps per episode
 
-    def _load_patterns(self) -> List[Dict[str, Any]]:
+    def _load_patterns(self) -> list[dict[str, Any]]:
         """Load patterns from JSON file"""
         if not self.patterns_file.exists():
             logger.warning(
@@ -99,30 +95,27 @@ class CodeConductorEnv(Env):
             return []
 
         try:
-            with open(self.patterns_file, "r", encoding="utf-8") as f:
+            with open(self.patterns_file, encoding="utf-8") as f:
                 patterns = json.load(f)
 
             # Filter patterns with valid rewards
             valid_patterns = [
                 p
                 for p in patterns
-                if p.get("reward") is not None
-                and isinstance(p.get("reward"), (int, float))
+                if p.get("reward") is not None and isinstance(p.get("reward"), (int, float))
             ]
 
             if len(valid_patterns) > self.max_patterns:
                 valid_patterns = valid_patterns[-self.max_patterns :]
 
-            logger.info(
-                f"Loaded {len(valid_patterns)} valid patterns for RLHF training"
-            )
+            logger.info(f"Loaded {len(valid_patterns)} valid patterns for RLHF training")
             return valid_patterns
 
         except Exception as e:
             logger.error(f"Error loading patterns: {e}")
             return []
 
-    def _extract_features(self, pattern: Dict[str, Any]) -> np.ndarray:
+    def _extract_features(self, pattern: dict[str, Any]) -> np.ndarray:
         """Extract features from pattern for observation"""
         # Test reward (0.0 to 1.0)
         reward_value = pattern.get("reward")
@@ -160,9 +153,7 @@ class CodeConductorEnv(Env):
 
         # Factors that indicate good code
         has_functions = any("def " in line for line in non_empty_lines)
-        has_imports = any(
-            "import " in line or "from " in line for line in non_empty_lines
-        )
+        has_imports = any("import " in line or "from " in line for line in non_empty_lines)
         has_docstrings = any('"""' in line or "'''" in line for line in non_empty_lines)
         has_type_hints = any(":" in line and "->" in line for line in non_empty_lines)
 
@@ -210,9 +201,7 @@ class CodeConductorEnv(Env):
         prompt_lower = prompt.lower()
 
         # Count complexity indicators
-        complex_count = sum(
-            1 for keyword in complex_keywords if keyword in prompt_lower
-        )
+        complex_count = sum(1 for keyword in complex_keywords if keyword in prompt_lower)
         simple_count = sum(1 for keyword in simple_keywords if keyword in prompt_lower)
 
         # Calculate complexity score
@@ -225,7 +214,7 @@ class CodeConductorEnv(Env):
 
         return complexity
 
-    def reset(self, seed: Optional[int] = None) -> Tuple[np.ndarray, Dict[str, Any]]:
+    def reset(self, seed: int | None = None) -> tuple[np.ndarray, dict[str, Any]]:
         """Reset environment for new episode"""
         super().reset(seed=seed)
 
@@ -242,7 +231,7 @@ class CodeConductorEnv(Env):
 
         return observation, {}
 
-    def step(self, action: int) -> Tuple[np.ndarray, float, bool, bool, Dict[str, Any]]:
+    def step(self, action: int) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
         """Execute one step in the environment"""
         if not self.patterns:
             return np.zeros(4, dtype=np.float32), 0.0, True, False, {}
@@ -255,9 +244,7 @@ class CodeConductorEnv(Env):
         adjusted_reward = base_reward * action_multiplier
 
         # Add exploration bonus for trying different actions
-        exploration_bonus = (
-            0.01 if action != 0 else 0.0
-        )  # Small bonus for non-default action
+        exploration_bonus = 0.01 if action != 0 else 0.0  # Small bonus for non-default action
 
         # Exec-feedback: favor higher test coverage, penalize runtime if present in pattern
         runtime_ms = float(pattern.get("runtime_ms", 0.0))
@@ -288,7 +275,7 @@ class CodeConductorEnv(Env):
 
         return next_observation, final_reward, done, truncated, info
 
-    def _get_action_multiplier(self, action: int, pattern: Dict[str, Any]) -> float:
+    def _get_action_multiplier(self, action: int, pattern: dict[str, Any]) -> float:
         """Get reward multiplier based on action and pattern context"""
         base_reward = pattern.get("reward", 0.0)
         task_complexity = self._estimate_task_complexity(pattern.get("prompt", ""))
@@ -339,9 +326,7 @@ class RLHFAgent:
 
         try:
             # Create environment
-            self.env = make_vec_env(
-                lambda: CodeConductorEnv(str(self.patterns_file)), n_envs=1
-            )
+            self.env = make_vec_env(lambda: CodeConductorEnv(str(self.patterns_file)), n_envs=1)
 
             # Create model
             self.model = PPO("MlpPolicy", self.env, verbose=1, learning_rate=0.0003)
@@ -382,15 +367,13 @@ class RLHFAgent:
                 logger.info(f"Model loaded from {self.model_path}")
                 return True
             else:
-                logger.warning(
-                    f"Model file {self.model_path} or {model_path_zip} not found."
-                )
+                logger.warning(f"Model file {self.model_path} or {model_path_zip} not found.")
                 return False
         except Exception as e:
             logger.error(f"Error loading model: {e}")
             return False
 
-    def predict_action(self, observation: np.ndarray) -> Tuple[int, np.ndarray]:
+    def predict_action(self, observation: np.ndarray) -> tuple[int, np.ndarray]:
         """Predict optimal action for given observation"""
         if self.model is None:
             logger.error("No model loaded. Call load_model() first.")
@@ -447,9 +430,7 @@ def demo_rlhf_training():
 
         # Test prediction
         print("\n🧪 Testing predictions...")
-        test_observation = np.array(
-            [0.5, 0.7, 0.8, 0.6], dtype=np.float32
-        )  # Example observation
+        test_observation = np.array([0.5, 0.7, 0.8, 0.6], dtype=np.float32)  # Example observation
         action, states = agent.predict_action(test_observation)
         action_desc = agent.get_action_description(action)
 

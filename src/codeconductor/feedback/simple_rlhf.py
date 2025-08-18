@@ -5,10 +5,8 @@ Updates model weights based on success/failure feedback
 """
 
 import json
-import os
-from typing import Dict, List, Any, Optional
-from pathlib import Path
 import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -20,11 +18,11 @@ class SimpleRLHFAgent:
         self.weights_file = Path(weights_file)
         self.weights = self.load_weights()
 
-    def load_weights(self) -> Dict[str, float]:
+    def load_weights(self) -> dict[str, float]:
         """Load model weights from file"""
         if self.weights_file.exists():
             try:
-                with open(self.weights_file, "r") as f:
+                with open(self.weights_file) as f:
                     weights = json.load(f)
                 logger.info(f"Loaded weights: {weights}")
                 return weights
@@ -62,21 +60,23 @@ class SimpleRLHFAgent:
             # Success: multiply by 1.1 to 1.2 (10-20% increase)
             multiplier = 1.1 + (quality * 0.1)  # 1.1 to 1.2
         else:
-            # Failure: multiply by 0.8 to 0.9 (10-20% decrease)  
+            # Failure: multiply by 0.8 to 0.9 (10-20% decrease)
             multiplier = 0.9 - ((1 - quality) * 0.1)  # 0.8 to 0.9
 
         # Update weight with percentage-based adjustment
         old_weight = self.weights[model]
-        
+
         if success:
             # Success: multiply by 1.1 to 1.2 (10-20% increase)
             multiplier = 1.1 + (quality * 0.1)  # 1.1 to 1.2
         else:
-            # Failure: multiply by 0.8 to 0.9 (10-20% decrease)  
+            # Failure: multiply by 0.8 to 0.9 (10-20% decrease)
             multiplier = 0.9 - ((1 - quality) * 0.1)  # 0.8 to 0.9
-        
-        self.weights[model] = max(0.1, min(20.0, old_weight * multiplier))  # Increased max from 10.0 to 20.0
-        
+
+        self.weights[model] = max(
+            0.1, min(20.0, old_weight * multiplier)
+        )  # Increased max from 10.0 to 20.0
+
         # NO NORMALIZATION - let weights be what they are!
 
         logger.info(
@@ -88,7 +88,7 @@ class SimpleRLHFAgent:
 
         return self.weights[model]
 
-    def get_best_models(self, n: int = 2) -> List[str]:
+    def get_best_models(self, n: int = 2) -> list[str]:
         """Get top N models based on weights"""
         sorted_models = sorted(self.weights.items(), key=lambda x: x[1], reverse=True)
         return [model for model, _ in sorted_models[:n]]

@@ -4,30 +4,29 @@ CodeConductor Debate Manager - Multi-Agent Debate System
 """
 
 import asyncio
-import yaml
 import json
 import logging
 import time
 from datetime import datetime
-from typing import List, Dict, Any, Optional
 from pathlib import Path
-from dataclasses import dataclass
+from typing import Any
+
+import yaml
 
 from .local_agent import LocalAIAgent
-from .personas import get_persona_prompt
 
 logger = logging.getLogger(__name__)
 
 
 class SingleModelDebateManager:
     """Base debate manager for single model debates"""
-    
+
     def __init__(self, *args, **kwargs):
         self.transcript = []
         # optional attrs used by save_transcript()
         self.agents = getattr(self, "agents", [])
         self.model_name = getattr(self, "model_name", "unknown")
-        
+
     def save_transcript(self, filename: str = "debate_transcript.json"):
         """
         Save debate transcript to artifacts/runs/<filename> as JSON.
@@ -38,7 +37,7 @@ class SingleModelDebateManager:
         output_file = output_dir / filename
 
         payload = {
-            "agents": [getattr(a, "name", str(a)) for a in self.agents] if self.agents else [],
+            "agents": ([getattr(a, "name", str(a)) for a in self.agents] if self.agents else []),
             "turns": self.transcript,
             "timestamp": datetime.now().isoformat(),
             "model": self.model_name or "unknown",
@@ -51,19 +50,20 @@ class SingleModelDebateManager:
 class CodeConductorDebateManager:
     """Debate manager for code generation tasks"""
 
-    def __init__(self, agents: Optional[List[LocalAIAgent]] = None):
+    def __init__(self, agents: list[LocalAIAgent] | None = None):
         self.agents = agents if agents is not None else self._default_agents()
         self.full_transcript = []
 
-    def _default_agents(self) -> List[LocalAIAgent]:
+    def _default_agents(self) -> list[LocalAIAgent]:
         """Minimal set för tester; kan vara mockade eller enkla lokala agenter"""
         from .local_ai_agent import LocalAIAgent
+
         return [
             LocalAIAgent(name="Architect", persona="You are an Architect."),
             LocalAIAgent(name="Coder", persona="You are a Coder."),
         ]
 
-    async def conduct_debate(self, user_prompt: str) -> Dict[str, Any]:
+    async def conduct_debate(self, user_prompt: str) -> dict[str, Any]:
         """Conduct a multi-agent debate for code generation"""
 
         try:
@@ -73,13 +73,13 @@ class CodeConductorDebateManager:
                 try:
                     response = await asyncio.wait_for(
                         agent.generate_response(user_prompt),
-                        timeout=30.0  # 30 second timeout per agent
+                        timeout=30.0,  # 30 second timeout per agent
                     )
                     self.full_transcript.append(
                         {"agent": agent.name, "turn": "proposal", "content": response}
                     )
                     print(f"{agent.name}:\n{response}\n")
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     print(f"⏰ {agent.name} timed out during proposal")
                     response = f"{agent.name} timed out during proposal generation."
                     self.full_transcript.append(
@@ -114,13 +114,13 @@ class CodeConductorDebateManager:
                     rebuttal_prompt += "Please provide your rebuttal or counter-argument."
                     response = await asyncio.wait_for(
                         agent.generate_response(rebuttal_prompt),
-                        timeout=30.0  # 30 second timeout per agent
+                        timeout=30.0,  # 30 second timeout per agent
                     )
                     self.full_transcript.append(
                         {"agent": agent.name, "turn": "rebuttal", "content": response}
                     )
                     print(f"{agent.name} (rebuttal):\n{response}\n")
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     print(f"⏰ {agent.name} timed out during rebuttal")
                     response = f"{agent.name} timed out during rebuttal generation."
                     self.full_transcript.append(
@@ -140,7 +140,7 @@ class CodeConductorDebateManager:
                     final_prompt = "Based on the debate so far, what is your final recommendation for the code implementation?"
                     response = await asyncio.wait_for(
                         agent.generate_response(final_prompt),
-                        timeout=30.0  # 30 second timeout per agent
+                        timeout=30.0,  # 30 second timeout per agent
                     )
                     self.full_transcript.append(
                         {
@@ -150,7 +150,7 @@ class CodeConductorDebateManager:
                         }
                     )
                     print(f"{agent.name} (final recommendation):\n{response}\n")
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     print(f"⏰ {agent.name} timed out during final recommendation")
                     response = f"{agent.name} timed out during final recommendation generation."
                     self.full_transcript.append(
@@ -162,7 +162,9 @@ class CodeConductorDebateManager:
                     )
                 except Exception as e:
                     print(f"❌ {agent.name} error during final recommendation: {e}")
-                    response = f"{agent.name} encountered an error during final recommendation: {str(e)}"
+                    response = (
+                        f"{agent.name} encountered an error during final recommendation: {str(e)}"
+                    )
                     self.full_transcript.append(
                         {
                             "agent": agent.name,
@@ -176,17 +178,17 @@ class CodeConductorDebateManager:
                 "agents": [agent.name for agent in self.agents],
                 "total_turns": len(self.full_transcript),
             }
-            
+
         except Exception as e:
             print(f"❌ Debate failed: {e}")
             return {
                 "transcript": self.full_transcript,
                 "agents": [agent.name for agent in self.agents],
                 "total_turns": len(self.full_transcript),
-                "error": str(e)
+                "error": str(e),
             }
 
-    def get_transcript(self) -> List[Dict[str, Any]]:
+    def get_transcript(self) -> list[dict[str, Any]]:
         """Get full debate transcript"""
         return self.full_transcript.copy()
 
@@ -202,21 +204,21 @@ class CodeConductorDebateManager:
             json.dump(self.full_transcript, f, indent=2, ensure_ascii=False)
 
         logger.info(f"Transcript saved to {filename} and {json_filename}")
-        
+
         # Also save to artifacts/runs/ for consistency
         output_dir = Path("artifacts/runs")
         output_dir.mkdir(parents=True, exist_ok=True)
         artifacts_file = output_dir / f"debate_transcript_{int(time.time())}.json"
-        
+
         payload = {
-            "agents": [agent.name for agent in self.agents] if hasattr(self, 'agents') else [],
+            "agents": ([agent.name for agent in self.agents] if hasattr(self, "agents") else []),
             "turns": self.full_transcript,
             "timestamp": datetime.now().isoformat(),
-            "model": getattr(self, 'model_name', 'unknown'),
+            "model": getattr(self, "model_name", "unknown"),
         }
         with artifacts_file.open("w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, ensure_ascii=False)
-        
+
         return artifacts_file
 
     def extract_consensus(self) -> str:

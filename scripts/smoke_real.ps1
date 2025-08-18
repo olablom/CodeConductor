@@ -20,5 +20,3 @@ Write-Host "[3/3] Focused suite (real)"
 python tests/test_codeconductor_2agents_focused.py | Tee-Object -FilePath (Join-Path $outDir "focused_stdout.txt")
 
 Write-Host "Done. Artifacts at $outDir"
-
-

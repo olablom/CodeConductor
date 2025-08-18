@@ -119,4 +119,4 @@ Tests automatically collect metrics:
 - **Resource Usage**: CPU, memory, VRAM
 - **Success Rate**: Pass/fail ratios
 
-Results are saved to `simple_master_test_results_*.json` for analysis. 
+Results are saved to `simple_master_test_results_*.json` for analysis.

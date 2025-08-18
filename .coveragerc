@@ -1,6 +1,6 @@
 [run]
 source = src/codeconductor
-omit = 
+omit =
     */tests/*
     */venv/*
     */__pycache__/*
@@ -19,7 +19,7 @@ exclude_lines =
     if __name__ == .__main__.:
     class .*\bProtocol\):
     @(abc\.)?abstractmethod
-    
+
 precision = 2
 show_missing = True
 skip_covered = False

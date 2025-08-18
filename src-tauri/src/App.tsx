@@ -69,50 +69,50 @@ function App() {
 
   const handleGenerate = async () => {
     console.log('🎯 Button clicked!') // DEBUG
-    
+
     if (!prompt.trim()) {
       console.log('❌ Empty prompt!') // DEBUG
       return
     }
-    
+
     console.log('📝 Prompt:', prompt) // DEBUG
-    
+
     // Test Tauri first
     const tauriWorks = await testTauri()
     console.log('🔍 Tauri available:', tauriWorks) // DEBUG
-    
+
     setIsGenerating(true)
     setGeneratedCode('// Generating code... Please wait...')
-    
+
     try {
       console.log('⏳ Setting loading state...') // DEBUG
-      
+
       if (!tauriWorks) {
         console.log('⚠️ Tauri not available, using fallback') // DEBUG
         throw new Error('Tauri not available')
       }
-      
+
       console.log('🚀 Calling Rust backend...') // DEBUG
-      
+
       // Call Rust backend via Tauri
-      const result = await window.__TAURI__.tauri.invoke('generate_code', { 
-        prompt: prompt.trim() 
+      const result = await window.__TAURI__.tauri.invoke('generate_code', {
+        prompt: prompt.trim()
       })
-      
+
       console.log('✅ Got result from Rust:', result) // DEBUG
-      
+
       setGeneratedCode(result as string)
       console.log('✅ Code generated successfully from Rust backend!')
-      
+
     } catch (error) {
       console.error('❌ Rust backend failed:', error)
-      
+
       // Enhanced fallback based on prompt content
       let fallbackCode = ''
       const promptLower = prompt.toLowerCase()
-      
+
       console.log('🔄 Using fallback code for:', promptLower) // DEBUG
-      
+
       if (promptLower.includes('python') && promptLower.includes('sort')) {
         fallbackCode = `def sort_list(numbers):
     """Sort a list of numbers in ascending order."""
@@ -168,7 +168,7 @@ function processData(input) {
 const result = processData('Hello CodeConductor!');
 console.log('Result:', result);`
       }
-      
+
       setGeneratedCode(fallbackCode)
       console.log('⚠️ Using enhanced fallback code')
     } finally {
@@ -177,15 +177,15 @@ console.log('Result:', result);`
   }
 
   return (
-    <div style={{ 
-      padding: '20px', 
+    <div style={{
+      padding: '20px',
       backgroundColor: '#f5f5f5',
       minHeight: '100vh',
       fontFamily: 'system-ui, sans-serif'
     }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <h1 style={{ 
-          fontSize: '2rem', 
+        <h1 style={{
+          fontSize: '2rem',
           color: '#333',
           marginBottom: '10px'
         }}>
@@ -197,9 +197,9 @@ console.log('Result:', result);`
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
           {/* Prompt Input */}
-          <div style={{ 
-            backgroundColor: 'white', 
-            padding: '20px', 
+          <div style={{
+            backgroundColor: 'white',
+            padding: '20px',
             borderRadius: '8px',
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
           }}>
@@ -223,8 +223,8 @@ console.log('Result:', result);`
                 }}
               />
             </div>
-            <button 
-              onClick={handleGenerate} 
+            <button
+              onClick={handleGenerate}
               disabled={isGenerating || !prompt.trim()}
               style={{
                 width: '100%',
@@ -243,9 +243,9 @@ console.log('Result:', result);`
           </div>
 
           {/* Generated Code */}
-          <div style={{ 
-            backgroundColor: 'white', 
-            padding: '20px', 
+          <div style={{
+            backgroundColor: 'white',
+            padding: '20px',
             borderRadius: '8px',
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
           }}>
@@ -355,4 +355,4 @@ console.log('Result:', result);`
   )
 }
 
-export default App 
+export default App

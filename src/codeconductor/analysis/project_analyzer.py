@@ -9,14 +9,12 @@ This module provides comprehensive project analysis including:
 - AI-powered recommendations
 """
 
-import os
 import ast
 import json
-import re
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +27,8 @@ class RouteInfo:
     path: str
     function: str
     file: str
-    parameters: Optional[List[str]] = None
-    response_model: Optional[str] = None
+    parameters: list[str] | None = None
+    response_model: str | None = None
 
 
 @dataclass
@@ -38,9 +36,9 @@ class TableInfo:
     """Information about a database table"""
 
     name: str
-    columns: List[Dict[str, str]]
-    primary_key: Optional[str] = None
-    foreign_keys: Optional[List[Dict[str, str]]] = None
+    columns: list[dict[str, str]]
+    primary_key: str | None = None
+    foreign_keys: list[dict[str, str]] | None = None
 
 
 class ProjectAnalyzer:
@@ -52,12 +50,12 @@ class ProjectAnalyzer:
     """
 
     def __init__(self):
-        self.project_path: Optional[Path] = None
-        self.python_files: List[Path] = []
-        self.routes: List[RouteInfo] = []
-        self.schema: Dict[str, Any] = {"tables": []}
+        self.project_path: Path | None = None
+        self.python_files: list[Path] = []
+        self.routes: list[RouteInfo] = []
+        self.schema: dict[str, Any] = {"tables": []}
 
-    def scan_fastapi_routes(self, project_path: str) -> List[Dict[str, Any]]:
+    def scan_fastapi_routes(self, project_path: str) -> list[dict[str, Any]]:
         """
         Scan a project for FastAPI routes.
 
@@ -138,7 +136,7 @@ class ProjectAnalyzer:
     def _scan_file_for_routes(self, file_path: Path):
         """Scan a single Python file for FastAPI routes"""
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
 
             # Parse the Python file
@@ -151,9 +149,7 @@ class ProjectAnalyzer:
                     # Check if function has route decorators
                     for decorator in node.decorator_list:
                         if self._is_route_decorator(decorator):
-                            route_info = self._extract_route_info(
-                                node, decorator, file_path
-                            )
+                            route_info = self._extract_route_info(node, decorator, file_path)
                             if route_info:
                                 self.routes.append(route_info)
 
@@ -185,10 +181,10 @@ class ProjectAnalyzer:
 
     def _extract_route_info(
         self,
-        func_node: Union[ast.FunctionDef, ast.AsyncFunctionDef],
+        func_node: ast.FunctionDef | ast.AsyncFunctionDef,
         decorator: ast.Call,
         file_path: Path,
-    ) -> Optional[RouteInfo]:
+    ) -> RouteInfo | None:
         """Extract route information from a function and its decorator"""
         try:
             # Get HTTP method
@@ -224,7 +220,7 @@ class ProjectAnalyzer:
             logger.warning(f"⚠️ Error extracting route info: {e}")
             return None
 
-    def introspect_postgresql(self, db_url: Optional[str] = None) -> Dict[str, Any]:
+    def introspect_postgresql(self, db_url: str | None = None) -> dict[str, Any]:
         """
         Introspect PostgreSQL database schema.
 
@@ -269,8 +265,8 @@ class ProjectAnalyzer:
         return mock_schema
 
     def generate_report(
-        self, routes: List[Dict[str, Any]], schema: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, routes: list[dict[str, Any]], schema: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Generate a comprehensive project analysis report.
 
@@ -313,14 +309,12 @@ class ProjectAnalyzer:
             "version": "MVP-1.0",
         }
 
-        logger.info(
-            f"✅ Generated report with {total_routes} routes, {total_tables} tables"
-        )
+        logger.info(f"✅ Generated report with {total_routes} routes, {total_tables} tables")
         return report
 
     def _generate_ai_recommendations(
-        self, routes: List[Dict[str, Any]], schema: Dict[str, Any]
-    ) -> List[Dict[str, str]]:
+        self, routes: list[dict[str, Any]], schema: dict[str, Any]
+    ) -> list[dict[str, str]]:
         """Generate AI-powered recommendations (mock for MVP)"""
         recommendations = []
 
@@ -343,9 +337,7 @@ class ProjectAnalyzer:
 
         # Security recommendations
         auth_routes = [
-            r
-            for r in routes
-            if "auth" in r["path"].lower() or "login" in r["path"].lower()
+            r for r in routes if "auth" in r["path"].lower() or "login" in r["path"].lower()
         ]
         if len(auth_routes) == 0:
             recommendations.append(
@@ -375,7 +367,7 @@ class ProjectAnalyzer:
 
         return recommendations
 
-    def analyze_code_quality(self) -> Dict[str, Any]:
+    def analyze_code_quality(self) -> dict[str, Any]:
         """Analyze code quality metrics (placeholder for future implementation)"""
         return {
             "complexity": "medium",
@@ -384,7 +376,7 @@ class ProjectAnalyzer:
             "documentation": "partial",
         }
 
-    def export_report(self, report: Dict[str, Any], format: str = "json") -> str:
+    def export_report(self, report: dict[str, Any], format: str = "json") -> str:
         """
         Export analysis report in specified format.
 
@@ -402,9 +394,7 @@ class ProjectAnalyzer:
             lines = ["Type,Name,Details"]
 
             for route in report.get("routes", []):
-                lines.append(
-                    f"Route,{route['method']} {route['path']},{route['function']}"
-                )
+                lines.append(f"Route,{route['method']} {route['path']},{route['function']}")
 
             for table in report.get("schema", {}).get("tables", []):
                 lines.append(f"Table,{table['name']},{len(table['columns'])} columns")
@@ -415,7 +405,7 @@ class ProjectAnalyzer:
 
 
 # Convenience functions for easy usage
-def analyze_project(project_path: str) -> Dict[str, Any]:
+def analyze_project(project_path: str) -> dict[str, Any]:
     """Convenience function to analyze a project"""
     analyzer = ProjectAnalyzer()
     routes = analyzer.scan_fastapi_routes(project_path)
@@ -423,7 +413,7 @@ def analyze_project(project_path: str) -> Dict[str, Any]:
     return analyzer.generate_report(routes, schema)
 
 
-def scan_routes_only(project_path: str) -> List[Dict[str, Any]]:
+def scan_routes_only(project_path: str) -> list[dict[str, Any]]:
     """Convenience function to scan only FastAPI routes"""
     analyzer = ProjectAnalyzer()
     return analyzer.scan_fastapi_routes(project_path)

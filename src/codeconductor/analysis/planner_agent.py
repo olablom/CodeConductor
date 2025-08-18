@@ -3,15 +3,14 @@ Planner Agent for CodeConductor
 Uses Tree-sitter analysis + Local LLM for intelligent development planning
 """
 
-import os
 import json
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
-from datetime import datetime
+import os
 import subprocess
+from dataclasses import dataclass
+from typing import Any
 
 # Import our Tree-sitter analyzer
-from .tree_sitter_analyzer import TreeSitterAnalyzer, FastAPITreeSitterAnalyzer
+from .tree_sitter_analyzer import FastAPITreeSitterAnalyzer
 
 
 @dataclass
@@ -19,12 +18,12 @@ class DevelopmentPlan:
     """Represents a development plan created by the Planner Agent"""
 
     task_description: str
-    steps: List[Dict[str, Any]]
-    context_used: Dict[str, Any]
-    cursor_prompts: List[str]
+    steps: list[dict[str, Any]]
+    context_used: dict[str, Any]
+    cursor_prompts: list[str]
     estimated_complexity: str  # 'simple', 'medium', 'complex'
-    dependencies: List[str]
-    validation_criteria: List[str]
+    dependencies: list[str]
+    validation_criteria: list[str]
 
 
 class PlannerAgent:
@@ -39,7 +38,7 @@ class PlannerAgent:
         self.code_analyzer = FastAPITreeSitterAnalyzer()
         self.project_context = self._load_project_context()
 
-    def _load_project_context(self) -> Dict[str, Any]:
+    def _load_project_context(self) -> dict[str, Any]:
         """Load complete project context using Tree-sitter"""
         print(f"🔍 Loading project context from {self.project_path}...")
 
@@ -63,7 +62,7 @@ class PlannerAgent:
 
         return context
 
-    def _get_file_structure(self) -> Dict[str, List[str]]:
+    def _get_file_structure(self) -> dict[str, list[str]]:
         """Get organized file structure"""
         structure = {
             "routers": [],
@@ -76,9 +75,7 @@ class PlannerAgent:
         for root, dirs, files in os.walk(self.project_path):
             for file in files:
                 if file.endswith(".py"):
-                    rel_path = os.path.relpath(
-                        os.path.join(root, file), self.project_path
-                    )
+                    rel_path = os.path.relpath(os.path.join(root, file), self.project_path)
 
                     if "routers" in rel_path:
                         structure["routers"].append(rel_path)
@@ -93,13 +90,13 @@ class PlannerAgent:
 
         return structure
 
-    def _extract_dependencies(self) -> Dict[str, List[str]]:
+    def _extract_dependencies(self) -> dict[str, list[str]]:
         """Extract project dependencies from requirements.txt or pyproject.toml"""
         dependencies = {"fastapi": [], "database": [], "testing": [], "other": []}
 
         req_file = os.path.join(self.project_path, "requirements.txt")
         if os.path.exists(req_file):
-            with open(req_file, "r") as f:
+            with open(req_file) as f:
                 for line in f:
                     dep = line.strip().lower()
                     if "fastapi" in dep or "pydantic" in dep:
@@ -113,7 +110,7 @@ class PlannerAgent:
 
         return dependencies
 
-    def _identify_code_patterns(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
+    def _identify_code_patterns(self, analysis: dict[str, Any]) -> dict[str, Any]:
         """Identify common patterns in the codebase"""
         patterns = {
             "authentication": False,
@@ -129,9 +126,7 @@ class PlannerAgent:
                 name_lower = element.name.lower()
 
                 # Auth patterns
-                if any(
-                    auth in name_lower for auth in ["login", "auth", "token", "jwt"]
-                ):
+                if any(auth in name_lower for auth in ["login", "auth", "token", "jwt"]):
                     patterns["authentication"] = True
 
                 # CRUD patterns
@@ -202,16 +197,11 @@ class PlannerAgent:
             return "complex"
 
         # Medium indicators
-        if any(
-            word in task_lower
-            for word in ["add", "implement", "create", "update", "modify"]
-        ):
+        if any(word in task_lower for word in ["add", "implement", "create", "update", "modify"]):
             return "medium"
 
         # Simple indicators
-        if any(
-            word in task_lower for word in ["fix", "change", "rename", "move", "typo"]
-        ):
+        if any(word in task_lower for word in ["fix", "change", "rename", "move", "typo"]):
             return "simple"
 
         return "medium"  # Default
@@ -251,17 +241,11 @@ Provide a detailed plan with specific implementation steps.
     def _format_routes_for_prompt(self) -> str:
         """Format routes for LLM context"""
         routes_str = ""
-        for route in self.project_context["routes"][
-            :10
-        ]:  # Limit to 10 for context size
-            routes_str += (
-                f"- {route['method']} {route['path']} -> {route['function']}()\n"
-            )
+        for route in self.project_context["routes"][:10]:  # Limit to 10 for context size
+            routes_str += f"- {route['method']} {route['path']} -> {route['function']}()\n"
 
         if len(self.project_context["routes"]) > 10:
-            routes_str += (
-                f"... and {len(self.project_context['routes']) - 10} more routes\n"
-            )
+            routes_str += f"... and {len(self.project_context['routes']) - 10} more routes\n"
 
         return routes_str
 
@@ -315,20 +299,20 @@ Provide a detailed plan with specific implementation steps.
 
 1. Install Redis dependencies:
    - Add redis and fastapi-cache2 to requirements.txt
-   
+
 2. Create cache configuration:
    - Create utils/cache.py with Redis connection setup
    - Add cache decorator functions
-   
+
 3. Apply caching to GET endpoints:
    - Import cache decorator in each router file
    - Add @cache decorator to GET methods
    - Set appropriate TTL values
-   
+
 4. Update main.py:
    - Initialize Redis connection on startup
    - Add cache middleware
-   
+
 5. Testing:
    - Add cache tests
    - Verify cache invalidation logic"""
@@ -339,27 +323,25 @@ Provide a detailed plan with specific implementation steps.
 1. Create admin router:
    - Create routers/admin.py
    - Add admin-only authentication dependency
-   
+
 2. Implement admin endpoints:
    - GET /api/admin/users - List all users
    - GET /api/admin/stats - System statistics
    - POST /api/admin/users/{id}/ban - Ban user
-   
+
 3. Add admin authentication:
    - Create is_admin dependency
    - Check user role in JWT token
-   
+
 4. Update main.py:
    - Import and include admin router
-   
+
 5. Add tests for admin functionality"""
 
         else:
             return f"Generic plan for: {task_line}"
 
-    def _generate_development_steps(
-        self, task: str, reasoning: str
-    ) -> List[Dict[str, Any]]:
+    def _generate_development_steps(self, task: str, reasoning: str) -> list[dict[str, Any]]:
         """Generate structured development steps from reasoning"""
         steps = []
 
@@ -398,7 +380,7 @@ Provide a detailed plan with specific implementation steps.
 
         return steps
 
-    def _generate_cursor_prompts(self, steps: List[Dict[str, Any]]) -> List[str]:
+    def _generate_cursor_prompts(self, steps: list[dict[str, Any]]) -> list[str]:
         """Generate optimized prompts for Cursor based on development steps"""
         prompts = []
 
@@ -410,7 +392,7 @@ Task: {step["description"]}
 
 Project Structure:
 - Authentication: JWT-based auth in routers/auth.py
-- User Management: CRUD operations in routers/users.py  
+- User Management: CRUD operations in routers/users.py
 - Posts Management: Blog posts with ownership in routers/posts.py
 - Database: Mock in-memory database (will be PostgreSQL later)
 
@@ -435,7 +417,7 @@ Generate clean, production-ready code that integrates seamlessly with the existi
 
         return prompts
 
-    def _add_file_specific_context(self, step: Dict[str, Any]) -> str:
+    def _add_file_specific_context(self, step: dict[str, Any]) -> str:
         """Add file-specific context to prompt based on step"""
         context = ""
 
@@ -448,9 +430,7 @@ Generate clean, production-ready code that integrates seamlessly with the existi
 
         return context
 
-    def _define_validation_criteria(
-        self, task: str, steps: List[Dict[str, Any]]
-    ) -> List[str]:
+    def _define_validation_criteria(self, task: str, steps: list[dict[str, Any]]) -> list[str]:
         """Define criteria to validate successful implementation"""
         criteria = [
             "Code follows existing project patterns",
@@ -481,7 +461,7 @@ Generate clean, production-ready code that integrates seamlessly with the existi
 
         return criteria
 
-    def _identify_task_dependencies(self, task: str) -> List[str]:
+    def _identify_task_dependencies(self, task: str) -> list[str]:
         """Identify dependencies required for the task"""
         dependencies = []
 
@@ -512,21 +492,21 @@ Generate clean, production-ready code that integrates seamlessly with the existi
         print(f"🚀 Current routes: {len(plan.context_used['routes'])}")
 
         if plan.dependencies:
-            print(f"\n📦 Dependencies needed:")
+            print("\n📦 Dependencies needed:")
             for dep in plan.dependencies:
                 print(f"   - {dep}")
 
-        print(f"\n📝 Implementation Steps:")
+        print("\n📝 Implementation Steps:")
         for step in plan.steps:
             print(f"\n{step['number']}. {step['description']}")
             print(f"   ⏱️  Estimated time: {step['estimated_time']}")
 
-        print(f"\n✅ Validation Criteria:")
+        print("\n✅ Validation Criteria:")
         for criteria in plan.validation_criteria:
             print(f"   - {criteria}")
 
         print(f"\n🤖 Cursor Prompts Generated: {len(plan.cursor_prompts)}")
-        print(f"\nFirst prompt preview:")
+        print("\nFirst prompt preview:")
         print("-" * 40)
         if plan.cursor_prompts:
             print(plan.cursor_prompts[0][:500] + "...")

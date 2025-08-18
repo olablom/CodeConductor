@@ -12,38 +12,38 @@ Always returns: primary model id, ordered fallbacks, and sampling params.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
-import os
 import logging
+import os
+from dataclasses import dataclass
+from typing import Any
 
-from .model_manager import ModelInfo
-from .breakers import get_manager as get_breaker_manager
 from codeconductor.telemetry import get_logger
 
+from .breakers import get_manager as get_breaker_manager
+from .model_manager import ModelInfo
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class SelectionInput:
-    models: List[ModelInfo]
+    models: list[ModelInfo]
     prompt_len: int
     policy: str = "latency"  # latency | context | quality
     # Optional hints/overrides
     max_candidates: int = 3
-    temperature: Optional[float] = None
-    top_p: Optional[float] = None
+    temperature: float | None = None
+    top_p: float | None = None
 
 
 @dataclass
 class SelectionOutput:
-    selected_model: Optional[str]
-    fallbacks: List[str]
+    selected_model: str | None
+    fallbacks: list[str]
     policy: str
-    scores: Dict[str, float]
-    sampling: Dict[str, float]
-    why: Dict[str, Any]
+    scores: dict[str, float]
+    sampling: dict[str, float]
+    why: dict[str, Any]
 
 
 class ModelSelector:
@@ -69,9 +69,9 @@ class ModelSelector:
                 chosen = sin.models[0].id
             logger.info(f"ModelSelector forced by env: {forced} => {chosen}")
             sampling = {
-                "temperature": sin.temperature
-                if sin.temperature is not None
-                else self.default_temperature,
+                "temperature": (
+                    sin.temperature if sin.temperature is not None else self.default_temperature
+                ),
                 "top_p": sin.top_p if sin.top_p is not None else self.default_top_p,
             }
             return SelectionOutput(
@@ -90,7 +90,7 @@ class ModelSelector:
             "quality": self._score_quality,
         }.get(policy, self._score_latency)
 
-        scores: Dict[str, float] = {}
+        scores: dict[str, float] = {}
         breaker = get_breaker_manager()
         tlog = get_logger()
         for m in sin.models:
@@ -110,9 +110,9 @@ class ModelSelector:
         fallbacks = [mid for mid, _ in ordered[1 : 1 + max(0, sin.max_candidates - 1)]]
 
         sampling = {
-            "temperature": sin.temperature
-            if sin.temperature is not None
-            else self.default_temperature,
+            "temperature": (
+                sin.temperature if sin.temperature is not None else self.default_temperature
+            ),
             "top_p": sin.top_p if sin.top_p is not None else self.default_top_p,
         }
 

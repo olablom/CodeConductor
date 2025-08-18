@@ -5,10 +5,10 @@ A simplified engine that uses only one model, similar to OpenAI API approach.
 """
 
 import asyncio
-import os
 import logging
-from typing import Dict, List, Optional, Any
+import os
 from dataclasses import dataclass
+from typing import Any
 
 from .model_manager import ModelManager
 from .query_dispatcher import QueryDispatcher
@@ -21,7 +21,7 @@ class SingleModelRequest:
     """Request for single model processing."""
 
     task_description: str
-    context: Optional[Dict[str, Any]] = None
+    context: dict[str, Any] | None = None
     timeout: float = 30.0
 
 
@@ -62,10 +62,8 @@ class SingleModelEngine:
             logger.info("✅ Model manager initialized")
 
             # Load the preferred model
-            loaded_models = (
-                await self.model_manager.ensure_models_loaded_with_memory_check(
-                    "light_load"
-                )
+            loaded_models = await self.model_manager.ensure_models_loaded_with_memory_check(
+                "light_load"
             )
             if not loaded_models:
                 logger.warning("⚠️ Could not load preferred model, trying fallback")
@@ -77,9 +75,7 @@ class SingleModelEngine:
                     )
 
             if loaded_models:
-                logger.info(
-                    f"✅ Single model engine initialized with: {loaded_models[0]}"
-                )
+                logger.info(f"✅ Single model engine initialized with: {loaded_models[0]}")
                 return True
             else:
                 logger.error("❌ No models could be loaded")
@@ -94,9 +90,7 @@ class SingleModelEngine:
         start_time = asyncio.get_event_loop().time()
 
         try:
-            logger.info(
-                f"Processing single model request: {request.task_description[:50]}..."
-            )
+            logger.info(f"Processing single model request: {request.task_description[:50]}...")
             if self._quick:
                 # Deterministic mock path for CI
                 logger.info(
@@ -129,9 +123,7 @@ class SingleModelEngine:
                     content = self._extract_response_content(result["response"])
                     execution_time = asyncio.get_event_loop().time() - start_time
 
-                    logger.info(
-                        f"✅ Single model request completed in {execution_time:.2f}s"
-                    )
+                    logger.info(f"✅ Single model request completed in {execution_time:.2f}s")
 
                     return SingleModelResponse(
                         content=content,
@@ -139,9 +131,7 @@ class SingleModelEngine:
                         execution_time=execution_time,
                     )
                 else:
-                    raise Exception(
-                        f"Model request failed: {result.get('error', 'Unknown error')}"
-                    )
+                    raise Exception(f"Model request failed: {result.get('error', 'Unknown error')}")
 
         except Exception as e:
             logger.error(f"❌ Single model request failed: {e}")

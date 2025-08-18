@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Dict, List, Tuple
-
 
 IGNORES = {
     ".git",
@@ -48,9 +46,9 @@ def _is_ignored(path: Path) -> bool:
     return any(name in IGNORES for name in parts) or path.name in IGNORES
 
 
-def scan_repo(root: Path) -> Tuple[List[Dict], Dict[str, int]]:
-    files: List[Dict] = []
-    lang_counts: Dict[str, int] = {}
+def scan_repo(root: Path) -> tuple[list[dict], dict[str, int]]:
+    files: list[dict] = []
+    lang_counts: dict[str, int] = {}
     for p in root.rglob("*"):
         try:
             if not p.is_file():
@@ -75,7 +73,7 @@ def scan_repo(root: Path) -> Tuple[List[Dict], Dict[str, int]]:
     return files, lang_counts
 
 
-def write_repo_map(root: Path, out_json: Path) -> Dict:
+def write_repo_map(root: Path, out_json: Path) -> dict:
     out_json.parent.mkdir(parents=True, exist_ok=True)
     files, lang_counts = scan_repo(root)
     data = {
@@ -84,13 +82,11 @@ def write_repo_map(root: Path, out_json: Path) -> Dict:
         "languages": lang_counts,
         "files": files,
     }
-    out_json.write_text(
-        json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+    out_json.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     return data
 
 
-def write_state_md(repo_map: Dict, out_md: Path) -> None:
+def write_state_md(repo_map: dict, out_md: Path) -> None:
     out_md.parent.mkdir(parents=True, exist_ok=True)
     total = int(repo_map.get("total_files", 0))
     langs = repo_map.get("languages", {})
@@ -114,7 +110,7 @@ def write_state_md(repo_map: Dict, out_md: Path) -> None:
     out_md.write_text("".join(lines), encoding="utf-8")
 
 
-def generate_cursorrules(repo_map: Dict) -> str:
+def generate_cursorrules(repo_map: dict) -> str:
     langs = repo_map.get("languages", {})
     has_py = langs.get("python", 0) > 0
     has_ts = langs.get("typescript", 0) > 0
@@ -146,7 +142,7 @@ def generate_cursorrules(repo_map: Dict) -> str:
     return "".join(rules)
 
 
-def propose_next_feature(repo_map: Dict, state_md_path: Path) -> str:
+def propose_next_feature(repo_map: dict, state_md_path: Path) -> str:
     langs = repo_map.get("languages", {})
     primary = next(iter(sorted(langs.items(), key=lambda x: -x[1])), ("unknown", 0))[0]
     test_hint = "pytest -q" if primary == "python" else "npm test"

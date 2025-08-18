@@ -1,0 +1,67 @@
+# Minimal pre-commit config for CodeConductor
+# Only processes code files to prevent hanging on first run
+
+repos:
+  # Ruff - fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.5.6
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix, --force-exclude]
+        files: ^(src/|tests/|scripts/|setup\.py|pyproject\.toml|\.py)$
+        exclude: >
+          (^\.git/)|(^\.venv/)|(^venv/)|(^env/)|(^.mypy_cache/)|
+          (^\.pytest_cache/)|(^\.ruff_cache/)|(^__pycache__/)|(^htmlcov/)|
+          (^dist/)|(^build/)|(^coverage/)|(^node_modules/)|
+          (^artifacts/)|(^\.artifacts/)|(^docs/assets/)|(^vector_db/)|
+          (^target/)|(^src-tauri/target/)|(^\.cache/)|(^\.cargo/)
+      - id: ruff-format
+        args: [--force-exclude]
+        files: ^(src/|tests/|scripts/|setup\.py|pyproject\.toml|\.py)$
+        exclude: >
+          (^\.git/)|(^\.venv/)|(^venv/)|(^env/)|(^.mypy_cache/)|
+          (^\.pytest_cache/)|(^\.ruff_cache/)|(^__pycache__/)|(^htmlcov/)|
+          (^dist/)|(^build/)|(^coverage/)|(^node_modules/)|
+          (^artifacts/)|(^\.artifacts/)|(^docs/assets/)|(^vector_db/)|
+          (^target/)|(^src-tauri/target/)|(^\.cache/)|(^\.cargo/)
+
+  # Black - Python code formatter (backup to ruff-format)
+  - repo: https://github.com/psf/black
+    rev: 24.8.0
+    hooks:
+      - id: black
+        language_version: python3
+        args: [--force-exclude]
+        files: ^(src/|tests/|scripts/|setup\.py|pyproject\.toml|\.py)$
+        exclude: >
+          (^\.git/)|(^\.venv/)|(^venv/)|(^env/)|(^.mypy_cache/)|
+          (^\.pytest_cache/)|(^\.ruff_cache/)|(^__pycache__/)|(^htmlcov/)|
+          (^dist/)|(^build/)|(^coverage/)|(^node_modules/)|
+          (^artifacts/)|(^\.artifacts/)|(^docs/assets/)|(^vector_db/)|
+          (^target/)|(^src-tauri/target/)|(^\.cache/)|(^\.cargo/)
+
+  # Prettier - TypeScript/JavaScript formatter
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: ^(src/|src-tauri/src/|gui/).*\.(ts|tsx|js|jsx|json|css|md)$
+        exclude: >
+          (^\.git/)|(^\.venv/)|(^venv/)|(^env/)|(^node_modules/)|
+          (^artifacts/)|(^\.artifacts/)|(^docs/assets/)|(^vector_db/)|
+          (^target/)|(^src-tauri/target/)|(^\.cache/)|(^\.cargo/)
+
+  # Basic file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        files: ^(src/|tests/|scripts/|setup\.py|pyproject\.toml|src-tauri/src/|gui/).*\.(py|ts|tsx|js|jsx|json|css|md|yaml|yml|toml)$
+      - id: end-of-file-fixer
+        files: ^(src/|tests/|scripts/|setup\.py|pyproject\.toml|src-tauri/src/|gui/).*\.(py|ts|tsx|js|jsx|json|css|md|yaml|yml|toml)$
+      - id: check-yaml
+        files: ^(src/|tests/|scripts/|agents/|configs/|monitoring/).*\.(yaml|yml)$
+      - id: check-json
+        files: ^(src/|tests/|scripts/|src-tauri/|gui/).*\.json$
+      - id: check-toml
+        files: ^(pyproject\.toml|Cargo\.toml|tauri\.conf\.json)$

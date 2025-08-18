@@ -6,10 +6,10 @@ A simple agent that uses local models, following the same structure as the OpenA
 
 import asyncio
 import logging
-from typing import List, Dict, Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # type hints only, avoid heavy imports at runtime
-    from ..ensemble.single_model_engine import SingleModelEngine, SingleModelRequest
+    from ..ensemble.single_model_engine import SingleModelEngine
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +49,7 @@ class LocalAIAgent:
         """
         try:
             # Create the full prompt with persona
-            full_prompt = (
-                f"System: {self.persona}\n\nUser: {user_prompt}\n\n{self.name}:"
-            )
+            full_prompt = f"System: {self.persona}\n\nUser: {user_prompt}\n\n{self.name}:"
 
             logger.info(
                 f"[PERSONA] {self.name}: {self.persona.splitlines()[0] if self.persona else ''}"
@@ -83,7 +81,7 @@ class LocalAIAgent:
                 logger.warning(f"{self.name} got empty response")
                 return f"{self.name} generated an empty response."
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(f"{self.name} timed out after {timeout} seconds")
             return f"{self.name} timed out during response generation."
         except Exception as e:
@@ -99,7 +97,7 @@ class LocalDebateManager:
     but uses our local agents instead of OpenAI.
     """
 
-    def __init__(self, agents: List[LocalAIAgent]):
+    def __init__(self, agents: list[LocalAIAgent]):
         self.agents = agents
         self.full_transcript = []
         self.shared_engine = None
@@ -115,7 +113,7 @@ class LocalDebateManager:
         user_prompt: str,
         timeout_per_turn: float = 60.0,
         rounds: int = 1,
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         """
         Conduct a debate between all agents.
 
@@ -142,7 +140,7 @@ class LocalDebateManager:
                     {"agent": agent.name, "turn": "proposal", "content": response}
                 )
                 logger.info(f"{agent.name} proposal completed")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error(f"{agent.name} timed out during proposal")
                 debate_responses.append(
                     {
@@ -172,22 +170,14 @@ class LocalDebateManager:
                         for r in debate_responses
                         if r["turn"] == "proposal" and r["agent"] != agent.name
                     ]
-                    rebuttal_prompt = (
-                        f"User: {user_prompt}\n\nOther agents' proposals:\n"
-                    )
+                    rebuttal_prompt = f"User: {user_prompt}\n\nOther agents' proposals:\n"
                     for prop in other_proposals:
-                        rebuttal_prompt += (
-                            f"- {prop['agent']}: {prop['content'][:200]}...\n\n"
-                        )
-                    rebuttal_prompt += (
-                        "Please provide your rebuttal to these proposals:"
-                    )
+                        rebuttal_prompt += f"- {prop['agent']}: {prop['content'][:200]}...\n\n"
+                    rebuttal_prompt += "Please provide your rebuttal to these proposals:"
 
                     logger.info(f"{agent.name} making rebuttal...")
                     response = await asyncio.wait_for(
-                        agent.generate_response(
-                            rebuttal_prompt, timeout=timeout_per_turn
-                        ),
+                        agent.generate_response(rebuttal_prompt, timeout=timeout_per_turn),
                         timeout=timeout_per_turn,
                     )
                     debate_responses.append(
@@ -198,7 +188,7 @@ class LocalDebateManager:
                         }
                     )
                     logger.info(f"{agent.name} rebuttal completed")
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.error(f"{agent.name} timed out during rebuttal")
                     debate_responses.append(
                         {
@@ -238,7 +228,7 @@ class LocalDebateManager:
                         }
                     )
                     logger.info(f"{agent.name} final recommendation completed")
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.error(f"{agent.name} timed out during final recommendation")
                     debate_responses.append(
                         {
@@ -260,6 +250,6 @@ class LocalDebateManager:
         logger.info("Debate completed successfully!")
         return debate_responses
 
-    def get_transcript(self) -> List[Dict[str, Any]]:
+    def get_transcript(self) -> list[dict[str, Any]]:
         """Get the full debate transcript."""
         return self.full_transcript

@@ -65,7 +65,7 @@ function App() {
       };
 
       const response: CodeGenerationResponse = await invoke("generate_code", { request });
-      
+
       setGeneratedCode(response.code);
       setLastGeneration(response);
       await loadStats();
@@ -78,7 +78,7 @@ function App() {
 
   const saveCode = async () => {
     if (!generatedCode) return;
-    
+
     try {
       await invoke("save_code_to_file", {
         code: generatedCode,
@@ -107,7 +107,7 @@ function App() {
               v0.1.0
             </Badge>
           </div>
-          
+
           <nav className="flex items-center space-x-1">
             <Button
               variant={activeTab === "editor" ? "default" : "ghost"}
@@ -308,4 +308,4 @@ function App() {
   );
 }
 
-export default App; 
+export default App;

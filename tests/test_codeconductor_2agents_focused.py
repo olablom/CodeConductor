@@ -6,14 +6,14 @@ Tests diverse code generation tasks with 2 agents to prove the system works cons
 """
 
 import asyncio
-import sys
-import yaml
 import json
+import sys
 import time
-import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any
+
+import yaml
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
@@ -37,7 +37,7 @@ class FocusedCodeConductorTester:
         await self.shared_engine.initialize()
         print("Test suite initialized successfully")
 
-    def create_2_agents(self) -> List[LocalAIAgent]:
+    def create_2_agents(self) -> list[LocalAIAgent]:
         """Create 2 agents for optimal performance"""
         agents = [
             LocalAIAgent(
@@ -55,7 +55,7 @@ class FocusedCodeConductorTester:
 
         return agents
 
-    def extract_code(self, debate_responses: List[Dict]) -> str:
+    def extract_code(self, debate_responses: list[dict]) -> str:
         """Extract code from debate responses"""
         # Prefer fenced blocks; fallback handles SQL etc.
         # Choose the longest code block across all responses.
@@ -67,7 +67,7 @@ class FocusedCodeConductorTester:
                 best = candidate
         return best if best.strip() else "No code found"
 
-    def validate_code(self, code: str, test_type: str) -> Dict[str, Any]:
+    def validate_code(self, code: str, test_type: str) -> dict[str, Any]:
         """Validate generated code"""
         validation = {
             "has_code": bool(code.strip()),
@@ -87,9 +87,7 @@ class FocusedCodeConductorTester:
         except SyntaxError as se:
             validation["syntax_check"] = False
             # Include a short error message for debugging
-            validation["syntax_error"] = (
-                str(se).splitlines()[0] if str(se) else "SyntaxError"
-            )
+            validation["syntax_error"] = str(se).splitlines()[0] if str(se) else "SyntaxError"
 
         # Test-specific validation
         if test_type == "binary_search":
@@ -165,12 +163,7 @@ class FocusedCodeConductorTester:
 
     def _test_react_hook(self, code: str) -> bool:
         """Test if React hook code has basic structure"""
-        return (
-            "useState" in code
-            or "useEffect" in code
-            or "const [" in code
-            or "setState" in code
-        )
+        return "useState" in code or "useEffect" in code or "const [" in code or "setState" in code
 
     def _test_sql_query(self, code: str) -> bool:
         """Test if SQL query has basic structure"""
@@ -219,7 +212,7 @@ class FocusedCodeConductorTester:
 
     async def run_single_test(
         self, test_name: str, prompt: str, timeout: float = 180.0
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run a single test case with 2 agents"""
         print(f"\nRunning test: {test_name} (2 agents)")
         print(f"Prompt: {prompt}")
@@ -262,7 +255,7 @@ class FocusedCodeConductorTester:
 
             return result
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             execution_time = time.time() - start_time
             print(f"Test timed out after {execution_time:.1f}s")
             return {
@@ -353,9 +346,7 @@ class FocusedCodeConductorTester:
                 )
                 / len(self.results),
                 "syntax_success_rate": sum(
-                    1
-                    for r in self.results
-                    if r.get("validation", {}).get("syntax_check", False)
+                    1 for r in self.results if r.get("validation", {}).get("syntax_check", False)
                 )
                 / len(self.results)
                 * 100,
@@ -414,13 +405,10 @@ class FocusedCodeConductorTester:
         # Code quality metrics
         print("\nCode Quality Metrics:")
         syntax_success = sum(
-            1
-            for r in self.results
-            if r.get("validation", {}).get("syntax_check", False)
+            1 for r in self.results if r.get("validation", {}).get("syntax_check", False)
         )
         avg_code_length = (
-            sum(r.get("validation", {}).get("code_length", 0) for r in self.results)
-            / total_tests
+            sum(r.get("validation", {}).get("code_length", 0) for r in self.results) / total_tests
         )
         print(
             f"  Syntax success rate: {syntax_success}/{total_tests} ({syntax_success / total_tests * 100:.1f}%)"

@@ -6,10 +6,11 @@ Tests the complete debate system with proper timeouts and error handling.
 """
 
 import asyncio
-import sys
-import yaml
 import json
+import sys
 from pathlib import Path
+
+import yaml
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
@@ -69,9 +70,7 @@ async def main():
         # Conduct the debate with very long timeouts
         print("🎭 Starting multi-agent debate...")
         debate_responses = await asyncio.wait_for(
-            debate.conduct_debate(
-                user_prompt, timeout_per_turn=300.0
-            ),  # 5 minutes per turn
+            debate.conduct_debate(user_prompt, timeout_per_turn=300.0),  # 5 minutes per turn
             timeout=1800.0,  # 30 minutes total timeout
         )
 
@@ -89,13 +88,11 @@ async def main():
         # Print summary
         print("\n📊 Debate Summary:")
         for response in debate_responses:
-            print(
-                f"  {response['agent']} ({response['turn']}): {response['content'][:100]}..."
-            )
+            print(f"  {response['agent']} ({response['turn']}): {response['content'][:100]}...")
 
         return True
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         print("⏰ Debate timed out - this can happen with local models")
         return False
     except Exception as e:

@@ -6,10 +6,10 @@ Saves successful prompt-code patterns for analysis and model optimization
 import json
 import os
 import time
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Dict, List, Any, Optional
 from pathlib import Path
-from dataclasses import dataclass, asdict
+from typing import Any
 
 PATTERNS_FILE = os.path.join(os.path.dirname(__file__), "patterns.json")
 
@@ -35,19 +35,19 @@ class Pattern:
 
     prompt: str
     code: str
-    validation: Dict[str, Any]
+    validation: dict[str, Any]
     task_description: str
     timestamp: str
-    model_used: Optional[str] = None
-    execution_time: Optional[float] = None
-    user_rating: Optional[int] = None  # 1-5 scale
-    notes: Optional[str] = None
-    reward: Optional[float] = None  # Test-as-Reward value
+    model_used: str | None = None
+    execution_time: float | None = None
+    user_rating: int | None = None  # 1-5 scale
+    notes: str | None = None
+    reward: float | None = None  # Test-as-Reward value
     # New performance and quality metrics
-    exec_time_s: Optional[float] = None  # Execution time in seconds
-    cyclomatic_complexity: Optional[float] = None  # Code complexity
-    tests_total: Optional[int] = None  # Total number of tests
-    tests_passed: Optional[int] = None  # Number of passed tests
+    exec_time_s: float | None = None  # Execution time in seconds
+    cyclomatic_complexity: float | None = None  # Code complexity
+    tests_total: int | None = None  # Total number of tests
+    tests_passed: int | None = None  # Number of passed tests
 
 
 class LearningSystem:
@@ -57,20 +57,18 @@ class LearningSystem:
 
     def __init__(self, patterns_file: str = "patterns.json"):
         self.patterns_file = Path(patterns_file)
-        self.patterns: List[Pattern] = []
+        self.patterns: list[Pattern] = []
         self._load_patterns()
 
     def _load_patterns(self):
         """Load existing patterns from JSON file"""
         if self.patterns_file.exists():
             try:
-                with open(self.patterns_file, "r", encoding="utf-8") as f:
+                with open(self.patterns_file, encoding="utf-8") as f:
                     data = json.load(f)
                     self.patterns = [Pattern(**pattern_data) for pattern_data in data]
             except (json.JSONDecodeError, KeyError) as e:
-                print(
-                    f"Warning: Could not load patterns from {self.patterns_file}: {e}"
-                )
+                print(f"Warning: Could not load patterns from {self.patterns_file}: {e}")
                 self.patterns = []
         else:
             self.patterns = []
@@ -95,17 +93,17 @@ class LearningSystem:
         self,
         prompt: str,
         code: str,
-        validation: Dict[str, Any],
+        validation: dict[str, Any],
         task_description: str,
-        model_used: Optional[str] = None,
-        execution_time: Optional[float] = None,
-        user_rating: Optional[int] = None,
-        notes: Optional[str] = None,
-        reward: Optional[float] = None,
-        exec_time_s: Optional[float] = None,
-        cyclomatic_complexity: Optional[float] = None,
-        tests_total: Optional[int] = None,
-        tests_passed: Optional[int] = None,
+        model_used: str | None = None,
+        execution_time: float | None = None,
+        user_rating: int | None = None,
+        notes: str | None = None,
+        reward: float | None = None,
+        exec_time_s: float | None = None,
+        cyclomatic_complexity: float | None = None,
+        tests_total: int | None = None,
+        tests_passed: int | None = None,
     ) -> bool:
         """
         Save a successful prompt-code pattern
@@ -221,27 +219,26 @@ class LearningSystem:
 
         return reward
 
-    def get_patterns(self, limit: Optional[int] = None) -> List[Pattern]:
+    def get_patterns(self, limit: int | None = None) -> list[Pattern]:
         """Get all patterns, optionally limited"""
         if limit:
             return self.patterns[-limit:]
         return self.patterns
 
-    def get_patterns_by_score(self, min_score: float = 0.0) -> List[Pattern]:
+    def get_patterns_by_score(self, min_score: float = 0.0) -> list[Pattern]:
         """Get patterns with reward above minimum score"""
         return [p for p in self.patterns if p.reward and p.reward >= min_score]
 
-    def get_patterns_by_task(self, task_keyword: str) -> List[Pattern]:
+    def get_patterns_by_task(self, task_keyword: str) -> list[Pattern]:
         """Get patterns containing task keyword"""
         keyword_lower = task_keyword.lower()
         return [
             p
             for p in self.patterns
-            if keyword_lower in p.task_description.lower()
-            or keyword_lower in p.prompt.lower()
+            if keyword_lower in p.task_description.lower() or keyword_lower in p.prompt.lower()
         ]
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get statistics about saved patterns"""
         if not self.patterns:
             return {
@@ -259,9 +256,7 @@ class LearningSystem:
         recent_count = sum(1 for p in self.patterns if self._is_recent(p.timestamp))
 
         # Count high reward patterns (reward >= 0.8)
-        high_reward_count = sum(
-            1 for p in self.patterns if p.reward and p.reward >= 0.8
-        )
+        high_reward_count = sum(1 for p in self.patterns if p.reward and p.reward >= 0.8)
 
         return {
             "total_patterns": len(self.patterns),
@@ -269,21 +264,11 @@ class LearningSystem:
             "recent_patterns": recent_count,
             "high_reward_patterns": high_reward_count,
             "reward_distribution": {
-                "0.0-0.2": sum(
-                    1 for p in self.patterns if p.reward and 0.0 <= p.reward < 0.2
-                ),
-                "0.2-0.4": sum(
-                    1 for p in self.patterns if p.reward and 0.2 <= p.reward < 0.4
-                ),
-                "0.4-0.6": sum(
-                    1 for p in self.patterns if p.reward and 0.4 <= p.reward < 0.6
-                ),
-                "0.6-0.8": sum(
-                    1 for p in self.patterns if p.reward and 0.6 <= p.reward < 0.8
-                ),
-                "0.8-1.0": sum(
-                    1 for p in self.patterns if p.reward and 0.8 <= p.reward <= 1.0
-                ),
+                "0.0-0.2": sum(1 for p in self.patterns if p.reward and 0.0 <= p.reward < 0.2),
+                "0.2-0.4": sum(1 for p in self.patterns if p.reward and 0.2 <= p.reward < 0.4),
+                "0.4-0.6": sum(1 for p in self.patterns if p.reward and 0.4 <= p.reward < 0.6),
+                "0.6-0.8": sum(1 for p in self.patterns if p.reward and 0.6 <= p.reward < 0.8),
+                "0.8-1.0": sum(1 for p in self.patterns if p.reward and 0.8 <= p.reward <= 1.0),
             },
         }
 
@@ -324,7 +309,7 @@ class LearningSystem:
 def _load_patterns():
     if not os.path.exists(PATTERNS_FILE):
         return []
-    with open(PATTERNS_FILE, "r", encoding="utf-8") as f:
+    with open(PATTERNS_FILE, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -334,7 +319,7 @@ def _save_patterns(patterns):
 
 
 def save_successful_pattern(
-    prompt: str, code: str, validation: Dict[str, Any], task_description: str, **kwargs
+    prompt: str, code: str, validation: dict[str, Any], task_description: str, **kwargs
 ) -> bool:
     """Legacy function for backward compatibility"""
     learning_system = LearningSystem()
@@ -347,9 +332,7 @@ def save_successful_pattern(
     )
 
 
-def log_test_reward(
-    prompt: str, code: str, test_results: list, metadata: dict = None
-) -> float:
+def log_test_reward(prompt: str, code: str, test_results: list, metadata: dict = None) -> float:
     """Legacy function for backward compatibility"""
     learning_system = LearningSystem()
     return learning_system.log_test_reward(prompt, code, test_results, metadata)

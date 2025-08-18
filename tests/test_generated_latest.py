@@ -1,5 +1,8 @@
+import doctest
+import glob
+import importlib.util
+import os
 
-import glob, os, importlib.util, doctest
 
 def _latest_generated():
     runs = sorted(glob.glob("artifacts/runs/*"))
@@ -9,6 +12,7 @@ def _latest_generated():
             return p
     raise FileNotFoundError("No generated.py found under artifacts/runs")
 
+
 def _load_module(path):
     spec = importlib.util.spec_from_file_location("generated_latest", path)
     mod = importlib.util.module_from_spec(spec)
@@ -16,11 +20,13 @@ def _load_module(path):
     spec.loader.exec_module(mod)
     return mod
 
+
 def test_doctest_passes():
     path = _latest_generated()
     mod = _load_module(path)
     failed, _ = doctest.testmod(mod, verbose=False)
     assert failed == 0
+
 
 def test_print_output(capsys):
     path = _latest_generated()

@@ -4,19 +4,15 @@
 Test vLLM Integration - Only runs when vLLM is available
 """
 
-import pytest
-import asyncio
 import platform
 from unittest.mock import Mock, patch
+
+import pytest
 
 
 def _is_wsl() -> bool:
     rel = platform.release().lower()
-    ver = (
-        getattr(platform, "version", lambda: "")().lower()
-        if hasattr(platform, "version")
-        else ""
-    )
+    ver = getattr(platform, "version", lambda: "")().lower() if hasattr(platform, "version") else ""
     return ("microsoft" in rel) or ("microsoft" in ver)
 
 
@@ -38,9 +34,7 @@ def _vllm_available():
 
 
 # Skip all tests if vLLM not available
-pytestmark = pytest.mark.skipif(
-    not _vllm_available(), reason="vLLM not available on this platform"
-)
+pytestmark = pytest.mark.skipif(not _vllm_available(), reason="vLLM not available on this platform")
 
 try:
     from codeconductor.vllm_integration import VLLMEngine, create_vllm_engine

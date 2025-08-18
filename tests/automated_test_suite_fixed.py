@@ -1,23 +1,24 @@
 # Automated Test Suite for Validation System (Fixed for Windows)
 # Comprehensive testing before manual integration
 
-import unittest
-import time
-import threading
-import pandas as pd
-import numpy as np
-import warnings
 import os
+import threading
+import time
+import unittest
+import warnings
+
+import pandas as pd
 
 # Suppress all warnings for clean output
 warnings.filterwarnings("ignore")
 os.environ["STREAMLIT_SERVER_RUN_ON_SAVE"] = "false"
 os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
 
-from validation_logger import ValidationLogger
-from validation_dashboard import ValidationDashboard
-import tempfile
 import shutil
+import tempfile
+
+from validation_dashboard import ValidationDashboard
+from validation_logger import ValidationLogger
 
 
 class ValidationSystemTestSuite(unittest.TestCase):
@@ -152,9 +153,7 @@ class ValidationSystemTestSuite(unittest.TestCase):
             try:
                 for i in range(5):
                     task_id = f"Concurrent_{thread_id}_{i}"
-                    logger.log_task_start(
-                        task_id, f"Concurrent task {i}", "CodeConductor"
-                    )
+                    logger.log_task_start(task_id, f"Concurrent task {i}", "CodeConductor")
                     time.sleep(0.01)
                     logger.log_task_complete(
                         task_id,
@@ -173,9 +172,7 @@ class ValidationSystemTestSuite(unittest.TestCase):
                 results.append(f"Thread {thread_id} failed: {e}")
 
         # Run 5 concurrent threads
-        threads = [
-            threading.Thread(target=log_concurrent_task, args=(i,)) for i in range(5)
-        ]
+        threads = [threading.Thread(target=log_concurrent_task, args=(i,)) for i in range(5)]
         for t in threads:
             t.start()
         for t in threads:
@@ -229,9 +226,7 @@ class ValidationSystemTestSuite(unittest.TestCase):
         self.assertTrue(all(df["Duration_sec"] >= 0))
         self.assertTrue(all(df["Tests_Passed"] >= 0))
         self.assertTrue(all(df["Total_Tests"] > 0))
-        self.assertTrue(
-            all(df["Model_Confidence"] >= 0) and all(df["Model_Confidence"] <= 1)
-        )
+        self.assertTrue(all(df["Model_Confidence"] >= 0) and all(df["Model_Confidence"] <= 1))
 
         print("Data validation passed")
 
@@ -437,9 +432,7 @@ class ValidationSystemTestSuite(unittest.TestCase):
         roi = logger.calculate_roi()
 
         # Verify realistic results
-        self.assertGreater(
-            savings["time_savings_percent"], 50
-        )  # Should show significant savings
+        self.assertGreater(savings["time_savings_percent"], 50)  # Should show significant savings
         self.assertGreater(roi["value_saved"], 0)  # Should show positive ROI
 
         print(

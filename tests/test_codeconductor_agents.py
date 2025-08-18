@@ -6,10 +6,11 @@ Tests the debate system with 3 agents designed for CodeConductor AI development 
 """
 
 import asyncio
-import sys
-import yaml
 import json
+import sys
 from pathlib import Path
+
+import yaml
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
@@ -62,9 +63,7 @@ async def main():
         # Conduct the debate with shorter timeouts
         print("🎭 Starting CodeConductor debate...")
         debate_responses = await asyncio.wait_for(
-            debate.conduct_debate(
-                user_prompt, timeout_per_turn=120.0
-            ),  # 2 minutes per turn
+            debate.conduct_debate(user_prompt, timeout_per_turn=120.0),  # 2 minutes per turn
             timeout=600.0,  # 10 minutes total timeout
         )
 
@@ -75,20 +74,16 @@ async def main():
         with open("codeconductor_debate.json", "w", encoding="utf-8") as f:
             json.dump(debate_responses, f, indent=2, ensure_ascii=False)
 
-        print(
-            "Debate transcript saved to codeconductor_debate.yaml and codeconductor_debate.json"
-        )
+        print("Debate transcript saved to codeconductor_debate.yaml and codeconductor_debate.json")
 
         # Print summary
         print("\n📊 CodeConductor Debate Summary:")
         for response in debate_responses:
-            print(
-                f"  {response['agent']} ({response['turn']}): {response['content'][:100]}..."
-            )
+            print(f"  {response['agent']} ({response['turn']}): {response['content'][:100]}...")
 
         return True
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         print("⏰ Debate timed out - this can happen with local models")
         return False
     except Exception as e:

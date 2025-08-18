@@ -9,4 +9,4 @@ This module provides RAG (Retrieval-Augmented Generation) capabilities including
 
 from .rag_system import RAGSystem
 
-__all__ = ["RAGSystem"] 
+__all__ = ["RAGSystem"]

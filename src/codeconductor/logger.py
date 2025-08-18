@@ -24,12 +24,12 @@ Validation Logger - Empirical Data Collection System
 Not tested directly - excluded from coverage
 """
 
-import time
 import csv
-import json
-import pandas as pd
+import time
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any
+
+import pandas as pd
 import streamlit as st  # pragma: no cover
 
 
@@ -61,7 +61,7 @@ class ValidationLogger:
         ]
 
         try:
-            with open(self.log_file, "r") as f:
+            with open(self.log_file) as f:
                 # File exists, don't overwrite
                 pass
         except FileNotFoundError:
@@ -77,7 +77,7 @@ class ValidationLogger:
         st.session_state[f"{task_id}_description"] = description
         return start_time
 
-    def log_task_complete(self, task_id: str, **metrics) -> Dict[str, Any]:
+    def log_task_complete(self, task_id: str, **metrics) -> dict[str, Any]:
         """Log task completion with all metrics"""
         if f"{task_id}_start" not in st.session_state:
             raise ValueError(f"No start time found for task {task_id}")
@@ -127,7 +127,7 @@ class ValidationLogger:
         except FileNotFoundError:
             return pd.DataFrame()
 
-    def calculate_time_savings(self) -> Dict[str, float]:
+    def calculate_time_savings(self) -> dict[str, float]:
         """Calculate time savings between Manual and CodeConductor modes"""
         df = self.get_comparison_data()
         if df.empty:
@@ -153,7 +153,7 @@ class ValidationLogger:
             "cc_avg_time": cc_times.mean(),
         }
 
-    def calculate_roi(self, hourly_rate: float = 50.0) -> Dict[str, float]:
+    def calculate_roi(self, hourly_rate: float = 50.0) -> dict[str, float]:
         """Calculate ROI based on time savings"""
         savings = self.calculate_time_savings()
         value_saved = savings["total_hours_saved"] * hourly_rate

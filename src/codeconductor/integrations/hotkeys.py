@@ -6,9 +6,7 @@ Provides keyboard shortcuts for common CodeConductor actions.
 """
 
 import logging
-import threading
-from typing import Callable, Dict, Optional
-from pathlib import Path
+from collections.abc import Callable
 
 # Windows-specific imports
 try:
@@ -28,7 +26,7 @@ class HotkeyManager:
         self.enabled = WINDOWS_AVAILABLE
         self.is_running = False
         self.hotkey_thread = None
-        self.callbacks: Dict[str, Callable] = {}
+        self.callbacks: dict[str, Callable] = {}
 
         # Default hotkey mappings
         self.default_hotkeys = {
@@ -40,9 +38,7 @@ class HotkeyManager:
         }
 
         if not self.enabled:
-            logger.warning(
-                "Global hotkeys not available (keyboard library not installed)"
-            )
+            logger.warning("Global hotkeys not available (keyboard library not installed)")
 
     def register_hotkey(self, hotkey: str, callback: Callable, description: str = ""):
         """
@@ -77,7 +73,7 @@ class HotkeyManager:
         except Exception as e:
             logger.error(f"Failed to unregister hotkey '{hotkey}': {e}")
 
-    def register_default_hotkeys(self, callbacks: Dict[str, Callable]):
+    def register_default_hotkeys(self, callbacks: dict[str, Callable]):
         """
         Register default CodeConductor hotkeys.
 
@@ -136,7 +132,7 @@ class HotkeyManager:
 
 
 # Global hotkey manager
-_global_hotkeys: Optional[HotkeyManager] = None
+_global_hotkeys: HotkeyManager | None = None
 
 
 def get_hotkey_manager() -> HotkeyManager:
@@ -147,7 +143,7 @@ def get_hotkey_manager() -> HotkeyManager:
     return _global_hotkeys
 
 
-def start_global_hotkeys(callbacks: Dict[str, Callable]):
+def start_global_hotkeys(callbacks: dict[str, Callable]):
     """Start global hotkeys with provided callbacks."""
     manager = get_hotkey_manager()
     manager.register_default_hotkeys(callbacks)

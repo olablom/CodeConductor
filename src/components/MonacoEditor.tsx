@@ -81,4 +81,4 @@ const MonacoEditor = forwardRef<monaco.editor.IStandaloneCodeEditor, MonacoEdito
 
 MonacoEditor.displayName = "MonacoEditor";
 
-export default MonacoEditor; 
+export default MonacoEditor;

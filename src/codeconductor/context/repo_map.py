@@ -8,13 +8,11 @@ and provides helpers to retrieve top-K relevant paths/snippets to enrich prompts
 
 from __future__ import annotations
 
+import logging
 import os
-import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
-
-import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +21,6 @@ logger = logging.getLogger(__name__)
 try:
     from codeconductor.analysis.tree_sitter_analyzer import (
         TreeSitterAnalyzer,
-        CodeElement,
     )
 
     TS_AVAILABLE = True
@@ -50,7 +47,7 @@ def _read_file_safe(path: Path) -> str:
         return ""
 
 
-def build_repo_map(project_root: str | Path) -> Dict[str, Any]:
+def build_repo_map(project_root: str | Path) -> dict[str, Any]:
     """
     Build a repository map with file tree and code elements (if Tree-sitter is available).
 
@@ -63,8 +60,8 @@ def build_repo_map(project_root: str | Path) -> Dict[str, Any]:
       }
     """
     root = Path(project_root).resolve()
-    files: List[str] = []
-    elements: List[Dict[str, Any]] = []
+    files: list[str] = []
+    elements: list[dict[str, Any]] = []
 
     exclude_dirs = {
         ".git",
@@ -125,11 +122,11 @@ def build_repo_map(project_root: str | Path) -> Dict[str, Any]:
     return {"root": str(root), "files": files, "elements": elements, "stats": stats}
 
 
-def format_project_structure(repo_map: Dict[str, Any], max_lines: int = 200) -> str:
+def format_project_structure(repo_map: dict[str, Any], max_lines: int = 200) -> str:
     """
     Produce a markdown-like tree of the repository for prompt context.
     """
-    lines: List[str] = ["Project Structure (trimmed):"]
+    lines: list[str] = ["Project Structure (trimmed):"]
     for path in sorted(repo_map.get("files", []))[:max_lines]:
         depth = path.count("/")
         indent = "  " * depth
@@ -151,16 +148,12 @@ def _score_match(task: str, candidate: str) -> float:
     return score
 
 
-def get_top_k_paths(
-    repo_map: Dict[str, Any], task_description: str, k: int = 5
-) -> List[str]:
+def get_top_k_paths(repo_map: dict[str, Any], task_description: str, k: int = 5) -> list[str]:
     """
     Rank file paths by naive keyword overlap with task description.
     """
     files = repo_map.get("files", [])
-    ranked = sorted(
-        files, key=lambda p: _score_match(task_description, p), reverse=True
-    )
+    ranked = sorted(files, key=lambda p: _score_match(task_description, p), reverse=True)
     return ranked[:k]
 
 
@@ -187,22 +180,22 @@ def extract_snippet(
 
 
 def get_top_k_snippets(
-    repo_map: Dict[str, Any], task_description: str, k: int = 3, max_chars: int = 1500
-) -> List[Dict[str, Any]]:
+    repo_map: dict[str, Any], task_description: str, k: int = 3, max_chars: int = 1500
+) -> list[dict[str, Any]]:
     """
     Retrieve up to k code snippets relevant to the task by scoring elements and paths.
     """
     root = repo_map.get("root", ".")
     elements = repo_map.get("elements", [])
 
-    scored_elements: List[Tuple[float, Dict[str, Any]]] = []
+    scored_elements: list[tuple[float, dict[str, Any]]] = []
     for el in elements:
         key = f"{el.get('name', '')} {el.get('file_path', '')} {el.get('type', '')}"
         score = _score_match(task_description, key)
         if score > 0:
             scored_elements.append((score, el))
 
-    top: List[Dict[str, Any]] = []
+    top: list[dict[str, Any]] = []
     for _, el in sorted(scored_elements, key=lambda p: p[0], reverse=True)[:k]:
         snippet = extract_snippet(
             root, el["file_path"], el.get("line_start", 1), el.get("line_end", 1)
@@ -237,7 +230,7 @@ def get_top_k_snippets(
 
 
 def build_prompt_context(
-    repo_map: Dict[str, Any],
+    repo_map: dict[str, Any],
     task_description: str,
     k_paths: int = 6,
     k_snippets: int = 3,
@@ -249,7 +242,7 @@ def build_prompt_context(
     top_paths = get_top_k_paths(repo_map, task_description, k=k_paths)
     snippets = get_top_k_snippets(repo_map, task_description, k=k_snippets)
 
-    parts: List[str] = []
+    parts: list[str] = []
     parts.append(structure)
     if top_paths:
         parts.append("\nTop relevant paths:")
@@ -258,7 +251,9 @@ def build_prompt_context(
     if snippets:
         parts.append("\nRelevant snippets:")
         for sn in snippets:
-            header = f"# {sn.get('file')} :: {sn.get('name', '').strip()} ({sn.get('type', '')})".strip()
+            header = (
+                f"# {sn.get('file')} :: {sn.get('name', '').strip()} ({sn.get('type', '')})".strip()
+            )
             parts.append(header)
             parts.append("```\n" + sn.get("snippet", "").strip() + "\n```")
 

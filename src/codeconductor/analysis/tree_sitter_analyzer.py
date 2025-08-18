@@ -4,17 +4,16 @@ Provides multi-language parsing with incremental updates and error recovery
 """
 
 import os
-from pathlib import Path
-from typing import Dict, List, Any, Optional, Set
-from dataclasses import dataclass
-import json
 import re
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 # Tree-sitter imports
 try:
     import tree_sitter
-    import tree_sitter_python
     import tree_sitter_javascript
+    import tree_sitter_python
 
     TREE_SITTER_AVAILABLE = True
 except ImportError:
@@ -34,7 +33,7 @@ class CodeElement:
     line_end: int
     file_path: str
     language: str
-    metadata: Dict[str, Any]  # Additional info like params, return type, etc.
+    metadata: dict[str, Any]  # Additional info like params, return type, etc.
 
 
 class TreeSitterAnalyzer:
@@ -67,9 +66,7 @@ class TreeSitterAnalyzer:
         try:
             import tree_sitter_typescript
 
-            TS_LANGUAGE = tree_sitter.Language(
-                tree_sitter_typescript.language_typescript()
-            )
+            TS_LANGUAGE = tree_sitter.Language(tree_sitter_typescript.language_typescript())
             ts_parser = tree_sitter.Parser(TS_LANGUAGE)
             self.parsers["typescript"] = ts_parser
             self.parsers["ts"] = ts_parser
@@ -77,7 +74,7 @@ class TreeSitterAnalyzer:
         except:
             print("TypeScript parser not available")
 
-    def analyze_file(self, file_path: str) -> List[CodeElement]:
+    def analyze_file(self, file_path: str) -> list[CodeElement]:
         """Analyze a single file and extract code elements"""
         path = Path(file_path)
         if not path.exists():
@@ -90,7 +87,7 @@ class TreeSitterAnalyzer:
 
         # Read file content
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 content = f.read()
         except Exception as e:
             print(f"Error reading {file_path}: {e}")
@@ -109,7 +106,7 @@ class TreeSitterAnalyzer:
 
         return elements
 
-    def analyze_project(self, project_path: str) -> Dict[str, Any]:
+    def analyze_project(self, project_path: str) -> dict[str, Any]:
         """Analyze entire project with Tree-sitter"""
         project_path = Path(project_path)
 
@@ -138,16 +135,14 @@ class TreeSitterAnalyzer:
             "statistics": {
                 "total_files": file_count,
                 "languages": language_stats,
-                "total_functions": len(
-                    [e for e in all_elements if e.type == "function"]
-                ),
+                "total_functions": len([e for e in all_elements if e.type == "function"]),
                 "total_classes": len([e for e in all_elements if e.type == "class"]),
                 "total_methods": len([e for e in all_elements if e.type == "method"]),
             },
             "cross_references": cross_refs,
         }
 
-    def _detect_language(self, file_path: Path) -> Optional[str]:
+    def _detect_language(self, file_path: Path) -> str | None:
         """Detect programming language from file extension"""
         extension_map = {
             ".py": "python",
@@ -160,7 +155,7 @@ class TreeSitterAnalyzer:
         }
         return extension_map.get(file_path.suffix.lower())
 
-    def _find_code_files(self, project_path: Path) -> List[Path]:
+    def _find_code_files(self, project_path: Path) -> list[Path]:
         """Find all code files in project, excluding common non-code directories"""
         exclude_dirs = {
             "node_modules",
@@ -188,9 +183,7 @@ class TreeSitterAnalyzer:
 
         return code_files
 
-    def _extract_python_elements(
-        self, tree, content: str, file_path: str
-    ) -> List[CodeElement]:
+    def _extract_python_elements(self, tree, content: str, file_path: str) -> list[CodeElement]:
         """Extract Python code elements using Tree-sitter queries"""
         elements = []
 
@@ -221,9 +214,7 @@ class TreeSitterAnalyzer:
                                     file_path=file_path,
                                     language="python",
                                     metadata={
-                                        "decorators": self._extract_decorators(
-                                            node, content
-                                        )
+                                        "decorators": self._extract_decorators(node, content)
                                     },
                                 )
                             )
@@ -237,9 +228,7 @@ class TreeSitterAnalyzer:
                                     file_path=file_path,
                                     language="python",
                                     metadata={
-                                        "decorators": self._extract_decorators(
-                                            node, content
-                                        )
+                                        "decorators": self._extract_decorators(node, content)
                                     },
                                 )
                             )
@@ -259,9 +248,7 @@ class TreeSitterAnalyzer:
                                 file_path=file_path,
                                 language="python",
                                 metadata={
-                                    "decorators": self._extract_decorators(
-                                        node, content
-                                    ),
+                                    "decorators": self._extract_decorators(node, content),
                                     "bases": self._extract_class_bases(node, content),
                                 },
                             )
@@ -275,9 +262,7 @@ class TreeSitterAnalyzer:
         walk_node(tree.root_node)
         return elements
 
-    def _extract_javascript_elements(
-        self, tree, content: str, file_path: str
-    ) -> List[CodeElement]:
+    def _extract_javascript_elements(self, tree, content: str, file_path: str) -> list[CodeElement]:
         """Extract JavaScript/TypeScript code elements"""
         elements = []
 
@@ -326,7 +311,7 @@ class TreeSitterAnalyzer:
         walk_node(tree.root_node)
         return elements
 
-    def _extract_decorators(self, node, content: str) -> List[str]:
+    def _extract_decorators(self, node, content: str) -> list[str]:
         """Extract decorators from a Python function or class"""
         decorators = []
 
@@ -339,7 +324,7 @@ class TreeSitterAnalyzer:
 
         return list(reversed(decorators))  # Reverse to get correct order
 
-    def _extract_class_bases(self, class_node, content: str) -> List[str]:
+    def _extract_class_bases(self, class_node, content: str) -> list[str]:
         """Extract base classes from a Python class definition"""
         bases = []
 
@@ -353,7 +338,7 @@ class TreeSitterAnalyzer:
 
         return bases
 
-    def _build_cross_references(self, elements: List[CodeElement]) -> Dict[str, Any]:
+    def _build_cross_references(self, elements: list[CodeElement]) -> dict[str, Any]:
         """Build cross-references between code elements"""
         # Group elements by type
         functions = [e for e in elements if e.type == "function"]
@@ -369,9 +354,7 @@ class TreeSitterAnalyzer:
 
         return cross_refs
 
-    def _build_class_hierarchy(
-        self, classes: List[CodeElement]
-    ) -> Dict[str, List[str]]:
+    def _build_class_hierarchy(self, classes: list[CodeElement]) -> dict[str, list[str]]:
         """Build class inheritance hierarchy"""
         hierarchy = {}
 
@@ -387,7 +370,7 @@ class TreeSitterAnalyzer:
 class FastAPITreeSitterAnalyzer(TreeSitterAnalyzer):
     """Extended analyzer for FastAPI-specific patterns"""
 
-    def extract_fastapi_routes(self, project_path: str) -> List[Dict[str, Any]]:
+    def extract_fastapi_routes(self, project_path: str) -> list[dict[str, Any]]:
         """Extract FastAPI routes using Tree-sitter"""
         project_analysis = self.analyze_project(project_path)
         routes = []
@@ -418,14 +401,10 @@ class FastAPITreeSitterAnalyzer(TreeSitterAnalyzer):
 
         return routes
 
-    def _parse_route_decorator(
-        self, decorator: str, element: CodeElement
-    ) -> Optional[Dict[str, Any]]:
+    def _parse_route_decorator(self, decorator: str, element: CodeElement) -> dict[str, Any] | None:
         """Parse FastAPI route decorator to extract route information"""
         # Match patterns like @app.get("/path") or @router.post("/path", ...)
-        pattern = (
-            r'@(?:app|router)\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']'
-        )
+        pattern = r'@(?:app|router)\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']'
         match = re.search(pattern, decorator)
 
         if match:
@@ -456,7 +435,7 @@ if __name__ == "__main__":
 
         # General analysis
         analysis = analyzer.analyze_project(project_path)
-        print(f"\nProject Statistics:")
+        print("\nProject Statistics:")
         print(f"  Total files: {analysis['statistics']['total_files']}")
         print(f"  Languages: {analysis['statistics']['languages']}")
         print(f"  Functions: {analysis['statistics']['total_functions']}")

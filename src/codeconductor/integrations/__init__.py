@@ -4,21 +4,21 @@ Integration Components
 Handles external integrations like Cursor, clipboard management, and code extraction.
 """
 
+from .clipboard_monitor import ClipboardMonitor
+from .cloud_escalator import CloudEscalator
 from .cursor_integration import (
     ClipboardManager,
     CodeExtractor,
     CursorIntegration,
     ExtractedFile,
 )
-from .clipboard_monitor import ClipboardMonitor
-from .cloud_escalator import CloudEscalator
 from .hotkeys import (
     HotkeyManager,
     get_hotkey_manager,
     start_global_hotkeys,
     stop_global_hotkeys,
 )
-from .notifications import notify_success, notify_error
+from .notifications import notify_error, notify_success
 
 # Optional external adapters (behind ALLOW_NET)
 try:

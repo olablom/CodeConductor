@@ -7,10 +7,10 @@ FastAPI server exposing health endpoint and an OpenAI-compatible
 from __future__ import annotations
 
 import asyncio
+import json
+import os
 import time
 import uuid
-from typing import List, Optional
-import json
 
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
@@ -20,7 +20,6 @@ from codeconductor.ensemble.single_model_engine import (
     SingleModelEngine,
     SingleModelRequest,
 )
-import os
 
 # Optional Prometheus metrics (opt-in)
 _ENABLE_METRICS = os.getenv("ENABLE_METRICS", "").strip().lower() in {
@@ -71,18 +70,18 @@ class Message(BaseModel):
 
 
 class CompletionIn(BaseModel):
-    model: Optional[str] = Field(default=None, description="Preferred model id")
-    messages: List[Message]
-    max_tokens: Optional[int] = 256
-    temperature: Optional[float] = 0.2
+    model: str | None = Field(default=None, description="Preferred model id")
+    messages: list[Message]
+    max_tokens: int | None = 256
+    temperature: float | None = 0.2
 
 
 # ---- Engine init (lazy singleton) ----
 _engine_lock = asyncio.Lock()
-_engine: Optional[SingleModelEngine] = None
+_engine: SingleModelEngine | None = None
 
 
-async def get_engine(preferred_model: Optional[str]) -> SingleModelEngine:
+async def get_engine(preferred_model: str | None) -> SingleModelEngine:
     global _engine
     if _engine is None:
         async with _engine_lock:
@@ -138,7 +137,7 @@ async def completions(req: CompletionIn) -> dict:
 
 
 @app.get("/stream")
-async def stream(request_id: Optional[str] = None, prompt: Optional[str] = None):
+async def stream(request_id: str | None = None, prompt: str | None = None):
     """SSE endpoint streaming tokens and basic metrics.
 
     Query params:

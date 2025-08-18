@@ -12,7 +12,10 @@ from pathlib import Path
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
 
-from codeconductor.debate.single_model_agent import SingleModelAIAgent, SingleModelDebateManager
+from codeconductor.debate.single_model_agent import (
+    SingleModelAIAgent,
+    SingleModelDebateManager,
+)
 
 
 async def test_single_model_debate():
@@ -66,7 +69,7 @@ async def test_single_model_debate():
         # Conduct debate with timeout
         result = await asyncio.wait_for(
             debate_manager.conduct_debate(test_prompt),
-            timeout=120.0  # 2 minute timeout for full debate
+            timeout=120.0,  # 2 minute timeout for full debate
         )
 
         print("\n" + "=" * 60)
@@ -85,7 +88,7 @@ async def test_single_model_debate():
 
         return True
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         print("⏰ Debate timed out after 2 minutes")
         return False
     except Exception as e:
@@ -96,9 +99,9 @@ async def test_single_model_debate():
 if __name__ == "__main__":
     # Run test
     success = asyncio.run(test_single_model_debate())
-    
+
     if success:
         print("\n🎉 Single-model debate test PASSED!")
     else:
         print("\n💥 Single-model debate test FAILED!")
-        sys.exit(1) 
+        sys.exit(1)

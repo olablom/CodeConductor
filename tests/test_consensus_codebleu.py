@@ -1,5 +1,3 @@
-import pytest
-
 from codeconductor.ensemble.consensus_calculator import ConsensusCalculator
 
 

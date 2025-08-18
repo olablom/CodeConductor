@@ -8,7 +8,7 @@ import asyncio
 import json
 import time
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Any
 
 # Test cases that should work well with 2-agent debate
 TEST_CASES = [
@@ -55,7 +55,7 @@ TEST_CASES = [
 ]
 
 
-async def run_2agent_test(test_case: Dict[str, Any]) -> Dict[str, Any]:
+async def run_2agent_test(test_case: dict[str, Any]) -> dict[str, Any]:
     """Run a single test case with 2 agents"""
 
     print(f"🧪 Testing: {test_case['name']}")
@@ -155,9 +155,7 @@ async def run_comprehensive_2agent_test():
     total_tests = len(results)
     success_rate = (successful_tests / total_tests) * 100 if total_tests > 0 else 0
 
-    avg_time = (
-        sum(r["execution_time"] for r in results) / len(results) if results else 0
-    )
+    avg_time = sum(r["execution_time"] for r in results) / len(results) if results else 0
 
     # Quality metrics
     avg_code_length = 0
@@ -166,9 +164,9 @@ async def run_comprehensive_2agent_test():
     if results:
         code_results = [r for r in results if r.get("code_quality")]
         if code_results:
-            avg_code_length = sum(
-                r["code_quality"]["code_length"] for r in code_results
-            ) / len(code_results)
+            avg_code_length = sum(r["code_quality"]["code_length"] for r in code_results) / len(
+                code_results
+            )
             syntax_success_rate = (
                 sum(1 for r in code_results if r["code_quality"]["syntax_check"])
                 / len(code_results)

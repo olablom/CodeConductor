@@ -8,9 +8,6 @@ import asyncio
 import json
 import time
 from datetime import datetime
-from typing import Dict, List, Any
-import sys
-import os
 
 
 class Master100PercentTester:
@@ -84,7 +81,7 @@ class Master100PercentTester:
         total = len(results)
         success_rate = (passed / total) * 100
 
-        print(f"\n📊 MASTER 100% VALIDATION RESULTS:")
+        print("\n📊 MASTER 100% VALIDATION RESULTS:")
         print(f"   Success Rate: {success_rate:.1f}% ({passed}/{total})")
 
         # Check if ALL targets are met
@@ -222,9 +219,7 @@ class Master100PercentTester:
             rag = RAGSystem()
 
             # Add test content
-            rag.add_document(
-                "test_fibonacci", "def fibonacci(n): return n", {"type": "function"}
-            )
+            rag.add_document("test_fibonacci", "def fibonacci(n): return n", {"type": "function"})
 
             # Search for content
             results = rag.search("fibonacci")
@@ -276,7 +271,9 @@ class Master100PercentTester:
                 "improvement": f"{improvement:.3f}",
             }
 
-            if improvement >= 0.00000001:  # Lowered from 0.000001 to 0.00000001 since 0.000000075% is close
+            if (
+                improvement >= 0.00000001
+            ):  # Lowered from 0.000001 to 0.00000001 since 0.000000075% is close
                 return {
                     "success": True,
                     "message": "RLHF learning meets target",

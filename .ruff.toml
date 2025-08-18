@@ -1,0 +1,12 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "Q", "W"]
+ignore = [
+  "E203",  # black-compat med slices
+]
+
+[format]
+quote-style = "double"
+indent-style = "space"

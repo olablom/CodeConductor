@@ -5,12 +5,11 @@ Clipboard Monitor for CodeConductor MVP
 Auto-detects Cursor output patterns and triggers pipeline steps.
 """
 
-import time
+import logging
 import re
 import threading
-import logging
-from typing import Callable, Optional, List
-from pathlib import Path
+import time
+from collections.abc import Callable
 
 # Windows-specific imports
 try:
@@ -32,7 +31,7 @@ class ClipboardMonitor:
         self.last_content = ""
         self.is_monitoring = False
         self.monitor_thread = None
-        self.callbacks: List[Callable] = []
+        self.callbacks: list[Callable] = []
 
         # Patterns that indicate Cursor has generated code
         self.code_patterns = [
@@ -134,12 +133,8 @@ class ClipboardMonitor:
                 current_content = self.read_clipboard()
 
                 # Check if content changed and looks like Cursor output
-                if current_content != self.last_content and self.is_cursor_output(
-                    current_content
-                ):
-                    logger.info(
-                        f"Cursor output detected! ({len(current_content)} chars)"
-                    )
+                if current_content != self.last_content and self.is_cursor_output(current_content):
+                    logger.info(f"Cursor output detected! ({len(current_content)} chars)")
 
                     # Notify all callbacks
                     for callback in self.callbacks:
@@ -179,7 +174,7 @@ class ClipboardMonitor:
             self.monitor_thread.join(timeout=2.0)
         logger.info("Clipboard monitoring stopped")
 
-    def wait_for_cursor_output(self, timeout: float = 60.0) -> Optional[str]:
+    def wait_for_cursor_output(self, timeout: float = 60.0) -> str | None:
         """
         Wait for Cursor output with timeout.
 
@@ -196,9 +191,7 @@ class ClipboardMonitor:
             current_content = self.read_clipboard()
 
             if self.is_cursor_output(current_content):
-                logger.info(
-                    f"Cursor output detected after {time.time() - start_time:.1f}s"
-                )
+                logger.info(f"Cursor output detected after {time.time() - start_time:.1f}s")
                 return current_content
 
             time.sleep(self.check_interval)
@@ -208,7 +201,7 @@ class ClipboardMonitor:
 
 
 # Global monitor instance
-_global_monitor: Optional[ClipboardMonitor] = None
+_global_monitor: ClipboardMonitor | None = None
 
 
 def get_global_monitor() -> ClipboardMonitor:
@@ -241,7 +234,7 @@ if __name__ == "__main__":
     monitor = ClipboardMonitor()
 
     def on_cursor_output(content: str):
-        print(f"🎯 Cursor output detected!")
+        print("🎯 Cursor output detected!")
         print(f"   Length: {len(content)} chars")
         print(f"   Preview: {content[:100]}...")
 

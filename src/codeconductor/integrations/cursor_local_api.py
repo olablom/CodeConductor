@@ -8,12 +8,14 @@ ECONNRESET and corporate proxy/TLS interception issues.
 """
 
 import asyncio
+import logging
 import os
 import random
+from collections.abc import Callable
 from contextlib import asynccontextmanager
+from typing import Any
+
 import aiohttp
-import logging
-from typing import Optional, Dict, Any, Callable
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -25,12 +27,12 @@ class CursorLocalAPI:
 
     def __init__(
         self,
-        base_url: Optional[str] = None,
+        base_url: str | None = None,
         timeout_seconds: float = 30.0,
         max_retries: int = 3,
         backoff_base_seconds: float = 0.25,
         backoff_max_seconds: float = 2.0,
-        trust_env: Optional[bool] = None,
+        trust_env: bool | None = None,
     ) -> None:
         # Allow override via env; default to localhost
         env_base = os.getenv("CURSOR_BASE_URL", "").strip()
@@ -39,15 +41,11 @@ class CursorLocalAPI:
         self.timeout_seconds = timeout_seconds
         self.max_retries = max(0, int(max_retries))
         self.backoff_base_seconds = max(0.01, float(backoff_base_seconds))
-        self.backoff_max_seconds = max(
-            self.backoff_base_seconds, float(backoff_max_seconds)
-        )
+        self.backoff_max_seconds = max(self.backoff_base_seconds, float(backoff_max_seconds))
         # trust_env controls whether aiohttp uses system proxy vars (HTTP_PROXY/HTTPS_PROXY)
         # If not explicitly provided, decide based on URL and CURSOR_DISABLE_PROXY
         self._trust_env = (
-            bool(trust_env)
-            if trust_env is not None
-            else self._decide_trust_env(self.base_url)
+            bool(trust_env) if trust_env is not None else self._decide_trust_env(self.base_url)
         )
 
     # ---------- Helper decision functions (unit-testable) ----------
@@ -62,9 +60,7 @@ class CursorLocalAPI:
             return False
         # Avoid proxy for localhost and 127.0.0.1 by default
         lowered = (base_url or "").lower()
-        if lowered.startswith("http://localhost") or lowered.startswith(
-            "http://127.0.0.1"
-        ):
+        if lowered.startswith("http://localhost") or lowered.startswith("http://127.0.0.1"):
             return False
         return True
 
@@ -101,21 +97,19 @@ class CursorLocalAPI:
         method: str,
         path: str,
         *,
-        json_payload: Optional[Dict[str, Any]] = None,
-        timeout_total: Optional[float] = None,
+        json_payload: dict[str, Any] | None = None,
+        timeout_total: float | None = None,
         expect_json: bool = True,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         url = f"{self.api_url}{path}"
         timeout = aiohttp.ClientTimeout(total=timeout_total or self.timeout_seconds)
 
-        last_error: Optional[BaseException] = None
+        last_error: BaseException | None = None
         for attempt in range(self.max_retries + 1):
             try:
                 async with self._session() as session:
                     http_call: Callable[..., Any] = getattr(session, method.lower())
-                    async with http_call(
-                        url, json=json_payload, timeout=timeout
-                    ) as response:
+                    async with http_call(url, json=json_payload, timeout=timeout) as response:
                         if response.status == 200:
                             if expect_json:
                                 return await response.json()
@@ -153,29 +147,23 @@ class CursorLocalAPI:
     # ---------- Public API ----------
     async def check_health(self) -> bool:
         """Check if Cursor's local API is available."""
-        data = await self._request(
-            "get", "/health", expect_json=True, timeout_total=5.0
-        )
+        data = await self._request("get", "/health", expect_json=True, timeout_total=5.0)
         if not data:
             return False
         version = data.get("version", "unknown")
         logger.info(f"Cursor local API healthy: {version}")
         return True
 
-    async def get_auth_status(self) -> Dict[str, Any]:
+    async def get_auth_status(self) -> dict[str, Any]:
         """Check authentication status."""
-        data = await self._request(
-            "get", "/auth/status", expect_json=True, timeout_total=5.0
-        )
+        data = await self._request("get", "/auth/status", expect_json=True, timeout_total=5.0)
         if data is None:
             return {"authenticated": False, "error": "request_failed"}
         if "authenticated" not in data:
             data["authenticated"] = False
         return data
 
-    async def send_chat_completion(
-        self, prompt: str, model: str = "default"
-    ) -> Optional[str]:
+    async def send_chat_completion(self, prompt: str, model: str = "default") -> str | None:
         """Send a chat completion request to Cursor's local API."""
         payload = {
             "messages": [{"role": "user", "content": prompt}],
@@ -193,11 +181,9 @@ class CursorLocalAPI:
             return None
         return data.get("choices", [{}])[0].get("message", {}).get("content", "")
 
-    async def get_workspace_info(self) -> Dict[str, Any]:
+    async def get_workspace_info(self) -> dict[str, Any]:
         """Get current workspace information."""
-        data = await self._request(
-            "get", "/workspace", expect_json=True, timeout_total=5.0
-        )
+        data = await self._request("get", "/workspace", expect_json=True, timeout_total=5.0)
         return data if data is not None else {"error": "request_failed"}
 
     async def is_available(self) -> bool:

@@ -1,4 +1,3 @@
-import asyncio
 import pytest
 
 from codeconductor.ensemble.ensemble_engine import EnsembleEngine, EnsembleRequest

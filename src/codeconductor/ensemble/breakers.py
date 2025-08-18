@@ -6,7 +6,7 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Deque, Dict, Optional, Tuple, List
+
 from codeconductor.telemetry import get_logger
 
 
@@ -14,17 +14,17 @@ from codeconductor.telemetry import get_logger
 class Observation:
     ts: float
     success: bool
-    total_ms: Optional[float] = None
-    ttft_ms: Optional[float] = None
-    error_class: Optional[str] = None  # timeout|5xx|reset|breaker_open|other
+    total_ms: float | None = None
+    ttft_ms: float | None = None
+    error_class: str | None = None  # timeout|5xx|reset|breaker_open|other
 
 
 @dataclass
 class ModelState:
     state: str = "Closed"  # Closed|Open|HalfOpen
-    reason: Optional[str] = None
+    reason: str | None = None
     last_change_ts: float = field(default_factory=lambda: time.monotonic())
-    next_probe_at: Optional[float] = None
+    next_probe_at: float | None = None
     halfopen_remaining_probes: int = 0
 
 
@@ -42,10 +42,10 @@ class BreakerManager:
 
     def __init__(self) -> None:
         self.lock = threading.Lock()
-        self.obs: Dict[str, Deque[Observation]] = {}
-        self.states: Dict[str, ModelState] = {}
-        self._last_p95_breach: Dict[str, int] = {}  # count consecutive TTFT breaches
-        self._obs_count: Dict[str, int] = {}
+        self.obs: dict[str, deque[Observation]] = {}
+        self.states: dict[str, ModelState] = {}
+        self._last_p95_breach: dict[str, int] = {}  # count consecutive TTFT breaches
+        self._obs_count: dict[str, int] = {}
 
         # Config (env-overridable)
         self.err_rate = float(os.getenv("CC_BREAKER_ERRRATE", "0.2"))
@@ -91,9 +91,9 @@ class BreakerManager:
         model_id: str,
         *,
         success: bool,
-        total_ms: Optional[float],
-        ttft_ms: Optional[float],
-        error_class: Optional[str],
+        total_ms: float | None,
+        ttft_ms: float | None,
+        error_class: str | None,
     ) -> None:
         with self.lock:
             buf = self.obs.setdefault(model_id, deque(maxlen=self.window_count))
@@ -134,9 +134,7 @@ class BreakerManager:
                         return
                 else:
                     # immediate reopen
-                    self._open(
-                        model_id, st, reason=error_class or "HALFOPEN_FAIL", now=now
-                    )
+                    self._open(model_id, st, reason=error_class or "HALFOPEN_FAIL", now=now)
                     return
 
             # Closed evaluation
@@ -188,7 +186,7 @@ class BreakerManager:
         *,
         reason: str,
         now: float,
-        metrics: Optional[Dict[str, float]] = None,
+        metrics: dict[str, float] | None = None,
     ) -> None:
         prev = st.state
         st.state = "Open"
@@ -208,13 +206,13 @@ class BreakerManager:
             payload.update(metrics)
         get_logger().log("breaker_event", payload)
 
-    def _evict_older(self, buf: Deque[Observation], now: float) -> None:
+    def _evict_older(self, buf: deque[Observation], now: float) -> None:
         # Evict older than window_sec
         cutoff = now - self.window_sec
         while buf and buf[0].ts < cutoff:
             buf.popleft()
 
-    def _evaluate_open_reason(self, buf: Deque[Observation]) -> Optional[str]:
+    def _evaluate_open_reason(self, buf: deque[Observation]) -> str | None:
         if not buf:
             return None
         n = len(buf)
@@ -232,7 +230,7 @@ class BreakerManager:
         # Error rate per class (worst wins)
         if err_rate > self.err_rate:
             # pick dominant error class
-            classes: Dict[str, int] = {}
+            classes: dict[str, int] = {}
             for o in buf:
                 if not o.success and o.error_class:
                     classes[o.error_class] = classes.get(o.error_class, 0) + 1
@@ -254,8 +252,8 @@ class BreakerManager:
         return None
 
     def _compute_metrics(
-        self, buf: Deque[Observation]
-    ) -> Tuple[float, Optional[float], Optional[float], int]:
+        self, buf: deque[Observation]
+    ) -> tuple[float, float | None, float | None, int]:
         n = len(buf)
         fails = sum(1 for o in buf if not o.success)
         err_rate = fails / n if n else 0.0
@@ -278,7 +276,7 @@ class BreakerManager:
         return err_rate, p95, p99, consec
 
 
-_GLOBAL_MANAGER: Optional[BreakerManager] = None
+_GLOBAL_MANAGER: BreakerManager | None = None
 
 
 def get_manager() -> BreakerManager:

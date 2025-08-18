@@ -7,24 +7,25 @@ Tested manually
 import argparse
 import asyncio
 import json
-import sys
-from pathlib import Path
-from typing import Dict, Any, Optional
-import subprocess
 import os
 import re
+import subprocess
+import sys
+from pathlib import Path
+from typing import Any
 
 import yaml
-from codeconductor.ensemble.model_manager import ModelManager
+
 from codeconductor.analysis.quick_analyze import (
-    write_repo_map,
-    write_state_md,
     generate_cursorrules,
     propose_next_feature,
+    write_repo_map,
+    write_state_md,
 )
+from codeconductor.ensemble.model_manager import ModelManager
 
 
-def create_default_config() -> Dict[str, Any]:
+def create_default_config() -> dict[str, Any]:
     """Create default configuration"""
     return {
         "models": {
@@ -134,9 +135,7 @@ Examples:
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Init command
-    init_parser = subparsers.add_parser(
-        "init", help="Initialize CodeConductor configuration"
-    )
+    init_parser = subparsers.add_parser("init", help="Initialize CodeConductor configuration")
     init_parser.set_defaults(func=init_command)
 
     # Test command
@@ -144,9 +143,7 @@ Examples:
     test_parser.add_argument(
         "--self_reflection", action="store_true", help="Enable self-reflection loop"
     )
-    test_parser.add_argument(
-        "--quick", action="store_true", help="Reserved for future quick mode"
-    )
+    test_parser.add_argument("--quick", action="store_true", help="Reserved for future quick mode")
     test_parser.add_argument(
         "--rounds", type=int, default=1, help="Debate rounds per task (default: 1)"
     )
@@ -217,6 +214,7 @@ Examples:
             try:
                 import time
                 from datetime import datetime
+
                 import requests  # type: ignore
             except Exception:
                 time = None
@@ -265,9 +263,7 @@ Examples:
                     url = "http://localhost:1234/v1/chat/completions"
                     payload = {
                         "model": model_id,
-                        "messages": [
-                            {"role": "user", "content": "Return the word ok."}
-                        ],
+                        "messages": [{"role": "user", "content": "Return the word ok."}],
                         "max_tokens": tokens,
                         "temperature": 0.1,
                     }
@@ -275,9 +271,7 @@ Examples:
                     r.raise_for_status()
                     data = r.json()
                     response_text = (
-                        data.get("choices", [{}])[0]
-                        .get("message", {})
-                        .get("content", "")
+                        data.get("choices", [{}])[0].get("message", {}).get("content", "")
                     )
                     success = True
                 elif backend == "ollama" and requests:
@@ -355,9 +349,7 @@ Examples:
             except Exception:
                 sys_mem_used_mb = None
 
-            decode_tok_s = (
-                num_tokens / max(0.001, (request_ms / 1000.0)) if request_ms else None
-            )
+            decode_tok_s = num_tokens / max(0.001, (request_ms / 1000.0)) if request_ms else None
 
             from datetime import datetime as _dt  # local import if earlier failed
 
@@ -370,9 +362,7 @@ Examples:
                 "ttft_ms": None,
                 "decode_tok_s": round(decode_tok_s, 2) if decode_tok_s else None,
                 "total_ms": round(total_ms, 1),
-                "gpu_mem_used_mb": int(gpu_info["used_gb"] * 1024)
-                if gpu_info
-                else None,
+                "gpu_mem_used_mb": (int(gpu_info["used_gb"] * 1024) if gpu_info else None),
                 "sys_mem_used_mb": sys_mem_used_mb,
                 "success": bool(success and contains_ok),
                 "error": error,
@@ -410,9 +400,7 @@ Examples:
         print("Doctor complete")
         return 0
 
-    doctor_parser = subparsers.add_parser(
-        "doctor", help="Show diagnostics and environment health"
-    )
+    doctor_parser = subparsers.add_parser("doctor", help="Show diagnostics and environment health")
     doctor_parser.add_argument(
         "--real",
         action="store_true",
@@ -424,9 +412,7 @@ Examples:
     doctor_parser.add_argument(
         "--tokens", type=int, default=128, help="Max tokens for doctor probe"
     )
-    doctor_parser.add_argument(
-        "--profile", action="store_true", help="Write per-phase CSV timings"
-    )
+    doctor_parser.add_argument("--profile", action="store_true", help="Write per-phase CSV timings")
     doctor_parser.set_defaults(func=doctor_command)
 
     # Diagnostics helpers (preflight)
@@ -450,10 +436,10 @@ Examples:
             }
             return f"{colors.get(color, '')}{text}{colors['reset']}"
 
-        def _summarize(latest_path: Path) -> Dict[str, Any]:
+        def _summarize(latest_path: Path) -> dict[str, Any]:
             cursor_mode = os.getenv("CURSOR_MODE") or "(not set)"
             cursor_api_base = os.getenv("CURSOR_API_BASE") or "(not set)"
-            summary: Dict[str, Any] = {
+            summary: dict[str, Any] = {
                 "cursor_mode": cursor_mode,
                 "cursor_api_base": cursor_api_base,
                 "ollama_status": "na",
@@ -466,9 +452,7 @@ Examples:
                 try:
                     text = latest_path.read_text(encoding="utf-8", errors="ignore")
                     summary["ollama_status"] = (
-                        "up"
-                        if ("Port 11434 -> TcpTestSucceeded=True" in text)
-                        else "down"
+                        "up" if ("Port 11434 -> TcpTestSucceeded=True" in text) else "down"
                     )
                     m = re.search(r"Detected Cursor API port:\s*(\d+)", text)
                     if m:
@@ -480,9 +464,7 @@ Examples:
                         ) and "11434" not in line:
                             cursor_api_up = True
                             break
-                    summary["cursor_api_status"] = (
-                        "up" if cursor_api_up else "not_listening"
-                    )
+                    summary["cursor_api_status"] = "up" if cursor_api_up else "not_listening"
                 except Exception:
                     summary["cursor_api_status"] = "na"
             else:
@@ -515,9 +497,7 @@ Examples:
                 except Exception as e:
                     print(f"Failed to run diagnostics: {e}")
             else:
-                print(
-                    "Note: '--run' diagnostics is Windows-only (PowerShell script). Skipping."
-                )
+                print("Note: '--run' diagnostics is Windows-only (PowerShell script). Skipping.")
 
         latest_path = Path("artifacts/diagnostics/diagnose_latest.txt")
         result = _summarize(latest_path)
@@ -572,9 +552,7 @@ Examples:
             print(f" - Ollama (11434): {_color('N/A', 'yellow')}")
 
         if result["cursor_api_status"] == "up":
-            print(
-                f" - Cursor API    : {_color('UP (health endpoint responded)', 'green')}"
-            )
+            print(f" - Cursor API    : {_color('UP (health endpoint responded)', 'green')}")
         elif result["cursor_api_status"] == "not_listening":
             print(f" - Cursor API    : {_color('NOT LISTENING', 'red')}")
         else:
@@ -588,9 +566,7 @@ Examples:
             print(
                 f"  [Environment]::SetEnvironmentVariable('CURSOR_API_BASE','http://127.0.0.1:{int(detected_port)}','User')"
             )
-            print(
-                "  [Environment]::SetEnvironmentVariable('CURSOR_MODE','auto','User')"
-            )
+            print("  [Environment]::SetEnvironmentVariable('CURSOR_MODE','auto','User')")
 
         # CI hint: don't fail pipeline if Cursor isn't listening
         if os.getenv("CI") == "true":
@@ -623,19 +599,13 @@ Examples:
         return 0
 
     diag_parser = subparsers.add_parser("diag", help="Diagnostics utilities")
-    diag_subparsers = diag_parser.add_subparsers(
-        dest="diag_cmd", help="Diagnostics commands"
-    )
+    diag_subparsers = diag_parser.add_subparsers(dest="diag_cmd", help="Diagnostics commands")
     # Cursor API diagnostics
     diag_cursor_parser = diag_subparsers.add_parser(
         "cursor", help="Cursor diagnostics and preflight checks"
     )
-    diag_cursor_parser.add_argument(
-        "--json", action="store_true", help="Output as JSON"
-    )
-    diag_cursor_parser.add_argument(
-        "--run", action="store_true", help="Run diagnostics script"
-    )
+    diag_cursor_parser.add_argument("--json", action="store_true", help="Output as JSON")
+    diag_cursor_parser.add_argument("--run", action="store_true", help="Run diagnostics script")
 
     diag_cursor_parser.set_defaults(func=diag_cursor_command)
 
@@ -643,11 +613,12 @@ Examples:
     def run_command(args: argparse.Namespace) -> int:
         """Run a single debate with optional personas and flags."""
         import asyncio as _asyncio
-        from codeconductor.debate.personas import (
-            load_personas_yaml,
-            build_agents_from_personas,
-        )
+
         from codeconductor.debate.local_ai_agent import LocalDebateManager
+        from codeconductor.debate.personas import (
+            build_agents_from_personas,
+            load_personas_yaml,
+        )
         from codeconductor.ensemble.single_model_engine import SingleModelEngine
 
         if not args.prompt and not args.prompt_file:
@@ -665,11 +636,7 @@ Examples:
             print("❌ Empty prompt")
             return 1
 
-        roles = [
-            r.strip()
-            for r in (args.agents or "architect,coder").split(",")
-            if r.strip()
-        ]
+        roles = [r.strip() for r in (args.agents or "architect,coder").split(",") if r.strip()]
         personas = load_personas_yaml(args.personas)
         agents = build_agents_from_personas(personas, roles)
 
@@ -685,33 +652,23 @@ Examples:
                     rounds=int(args.rounds),
                 )
                 # Minimal output
-                print(
-                    json.dumps({"responses": responses}, ensure_ascii=False, indent=2)
-                )
+                print(json.dumps({"responses": responses}, ensure_ascii=False, indent=2))
                 return 0
             finally:
                 await engine.cleanup()
 
         return _asyncio.run(_run())
 
-    run_parser = subparsers.add_parser(
-        "run", help="Run a single debate with optional personas"
-    )
-    run_parser.add_argument(
-        "--personas", type=str, default=None, help="Path to personas YAML"
-    )
+    run_parser = subparsers.add_parser("run", help="Run a single debate with optional personas")
+    run_parser.add_argument("--personas", type=str, default=None, help="Path to personas YAML")
     run_parser.add_argument(
         "--agents",
         type=str,
         default="architect,coder",
         help="Comma-separated roles to use",
     )
-    run_parser.add_argument(
-        "--prompt", type=str, default=None, help="Inline prompt text"
-    )
-    run_parser.add_argument(
-        "--prompt-file", type=str, default=None, help="Path to prompt file"
-    )
+    run_parser.add_argument("--prompt", type=str, default=None, help="Inline prompt text")
+    run_parser.add_argument("--prompt-file", type=str, default=None, help="Path to prompt file")
     run_parser.add_argument("--rounds", type=int, default=1, help="Debate rounds")
     run_parser.add_argument(
         "--timeout-per-turn", type=int, default=60, help="Seconds per agent turn"
@@ -776,9 +733,7 @@ Examples:
     )
     propose_parser.add_argument("--input", type=str, default="artifacts/repo_map.json")
     propose_parser.add_argument("--state", type=str, default="artifacts/state.md")
-    propose_parser.add_argument(
-        "--out", type=str, default="artifacts/prompts/next_feature.md"
-    )
+    propose_parser.add_argument("--out", type=str, default="artifacts/prompts/next_feature.md")
     propose_parser.set_defaults(func=propose_command)
 
     args = parser.parse_args()

@@ -12,5 +12,3 @@ switch ($Task) {
     python scripts/stream_smoke.py --start-server --prompt "$Prompt"
   }
 }
-
-

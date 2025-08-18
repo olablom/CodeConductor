@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 # Filename: tests/test_vllm_windows.py
-import pytest
 import platform
+
+import pytest
+
 
 def _is_wsl() -> bool:
     rel = platform.release().lower()
     ver = getattr(platform, "version", lambda: "")().lower() if hasattr(platform, "version") else ""
     return ("microsoft" in rel) or ("microsoft" in ver)
+
 
 def test_vllm_availability():
     """

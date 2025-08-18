@@ -59,4 +59,3 @@ refactorist:
     - extract small pure functions
     - reduce cyclomatic complexity
     - improve names and module boundaries
-

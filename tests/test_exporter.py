@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 from codeconductor.utils.exporter import export_latest_run, verify_manifest

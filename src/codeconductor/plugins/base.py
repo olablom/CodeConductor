@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 @dataclass
 class PluginContext:
     task_description: str
-    code: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    code: str | None = None
+    metadata: dict[str, Any] | None = None
 
 
 class AgentPlugin:

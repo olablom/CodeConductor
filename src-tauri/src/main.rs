@@ -28,7 +28,7 @@ async fn generate_code(prompt: String, state: State<'_, AppState>) -> Result<Str
         let mut count = state.generation_count.lock().unwrap();
         *count += 1;
     }
-    
+
     // Generate code based on prompt content
     let generated_code = match prompt.to_lowercase() {
         p if p.contains("python") && p.contains("sort") => {
@@ -90,7 +90,7 @@ const result = example()
 console.log("Result:", result)"#, prompt)
         }
     };
-    
+
     Ok(generated_code)
 }
 
@@ -223,4 +223,4 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-} 
+}

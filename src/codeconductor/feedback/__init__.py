@@ -9,6 +9,12 @@ This module provides feedback and learning capabilities including:
 
 from .learning_system import LearningSystem
 from .rlhf_agent import RLHFAgent
-from .validation_system import validate_cursor_output, CodeValidator, ValidationResult
+from .validation_system import CodeValidator, ValidationResult, validate_cursor_output
 
-__all__ = ["LearningSystem", "RLHFAgent", "validate_cursor_output", "CodeValidator", "ValidationResult"] 
+__all__ = [
+    "LearningSystem",
+    "RLHFAgent",
+    "validate_cursor_output",
+    "CodeValidator",
+    "ValidationResult",
+]

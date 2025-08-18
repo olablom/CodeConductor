@@ -6,10 +6,11 @@ Tests one agent with a simple prompt to verify response quality.
 """
 
 import asyncio
-import sys
-import yaml
 import json
+import sys
 from pathlib import Path
+
+import yaml
 
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
@@ -44,11 +45,9 @@ async def main():
     try:
         # Generate response
         print("🤖 Generating response...")
-        response = await agent.generate_response(
-            user_prompt, timeout=300.0
-        )  # 5 minutes
+        response = await agent.generate_response(user_prompt, timeout=300.0)  # 5 minutes
 
-        print(f"\n✅ Response generated successfully!")
+        print("\n✅ Response generated successfully!")
         print(f"📝 Response: {response}")
 
         # Save response

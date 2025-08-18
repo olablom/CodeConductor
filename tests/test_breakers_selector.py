@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
-
-from codeconductor.ensemble.model_selector import ModelSelector, SelectionInput
 from codeconductor.ensemble.breakers import get_manager
 from codeconductor.ensemble.model_manager import ModelInfo
+from codeconductor.ensemble.model_selector import ModelSelector, SelectionInput
 
 
 def test_selector_skips_open_models(monkeypatch):

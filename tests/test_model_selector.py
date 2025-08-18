@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 
@@ -6,8 +5,8 @@ from pathlib import Path
 repo_root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(repo_root / "src"))
 
-from codeconductor.ensemble.model_selector import ModelSelector, SelectionInput
 from codeconductor.ensemble.model_manager import ModelInfo
+from codeconductor.ensemble.model_selector import ModelSelector, SelectionInput
 
 
 def make_model_simple(id: str, **md):
@@ -52,17 +51,11 @@ def test_selector_forced_env(monkeypatch):
     b = make_model_simple("mixtral-8x7b", latency_p95=0.2)
     monkeypatch.setenv("FORCE_MODEL", "deepseek-v3")
     try:
-        out = sel.select(
-            SelectionInput(models=[a, b], prompt_len=100, policy="latency")
-        )
+        out = sel.select(SelectionInput(models=[a, b], prompt_len=100, policy="latency"))
     finally:
         monkeypatch.delenv("FORCE_MODEL", raising=False)
     assert out.selected_model == "deepseek-v3"
     assert out.why.get("reason") == "forced_by_env"
-
-
-from codeconductor.ensemble.model_selector import ModelSelector, SelectionInput
-from codeconductor.ensemble.model_manager import ModelInfo
 
 
 def make_model(id: str, provider: str, meta: dict) -> ModelInfo:

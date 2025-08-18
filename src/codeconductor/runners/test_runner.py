@@ -5,15 +5,15 @@ Test Runner for CodeConductor MVP.
 Handles pytest execution, result parsing, and feedback generation for the feedback loop.
 """
 
-import subprocess
 import json
+import os
+import re
+import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Dict, Any, Optional
-import re
-import sys
-import os
+from typing import Any
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -28,10 +28,8 @@ class TestResult:
 
     success: bool
     stdout: str
-    errors: List[str] = field(default_factory=list)
-    test_results: List[Dict[str, Any]] = field(
-        default_factory=list
-    )  # Test-as-Reward data
+    errors: list[str] = field(default_factory=list)
+    test_results: list[dict[str, Any]] = field(default_factory=list)  # Test-as-Reward data
 
 
 class PytestRunner:
@@ -44,7 +42,7 @@ class PytestRunner:
         self.code = code
         self.tests_dir = tests_dir
 
-    def run(self) -> Dict[str, Any]:
+    def run(self) -> dict[str, Any]:
         """
         Run pytest with JSON reporting and return structured results.
 
@@ -55,9 +53,7 @@ class PytestRunner:
             # 1. Save generated code to temporary file if provided
             code_path = None
             if self.code and self.code.strip():
-                with tempfile.NamedTemporaryFile(
-                    suffix=".py", delete=False, mode="w"
-                ) as tmp:
+                with tempfile.NamedTemporaryFile(suffix=".py", delete=False, mode="w") as tmp:
                     tmp.write(self.code)
                     code_path = tmp.name
 
@@ -89,9 +85,7 @@ class PytestRunner:
                     "-q",
                     "--tb=short",
                 ]
-                process = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=60
-                )
+                process = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
                 output = process.stdout + process.stderr
 
             # 3. Read JSON report
@@ -99,7 +93,7 @@ class PytestRunner:
             success = False
             if os.path.exists(report_file):
                 try:
-                    with open(report_file, "r") as f:
+                    with open(report_file) as f:
                         report = json.load(f)
 
                     # 4. Transform to our structure
@@ -162,9 +156,7 @@ class PytestRunner:
                             pass
                         if "passed and" in line and "failed" in line:
                             # e.g., 7 passed and 0 failed.
-                            m = re.search(
-                                r"(\d+)\s+passed\s+and\s+(\d+)\s+failed", line
-                            )
+                            m = re.search(r"(\d+)\s+passed\s+and\s+(\d+)\s+failed", line)
                             if m:
                                 tests = int(m.group(1)) + int(m.group(2))
                                 fails = int(m.group(2))
@@ -199,10 +191,7 @@ class PytestRunner:
             total = len(test_results)
             passed = sum(1 for t in test_results if t.get("passed"))
             # Force fail if doctest path produced 0 tests
-            if (
-                os.getenv("CC_TEST_SCOPE", "artifact").strip().lower() == "artifact"
-                and total == 0
-            ):
+            if os.getenv("CC_TEST_SCOPE", "artifact").strip().lower() == "artifact" and total == 0:
                 success = False
                 test_results.append(
                     {
@@ -248,7 +237,7 @@ class PytestRunner:
             if code_path and os.path.exists(code_path):
                 os.remove(code_path)
 
-    def _log_test_reward(self, test_results: List[Dict[str, Any]]) -> float:
+    def _log_test_reward(self, test_results: list[dict[str, Any]]) -> float:
         """
         Log test results as reward using the learning system.
 
@@ -283,7 +272,7 @@ class TestRunner:
         test_dir: Path,
         prompt: str = "",
         code: str = "",
-        metadata: Dict[str, Any] = None,
+        metadata: dict[str, Any] = None,
     ) -> TestResult:
         """
         Run pytest in default mode (full tracebacks) on the given directory.
@@ -343,7 +332,7 @@ class TestRunner:
 
         return result
 
-    def _parse_test_results(self, output: str) -> List[Dict[str, Any]]:
+    def _parse_test_results(self, output: str) -> list[dict[str, Any]]:
         """
         Parse pytest output to extract individual test results for Test-as-Reward.
 
@@ -373,19 +362,13 @@ class TestRunner:
 
         # Create test result entries
         for i in range(passed_count):
-            test_results.append(
-                {"name": f"test_{i + 1}_passed", "passed": True, "type": "passed"}
-            )
+            test_results.append({"name": f"test_{i + 1}_passed", "passed": True, "type": "passed"})
 
         for i in range(failed_count):
-            test_results.append(
-                {"name": f"test_{i + 1}_failed", "passed": False, "type": "failed"}
-            )
+            test_results.append({"name": f"test_{i + 1}_failed", "passed": False, "type": "failed"})
 
         for i in range(error_count):
-            test_results.append(
-                {"name": f"test_{i + 1}_error", "passed": False, "type": "error"}
-            )
+            test_results.append({"name": f"test_{i + 1}_error", "passed": False, "type": "error"})
 
         # If no detailed parsing possible, create a summary result
         if not test_results and total_tests > 0:
@@ -393,8 +376,7 @@ class TestRunner:
             test_results.append(
                 {
                     "name": "summary",
-                    "passed": success_rate
-                    >= 0.5,  # Consider it passed if at least 50% success
+                    "passed": success_rate >= 0.5,  # Consider it passed if at least 50% success
                     "type": "summary",
                     "success_rate": success_rate,
                     "total_tests": total_tests,
@@ -408,8 +390,8 @@ class TestRunner:
         self,
         prompt: str,
         code: str,
-        test_results: List[Dict[str, Any]],
-        metadata: Dict[str, Any] = None,
+        test_results: list[dict[str, Any]],
+        metadata: dict[str, Any] = None,
     ) -> float:
         """
         Log test results as reward using the learning system.
@@ -433,7 +415,7 @@ class TestRunner:
             print(f"⚠️ Error logging test reward: {e}")
             return 0.0
 
-    def _extract_errors(self, output: str) -> List[str]:
+    def _extract_errors(self, output: str) -> list[str]:
         """
         Extract individual failure and error blocks from pytest output.
 
@@ -452,7 +434,7 @@ class TestRunner:
                 combined.append(block.strip())
         return combined
 
-    def execute_test(self, test_spec: Dict[str, Any]) -> Dict[str, Any]:
+    def execute_test(self, test_spec: dict[str, Any]) -> dict[str, Any]:
         """
         Execute a single test specification with duration tracking.
 
@@ -483,11 +465,11 @@ class TestRunner:
 
     def run_custom_tests(
         self,
-        tests: List[Dict[str, Any]],
+        tests: list[dict[str, Any]],
         prompt: str = "",
         code: str = "",
-        metadata: Dict[str, Any] = None,
-    ) -> List[Dict[str, Any]]:
+        metadata: dict[str, Any] = None,
+    ) -> list[dict[str, Any]]:
         """
         Run custom tests and log rewards.
 

@@ -11,17 +11,14 @@ All helpers are intentionally lightweight and without Streamlit deps.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Optional
-
 import ast
 import doctest
 import re
 import subprocess
 import sys
 import types
-
+from dataclasses import dataclass
+from pathlib import Path
 
 _TRIPLE_QUOTE_RE = re.compile(r"([\"]{3}|[\']{3})")
 _DOCTEST_MARKER_RE = re.compile(r"^\s*>>>\s*", flags=re.M)
@@ -172,8 +169,8 @@ def validate_python_code(
     run_doctests: bool = True,
     *,
     enforce_header: bool = True,
-    require_trailer: Optional[bool] = None,
-    task_input: Optional[str] = None,
+    require_trailer: bool | None = None,
+    task_input: str | None = None,
 ) -> ValidationReport:
     errors: list[str] = []
 
@@ -293,7 +290,7 @@ def _diagnose_header_trailer(original_code: str) -> str:
 def build_repair_prompt(
     original_code: str,
     issues: ValidationReport | dict[str, object],
-    doctest_output: Optional[str] = None,
+    doctest_output: str | None = None,
     filename_hint: str = "generated.py",
     *,
     require_trailer_by_task: bool = False,
@@ -334,9 +331,7 @@ def build_repair_prompt(
         trailer_policy = "- Append the two exact trailer lines at EOF: first '# SYNTAX_ERROR BELOW' then '(' (on its own line).\n"
     else:
         trailer_policy = ""
-    doctest_note = (
-        "\n\nDoctest failures:\n" + doctest_output.strip() if doctest_output else ""
-    )
+    doctest_note = "\n\nDoctest failures:\n" + doctest_output.strip() if doctest_output else ""
     diagnosis = _diagnose_header_trailer(original_code)
     return (
         "You are fixing a Python module. Return ONLY one fenced python code block for the file "

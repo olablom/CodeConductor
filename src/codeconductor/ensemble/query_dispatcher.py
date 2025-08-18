@@ -7,11 +7,14 @@ Dispatches prompts to multiple LLM models in parallel with timeout and error han
 import asyncio
 import json
 import logging
-from typing import Dict, Any, List, Tuple, Optional
-from aiohttp import ClientSession, ClientError, ClientTimeout
-from .model_manager import ModelManager, ModelInfo
-from .breakers import get_manager as get_breaker_manager
+from typing import Any
+
+from aiohttp import ClientError, ClientSession, ClientTimeout
+
 from codeconductor.telemetry import get_logger
+
+from .breakers import get_manager as get_breaker_manager
+from .model_manager import ModelInfo, ModelManager
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -83,7 +86,7 @@ DEFAULT_CONFIG = {
 }
 
 
-def _env_number(name: str) -> Optional[float]:
+def _env_number(name: str) -> float | None:
     import os as _os
 
     val = (_os.getenv(name) or "").strip()
@@ -159,7 +162,7 @@ class QueryDispatcher:
 
     async def _query_lm_studio_model(
         self, session: ClientSession, model_info: ModelInfo, prompt: str
-    ) -> Tuple[str, Any]:
+    ) -> tuple[str, Any]:
         """
         Send prompt to a single LM Studio model and return (model_id, response_json).
         """
@@ -205,9 +208,7 @@ class QueryDispatcher:
                         if choices and len(choices) > 0:
                             content = choices[0].get("message", {}).get("content", "")
                             logger.info(f"🐛 DEBUG: Content length: {len(content)}")
-                            logger.info(
-                                f"🐛 DEBUG: Content preview: {content[:200]}..."
-                            )
+                            logger.info(f"🐛 DEBUG: Content preview: {content[:200]}...")
                             # If LM Studio returns an empty message content, mark explicitly
                             if not content:
                                 logger.warning(
@@ -223,26 +224,18 @@ class QueryDispatcher:
                         else:
                             logger.warning("🐛 DEBUG: No choices in response")
                     else:
-                        logger.warning(
-                            f"🐛 DEBUG: Unexpected response format: {type(data)}"
-                        )
+                        logger.warning(f"🐛 DEBUG: Unexpected response format: {type(data)}")
 
-                    logger.info(
-                        f"✅ Successfully queried {model_info.id} with optimized config"
-                    )
+                    logger.info(f"✅ Successfully queried {model_info.id} with optimized config")
                     return model_info.id, data
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(f"⏰ Timeout for {model_info.id} after {timeout}s")
             # Check if we actually got a response despite timeout
             try:
-                async with session.post(
-                    url, json=payload, timeout=ClientTimeout(total=30)
-                ) as resp:
+                async with session.post(url, json=payload, timeout=ClientTimeout(total=30)) as resp:
                     if resp.status == 200:
                         data = await resp.json()
-                        logger.info(
-                            f"✅ Got response from {model_info.id} despite timeout"
-                        )
+                        logger.info(f"✅ Got response from {model_info.id} despite timeout")
                         return model_info.id, data
             except:
                 pass
@@ -256,7 +249,7 @@ class QueryDispatcher:
 
     async def _query_ollama_model(
         self, session: ClientSession, model_info: ModelInfo, prompt: str
-    ) -> Tuple[str, Any]:
+    ) -> tuple[str, Any]:
         """
         Send prompt to a single Ollama model and return (model_id, response_json).
         """
@@ -288,11 +281,9 @@ class QueryDispatcher:
                 ) as resp:
                     resp.raise_for_status()
                     data = await resp.json()
-                    logger.info(
-                        f"✅ Successfully queried {model_info.id} with optimized config"
-                    )
+                    logger.info(f"✅ Successfully queried {model_info.id} with optimized config")
                     return model_info.id, data
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(f"⏰ Timeout for {model_info.id} after {timeout}s")
             return model_info.id, {"error": "timeout", "model": model_info.id}
         except ClientError as e:
@@ -304,7 +295,7 @@ class QueryDispatcher:
 
     async def _query_model(
         self, session: ClientSession, model_info: ModelInfo, prompt: str
-    ) -> Tuple[str, Any]:
+    ) -> tuple[str, Any]:
         """
         Send prompt to a single model based on its provider.
         """
@@ -334,9 +325,7 @@ class QueryDispatcher:
             err = err_map.get(inj_mode, "mock_error")
             start = asyncio.get_event_loop().time()
             total_ms = (asyncio.get_event_loop().time() - start) * 1000.0
-            cls = (
-                "timeout" if err == "timeout" else ("5xx" if "HTTP" in err else "reset")
-            )
+            cls = "timeout" if err == "timeout" else ("5xx" if "HTTP" in err else "reset")
             breaker.update(
                 model_info.id,
                 success=False,
@@ -359,9 +348,7 @@ class QueryDispatcher:
         err_class: str | None = None
         try:
             if model_info.provider == "lm_studio":
-                mid, data = await self._query_lm_studio_model(
-                    session, model_info, prompt
-                )
+                mid, data = await self._query_lm_studio_model(session, model_info, prompt)
             elif model_info.provider == "ollama":
                 mid, data = await self._query_ollama_model(session, model_info, prompt)
             else:
@@ -375,9 +362,9 @@ class QueryDispatcher:
                 )
         finally:
             total_ms = (asyncio.get_event_loop().time() - start) * 1000.0
-            success = isinstance(
-                locals().get("data", {}), dict
-            ) and "error" not in locals().get("data", {})
+            success = isinstance(locals().get("data", {}), dict) and "error" not in locals().get(
+                "data", {}
+            )
             if not success:
                 # classify error
                 err = (
@@ -414,9 +401,7 @@ class QueryDispatcher:
             )
         return mid, data
 
-    async def dispatch(
-        self, prompt: str, max_models: Optional[int] = None
-    ) -> Dict[str, Any]:
+    async def dispatch(self, prompt: str, max_models: int | None = None) -> dict[str, Any]:
         """
         Dispatch the prompt to healthy models and collect raw responses.
 
@@ -427,7 +412,7 @@ class QueryDispatcher:
         Returns:
             Dict mapping model IDs to their JSON responses or errors.
         """
-        logger.info(f"🚀 Dispatching prompt to models...")
+        logger.info("🚀 Dispatching prompt to models...")
         logger.info(f"📝 Prompt: {prompt[:100]}{'...' if len(prompt) > 100 else ''}")
 
         # Get available models
@@ -462,13 +447,11 @@ class QueryDispatcher:
         # Log summary
         success_count = sum(1 for r in results.values() if "error" not in r)
         error_count = len(results) - success_count
-        logger.info(
-            f"📊 Dispatch complete: {success_count} success, {error_count} errors"
-        )
+        logger.info(f"📊 Dispatch complete: {success_count} success, {error_count} errors")
 
         return results
 
-    async def dispatch_to_healthy_models(self, prompt: str) -> Dict[str, Any]:
+    async def dispatch_to_healthy_models(self, prompt: str) -> dict[str, Any]:
         """
         Dispatch only to models that pass health checks.
         """
@@ -484,9 +467,7 @@ class QueryDispatcher:
         health_status = await self.model_manager.check_all_health(models)
 
         # Filter to healthy models only
-        healthy_models = [
-            model for model in models if health_status.get(model.id, False)
-        ]
+        healthy_models = [model for model in models if health_status.get(model.id, False)]
 
         if not healthy_models:
             logger.warning("⚠️ No healthy models available")
@@ -499,7 +480,7 @@ class QueryDispatcher:
 
     async def dispatch_to_best_models(
         self, prompt: str, min_models: int = 2, max_models: int = 5
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Dispatch to the best available models based on health and performance.
         """
@@ -513,21 +494,15 @@ class QueryDispatcher:
             return await self.dispatch(prompt)
 
         if len(best_models) < min_models:
-            logger.warning(
-                f"⚠️ Only {len(best_models)} best models available (need {min_models})"
-            )
+            logger.warning(f"⚠️ Only {len(best_models)} best models available (need {min_models})")
             # Continue with what we have
 
-        logger.info(
-            f"✅ Using {len(best_models)} best models: {[m.id for m in best_models]}"
-        )
+        logger.info(f"✅ Using {len(best_models)} best models: {[m.id for m in best_models]}")
 
         # Dispatch to best models
         return await self.dispatch_to_models(best_models, prompt)
 
-    async def dispatch_to_models(
-        self, models: List[ModelInfo], prompt: str
-    ) -> Dict[str, Any]:
+    async def dispatch_to_models(self, models: list[ModelInfo], prompt: str) -> dict[str, Any]:
         """
         Dispatch to specific models.
         """
@@ -552,15 +527,11 @@ class QueryDispatcher:
         # Log summary
         success_count = sum(1 for r in results.values() if "error" not in r)
         error_count = len(results) - success_count
-        logger.info(
-            f"📊 Dispatch complete: {success_count} success, {error_count} errors"
-        )
+        logger.info(f"📊 Dispatch complete: {success_count} success, {error_count} errors")
 
         return results
 
-    async def dispatch_with_fallback(
-        self, prompt: str, min_models: int = 2
-    ) -> Dict[str, Any]:
+    async def dispatch_with_fallback(self, prompt: str, min_models: int = 2) -> dict[str, Any]:
         """
         Dispatch with intelligent fallback strategies.
         """
@@ -572,23 +543,17 @@ class QueryDispatcher:
         success_count = sum(1 for r in results.values() if "error" not in r)
 
         if success_count >= min_models:
-            logger.info(
-                f"✅ Got {success_count} successful responses, no fallback needed"
-            )
+            logger.info(f"✅ Got {success_count} successful responses, no fallback needed")
             return results
 
-        logger.warning(
-            f"⚠️ Only {success_count} successful responses, trying fallback..."
-        )
+        logger.warning(f"⚠️ Only {success_count} successful responses, trying fallback...")
 
         # Fallback 1: Try all models
         all_results = await self.dispatch(prompt)
         all_success_count = sum(1 for r in all_results.values() if "error" not in r)
 
         if all_success_count > success_count:
-            logger.info(
-                f"✅ Fallback improved results: {all_success_count} vs {success_count}"
-            )
+            logger.info(f"✅ Fallback improved results: {all_success_count} vs {success_count}")
             return all_results
 
         # Fallback 2: Try with longer timeout
@@ -598,9 +563,7 @@ class QueryDispatcher:
 
         try:
             extended_results = await self.dispatch(prompt)
-            extended_success_count = sum(
-                1 for r in extended_results.values() if "error" not in r
-            )
+            extended_success_count = sum(1 for r in extended_results.values() if "error" not in r)
 
             if extended_success_count > success_count:
                 logger.info(
@@ -618,10 +581,10 @@ class QueryDispatcher:
 
     async def dispatch_parallel(
         self,
-        models: List[ModelInfo],
+        models: list[ModelInfo],
         prompt: str,
-        context: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Dispatch a prompt to multiple models in parallel."""
         logger.info(f"🚀 Dispatching parallel to {len(models)} models...")
         logger.info(f"🔍 Models: {[model.id for model in models]}")
@@ -640,7 +603,7 @@ class QueryDispatcher:
         try:
             # Wait for all tasks to complete
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            logger.info(f"🔍 All tasks completed")
+            logger.info("🔍 All tasks completed")
 
             # Process results
             successful_results = {}
@@ -673,8 +636,8 @@ class QueryDispatcher:
         self,
         model: ModelInfo,
         prompt: str,
-        context: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Dispatch a prompt to a single model."""
         logger.info(f"🎯 Dispatching to single model: {model.id}")
 
@@ -710,9 +673,7 @@ class QueryDispatcher:
 
 
 # Convenience functions
-async def dispatch_prompt(
-    prompt: str, max_models: Optional[int] = None
-) -> Dict[str, Any]:
+async def dispatch_prompt(prompt: str, max_models: int | None = None) -> dict[str, Any]:
     """Convenience function to dispatch a prompt."""
     dispatcher = QueryDispatcher()
     return await dispatcher.dispatch(prompt, max_models)
@@ -732,9 +693,7 @@ async def main():
     print()
 
     # Dispatch to all models
-    results = await dispatcher.dispatch(
-        test_prompt, max_models=2
-    )  # Limit to 2 for demo
+    results = await dispatcher.dispatch(test_prompt, max_models=2)  # Limit to 2 for demo
 
     print("📊 Results:")
     for model_id, response in results.items():

@@ -21,14 +21,12 @@ from __future__ import annotations
 
 import argparse
 import datetime as _dt
+import json
 import os
-from pathlib import Path
-from typing import List, Tuple
 import shutil
 import time
-import os
-import json
 import zipfile
+from pathlib import Path
 
 
 def _is_run_dir(path: Path) -> bool:
@@ -45,7 +43,7 @@ def _is_run_dir(path: Path) -> bool:
         return False
 
 
-def _list_runs(runs_root: Path) -> List[Path]:
+def _list_runs(runs_root: Path) -> list[Path]:
     if not runs_root.exists():
         return []
     runs = [p for p in runs_root.iterdir() if _is_run_dir(p)]
@@ -54,12 +52,12 @@ def _list_runs(runs_root: Path) -> List[Path]:
     return runs
 
 
-def _partition_by_age(runs: List[Path], days: int) -> Tuple[List[Path], List[Path]]:
+def _partition_by_age(runs: list[Path], days: int) -> tuple[list[Path], list[Path]]:
     if days <= 0:
         return runs, []
     cutoff = _dt.datetime.utcnow() - _dt.timedelta(days=days)
-    keep: List[Path] = []
-    old: List[Path] = []
+    keep: list[Path] = []
+    old: list[Path] = []
     for r in runs:
         try:
             ts = _dt.datetime.strptime(r.name, "%Y%m%d_%H%M%S")
@@ -136,8 +134,8 @@ def cleanup_runs(
 
     # OR logic: keep if index < keep OR age <= days
     keep_cap = max(keep, 0)
-    to_keep: List[Path] = []
-    overflow: List[Path] = []
+    to_keep: list[Path] = []
+    overflow: list[Path] = []
     for idx, r in enumerate(recent):
         if idx < keep_cap:
             to_keep.append(r)
@@ -160,18 +158,12 @@ def cleanup_runs(
                     name = (
                         "manifest.json"
                         if "manifest.json" in zf.namelist()
-                        else (
-                            "MANIFEST.json"
-                            if "MANIFEST.json" in zf.namelist()
-                            else None
-                        )
+                        else ("MANIFEST.json" if "MANIFEST.json" in zf.namelist() else None)
                     )
                     if not name:
                         continue
                     try:
-                        manifest = json.loads(
-                            zf.read(name).decode("utf-8", errors="ignore")
-                        )
+                        manifest = json.loads(zf.read(name).decode("utf-8", errors="ignore"))
                         rid = manifest.get("run_id")
                         if isinstance(rid, str) and rid:
                             refs.add(rid)
@@ -202,7 +194,7 @@ def cleanup_runs(
 
     cap_gb_str = os.getenv("ARTIFACTS_SIZE_CAP_GB", "").strip()
     before_bytes = _dir_size_bytes(artifacts_dir)
-    extra_delete: List[Path] = []
+    extra_delete: list[Path] = []
     if cap_gb_str:
         try:
             cap_bytes = int(float(cap_gb_str) * (1024**3))
@@ -224,9 +216,7 @@ def cleanup_runs(
                 # Candidates: oldest lex first among to_delete, skipping pinned and referenced
                 pin_runs = set([x for x in os.getenv("PIN_RUNS", "").split(";") if x])
                 cands = [
-                    p
-                    for p in to_delete
-                    if p.name not in pin_runs and p.name not in referenced
+                    p for p in to_delete if p.name not in pin_runs and p.name not in referenced
                 ]
                 cands.sort(key=lambda p: p.name)  # oldest first
                 remaining = before_bytes

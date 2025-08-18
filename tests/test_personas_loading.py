@@ -1,4 +1,4 @@
-from codeconductor.debate.personas import load_personas_yaml, build_agents_from_personas
+from codeconductor.debate.personas import build_agents_from_personas, load_personas_yaml
 
 
 def test_load_and_build_personas_default():

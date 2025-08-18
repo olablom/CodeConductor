@@ -4,13 +4,13 @@ Prompt Generator for CodeConductor MVP
 Converts ensemble consensus to structured prompts for Cursor.
 """
 
-import json
 import logging
-from typing import Dict, Any, List, Optional
-from pathlib import Path
 import os
-from jinja2 import Environment, FileSystemLoader, Template
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from jinja2 import Environment, FileSystemLoader
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -21,9 +21,9 @@ class PromptContext:
     """Context information for prompt generation."""
 
     project_structure: str = ""
-    coding_standards: List[str] = None
-    existing_patterns: List[str] = None
-    dependencies: List[str] = None
+    coding_standards: list[str] = None
+    existing_patterns: list[str] = None
+    dependencies: list[str] = None
     max_tokens: int = 4000
 
     def __post_init__(self):
@@ -51,7 +51,7 @@ class PromptGenerator:
         self.template_dir = Path(template_dir).resolve()
 
         # Search order: canonical first, then legacy, then provided template_dir (if different)
-        search_paths: List[str] = []
+        search_paths: list[str] = []
         for p in [self.canonical_dir, self.legacy_dir, self.template_dir]:
             p_str = str(p)
             if p_str not in search_paths and p.exists():
@@ -76,11 +76,7 @@ class PromptGenerator:
     def _ensure_template_dir(self):
         """Ensure templates exist in at least one location. Do not duplicate if already present in canonical or legacy."""
         # Determine effective write target: prefer canonical if parent exists or can be created
-        target_dir = (
-            self.canonical_dir
-            if self.canonical_dir.parent.exists()
-            else self.template_dir
-        )
+        target_dir = self.canonical_dir if self.canonical_dir.parent.exists() else self.template_dir
         try:
             target_dir.mkdir(parents=True, exist_ok=True)
         except Exception:
@@ -89,9 +85,7 @@ class PromptGenerator:
             target_dir.mkdir(parents=True, exist_ok=True)
 
         def exists_any(name: str) -> bool:
-            return (self.canonical_dir / name).exists() or (
-                self.legacy_dir / name
-            ).exists()
+            return (self.canonical_dir / name).exists() or (self.legacy_dir / name).exists()
 
         # Create default template only if missing in both places
         if not exists_any("prompt.md.j2"):
@@ -303,8 +297,8 @@ Please provide a complete, working implementation that meets all requirements.
 
     def generate(
         self,
-        consensus: Dict[str, Any],
-        context: Optional[PromptContext] = None,
+        consensus: dict[str, Any],
+        context: PromptContext | None = None,
         model: str = None,
     ) -> str:
         """
@@ -333,8 +327,8 @@ Please provide a complete, working implementation that meets all requirements.
         # Try to enrich with repo map context if available
         try:
             from codeconductor.context.repo_map import (
-                build_repo_map,
                 build_prompt_context,
+                build_repo_map,
             )
 
             repo_root = Path.cwd()
@@ -389,7 +383,7 @@ Please provide a complete, working implementation that meets all requirements.
         else:
             return "prompt.md.j2"
 
-    def _validate_consensus(self, consensus: Dict[str, Any]):
+    def _validate_consensus(self, consensus: dict[str, Any]):
         """Validate that consensus contains required fields."""
         # Early return if consensus is not a dict
         if not isinstance(consensus, dict):
@@ -415,13 +409,9 @@ Please provide a complete, working implementation that meets all requirements.
         estimated_tokens = len(prompt) // 4
 
         if estimated_tokens > max_tokens:
-            logger.warning(
-                f"⚠️ Prompt may exceed token limit: {estimated_tokens} > {max_tokens}"
-            )
+            logger.warning(f"⚠️ Prompt may exceed token limit: {estimated_tokens} > {max_tokens}")
 
-    def _generate_fallback_prompt(
-        self, consensus: Dict[str, Any], context: PromptContext
-    ) -> str:
+    def _generate_fallback_prompt(self, consensus: dict[str, Any], context: PromptContext) -> str:
         """Generate a simple fallback prompt if template fails."""
         logger.info("🔄 Using fallback prompt generation...")
 
@@ -431,9 +421,7 @@ Please provide a complete, working implementation that meets all requirements.
             "\n### Requirements",
         ]
 
-        for req in consensus.get(
-            "requirements", ["Implement the requested functionality"]
-        ):
+        for req in consensus.get("requirements", ["Implement the requested functionality"]):
             prompt_parts.append(f"- {req}")
 
         prompt_parts.append("\n### Constraints")
@@ -445,7 +433,7 @@ Please provide a complete, working implementation that meets all requirements.
         return "\n".join(prompt_parts)
 
     def generate_code_generation_prompt(
-        self, task: str, files_needed: List[str] = None, dependencies: List[str] = None
+        self, task: str, files_needed: list[str] = None, dependencies: list[str] = None
     ) -> str:
         """
         Generate a prompt specifically for code generation tasks.
@@ -500,11 +488,7 @@ Please provide a complete, working implementation that meets all requirements.
                 consensus_dict = {"task": task}
 
             # Check if we have meaningful consensus data
-            if (
-                consensus_dict
-                and isinstance(consensus_dict, dict)
-                and len(consensus_dict) > 0
-            ):
+            if consensus_dict and isinstance(consensus_dict, dict) and len(consensus_dict) > 0:
                 # Use consensus data to generate rich prompt
                 return self.generate(consensus_dict)
             else:
@@ -561,14 +545,14 @@ Please provide a complete, working implementation that meets all requirements.
 
 # Convenience functions
 def generate_prompt(
-    consensus: Dict[str, Any], task: str, context: Optional[PromptContext] = None
+    consensus: dict[str, Any], task: str, context: PromptContext | None = None
 ) -> str:
     """Generate a prompt from consensus and task."""
     generator = PromptGenerator()
     return generator.generate_prompt(consensus, task)
 
 
-def generate_code_prompt(task: str, files_needed: List[str] = None) -> str:
+def generate_code_prompt(task: str, files_needed: list[str] = None) -> str:
     """Generate a code generation prompt."""
     generator = PromptGenerator()
     return generator.generate_code_generation_prompt(task, files_needed)
@@ -616,9 +600,7 @@ async def main():
     print("✅ Generated prompt with context:")
     print("-" * 30)
     print(
-        prompt_with_context[:500] + "..."
-        if len(prompt_with_context) > 500
-        else prompt_with_context
+        prompt_with_context[:500] + "..." if len(prompt_with_context) > 500 else prompt_with_context
     )
 
     print(

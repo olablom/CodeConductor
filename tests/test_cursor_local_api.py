@@ -1,9 +1,5 @@
-import os
-import sys
-import asyncio
 import pathlib
-import types
-import pytest
+import sys
 
 # Ensure 'src' is on sys.path for local test runs without installation
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -33,7 +29,7 @@ def test_decide_trust_env_remote_allows_proxy(monkeypatch):
 def test_should_retry_on_common_errors():
     api = CursorLocalAPI()
     # TimeoutError
-    assert api._should_retry(asyncio.TimeoutError()) is True
+    assert api._should_retry(TimeoutError()) is True
     # ConnectionResetError
     assert api._should_retry(ConnectionResetError()) is True
     # Non-retryable

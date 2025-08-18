@@ -4,11 +4,11 @@ CodeConductor LLM Ensemble Engine
 Orchestrates multiple local LLMs for consensus-based code generation.
 """
 
+from .consensus_calculator import ConsensusCalculator
 from .ensemble_engine import EnsembleEngine, EnsembleRequest, EnsembleResponse
+from .hybrid_ensemble import HybridEnsemble
 from .model_manager import ModelManager
 from .query_dispatcher import QueryDispatcher
-from .consensus_calculator import ConsensusCalculator
-from .hybrid_ensemble import HybridEnsemble
 
 __all__ = [
     "EnsembleEngine",

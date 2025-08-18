@@ -4,16 +4,13 @@ Consensus Calculator for LLM Ensemble
 Analyzes and compares responses from multiple LLMs to generate consensus.
 """
 
-import json
+import ast
+import logging
 import os
 import re
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass
-import logging
-from difflib import SequenceMatcher
-from typing import Dict, Any
 from collections import Counter
-import ast
+from dataclasses import dataclass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +21,7 @@ class ConsensusResult:
 
     consensus: str
     confidence: float
-    model_scores: Dict[str, float]
+    model_scores: dict[str, float]
     reasoning: str
     code_quality_score: float
     syntax_valid: bool
@@ -42,7 +39,7 @@ class ConsensusCalculator:
             "consistency": 0.1,
         }
 
-    def calculate_consensus(self, responses: List[Dict[str, Any]]) -> ConsensusResult:
+    def calculate_consensus(self, responses: list[dict[str, Any]]) -> ConsensusResult:
         """
         Calculate consensus from multiple model responses with intelligent scoring
 
@@ -110,9 +107,7 @@ class ConsensusCalculator:
         model_scores = {r["model"]: r["score"] for r in scored_responses}
 
         # Generate reasoning
-        reasoning = self._generate_reasoning(
-            scored_responses, consistency_score, syntax_valid
-        )
+        reasoning = self._generate_reasoning(scored_responses, consistency_score, syntax_valid)
 
         # TEMPORARY FIX: Better confidence calculation for single model
         if len(scored_responses) == 1:
@@ -131,7 +126,7 @@ class ConsensusCalculator:
             syntax_valid=syntax_valid,
         )
 
-    def _score_response(self, response: Dict[str, Any]) -> float:
+    def _score_response(self, response: dict[str, Any]) -> float:
         """Score a single response based on multiple criteria"""
         # Robust extraction with guards
         if not isinstance(response, dict):
@@ -221,9 +216,7 @@ class ConsensusCalculator:
             score += 0.15
 
         # 3. Check for type hints
-        if ":" in code and any(
-            hint in code for hint in ["str", "int", "bool", "List", "Dict"]
-        ):
+        if ":" in code and any(hint in code for hint in ["str", "int", "bool", "List", "Dict"]):
             score += 0.15
 
         # 4. Check for error handling
@@ -245,7 +238,7 @@ class ConsensusCalculator:
 
         return min(score, 1.0)
 
-    def _calculate_consistency(self, top_responses: List[Dict]) -> float:
+    def _calculate_consistency(self, top_responses: list[dict]) -> float:
         """Calculate consistency between top responses"""
         if len(top_responses) < 2:
             return 1.0
@@ -330,12 +323,9 @@ class ConsensusCalculator:
         toks2 = re.findall(r"\b\w+\b", s2.lower())
 
         # Unigram precision
-        def precision_ngram(t1: List[str], t2: List[str], n: int) -> float:
-            def ngrams(tokens: List[str], n: int) -> List[Tuple[str, ...]]:
-                return [
-                    tuple(tokens[i : i + n])
-                    for i in range(0, max(len(tokens) - n + 1, 0))
-                ]
+        def precision_ngram(t1: list[str], t2: list[str], n: int) -> float:
+            def ngrams(tokens: list[str], n: int) -> list[tuple[str, ...]]:
+                return [tuple(tokens[i : i + n]) for i in range(0, max(len(tokens) - n + 1, 0))]
 
             n1 = Counter(ngrams(t1, n))
             n2 = Counter(ngrams(t2, n))
@@ -354,10 +344,10 @@ class ConsensusCalculator:
         ngram_score = 0.5 * p1 + 0.5 * p2
 
         # AST node-type Jaccard
-        def ast_types(s: str) -> List[str]:
+        def ast_types(s: str) -> list[str]:
             try:
                 tree = ast.parse(s)
-                types: List[str] = []
+                types: list[str] = []
                 for node in ast.walk(tree):
                     types.append(type(node).__name__)
                 return types
@@ -367,19 +357,15 @@ class ConsensusCalculator:
         types1 = set(ast_types(s1))
         types2 = set(ast_types(s2))
         if types1 or types2:
-            ast_jaccard = (
-                len(types1 & types2) / len(types1 | types2)
-                if (types1 | types2)
-                else 0.0
-            )
+            ast_jaccard = len(types1 & types2) / len(types1 | types2) if (types1 | types2) else 0.0
         else:
             ast_jaccard = 0.0
 
         # Operator mismatch penalty (e.g., Add vs Mult) to reduce false-high similarity
-        def op_types(s: str) -> List[str]:
+        def op_types(s: str) -> list[str]:
             try:
                 tree = ast.parse(s)
-                ops: List[str] = []
+                ops: list[str] = []
                 for node in ast.walk(tree):
                     if isinstance(node, ast.BinOp):
                         ops.append(type(node.op).__name__)
@@ -398,9 +384,7 @@ class ConsensusCalculator:
         tok_set1 = set(toks1)
         tok_set2 = set(toks2)
         tok_jaccard = (
-            len(tok_set1 & tok_set2) / len(tok_set1 | tok_set2)
-            if (tok_set1 | tok_set2)
-            else 0.0
+            len(tok_set1 & tok_set2) / len(tok_set1 | tok_set2) if (tok_set1 | tok_set2) else 0.0
         )
 
         # Weighted combination (env override)
@@ -424,7 +408,7 @@ class ConsensusCalculator:
         return max(0.0, min(1.0, score))
 
     def _generate_reasoning(
-        self, scored_responses: List[Dict], consistency: float, syntax_valid: bool
+        self, scored_responses: list[dict], consistency: float, syntax_valid: bool
     ) -> str:
         """Generate reasoning for consensus decision"""
         best_model = scored_responses[0]["model"]
@@ -433,9 +417,7 @@ class ConsensusCalculator:
         reasoning_parts = []
 
         # Model selection reasoning
-        reasoning_parts.append(
-            f"Selected {best_model} as primary model (score: {best_score:.2f})"
-        )
+        reasoning_parts.append(f"Selected {best_model} as primary model (score: {best_score:.2f})")
 
         # Syntax validation
         if syntax_valid:

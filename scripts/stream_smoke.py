@@ -16,7 +16,6 @@ import json
 import sys
 import threading
 import time
-from typing import Optional
 from pathlib import Path
 
 import requests
@@ -50,7 +49,7 @@ def start_server_in_thread(host: str, port: int) -> threading.Thread:
 def run_smoke(host: str, port: int, prompt: str, timeout: float) -> int:
     url = f"http://{host}:{port}/stream"
     params = {"prompt": prompt}
-    ttft_ms: Optional[int] = None
+    ttft_ms: int | None = None
     seq_last = 0
     tokens = []
     t_start = time.perf_counter()
@@ -117,9 +116,7 @@ def run_smoke(host: str, port: int, prompt: str, timeout: float) -> int:
         "tps": round(tps, 2),
         "sample": token_text[:80],
     }
-    out_path.write_text(
-        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    out_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print("SSE smoke: OK")
     print(f"  TTFT: {ttft_ms if ttft_ms is not None else 'n/a'} ms")
@@ -139,15 +136,11 @@ def main() -> int:
         default=["Hello from streaming test"],
         help="Prompt(s) to stream; can be repeated",
     )
-    p.add_argument(
-        "--timeout", type=float, default=5.0, help="overall read timeout (s)"
-    )
-    p.add_argument(
-        "--start-server", action="store_true", help="start uvicorn server in background"
-    )
+    p.add_argument("--timeout", type=float, default=5.0, help="overall read timeout (s)")
+    p.add_argument("--start-server", action="store_true", help="start uvicorn server in background")
     args = p.parse_args()
 
-    server_thread: Optional[threading.Thread] = None
+    server_thread: threading.Thread | None = None
     if args.start_server:
         try:
             server_thread = start_server_in_thread(args.host, args.port)

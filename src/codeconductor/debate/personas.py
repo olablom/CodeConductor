@@ -4,13 +4,13 @@ Utilities for loading agent personas from YAML and constructing LocalAIAgent ins
 
 from __future__ import annotations
 
-import yaml
-from typing import Dict, Any, List, Optional
+from functools import cache
 from pathlib import Path
-from functools import lru_cache
+from typing import Any
+
+import yaml
 
 from .local_ai_agent import LocalAIAgent
-
 
 DEFAULT_PERSONAS_YAML = {
     "architect": {
@@ -37,7 +37,7 @@ DEFAULT_PERSONAS_YAML = {
 }
 
 
-def load_personas_yaml(path: Optional[str]) -> Dict[str, Dict[str, Any]]:
+def load_personas_yaml(path: str | None) -> dict[str, dict[str, Any]]:
     """Load personas mapping from YAML file; return defaults if path is None.
 
     Structure:
@@ -47,7 +47,7 @@ def load_personas_yaml(path: Optional[str]) -> Dict[str, Dict[str, Any]]:
     """
     if not path:
         return DEFAULT_PERSONAS_YAML
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f) or {}
         if not isinstance(data, dict):
             raise ValueError("Personas YAML must be a mapping of roles")
@@ -55,14 +55,14 @@ def load_personas_yaml(path: Optional[str]) -> Dict[str, Dict[str, Any]]:
 
 
 def build_agents_from_personas(
-    personas: Dict[str, Dict[str, Any]], roles: Optional[List[str]] = None
-) -> List[LocalAIAgent]:
+    personas: dict[str, dict[str, Any]], roles: list[str] | None = None
+) -> list[LocalAIAgent]:
     """Create LocalAIAgent list from personas mapping.
 
     If roles is provided, only include those keys in that order. Otherwise include all keys.
     """
     selected_roles = roles or list(personas.keys())
-    agents: List[LocalAIAgent] = []
+    agents: list[LocalAIAgent] = []
     for role in selected_roles:
         spec = personas.get(role) or {}
         style = spec.get("style", role)
@@ -81,10 +81,10 @@ def build_agents_from_personas(
 
 
 # Back-compat API expected by tests
-@lru_cache(maxsize=None)
-def _load_all_personas() -> Dict[str, Dict[str, Any]]:
+@cache
+def _load_all_personas() -> dict[str, dict[str, Any]]:
     """Load all persona YAMLs into a dict keyed by persona name."""
-    data: Dict[str, Dict[str, Any]] = {}
+    data: dict[str, dict[str, Any]] = {}
 
     # 1) Samlad YAML (om du har en personas.yaml)
     base_dir = Path(__file__).resolve().parent
@@ -104,7 +104,7 @@ def _load_all_personas() -> Dict[str, Dict[str, Any]]:
     return data
 
 
-def list_personas() -> Dict[str, Dict[str, Any]]:
+def list_personas() -> dict[str, dict[str, Any]]:
     """Return a copy of loaded personas (for testing/introspection)."""
     return dict(_load_all_personas())
 
@@ -118,12 +118,12 @@ def get_persona_prompt(name: str) -> str:
     cfg = personas.get(name)
     if not cfg:
         raise KeyError(f"Persona '{name}' not found")
-    
+
     # Vanliga fältnamn: "prompt", "system", "template"
     for key in ("prompt", "system", "template"):
         if isinstance(cfg.get(key), str) and cfg[key].strip():
             return cfg[key].strip()
-    
+
     # Tillåt 'messages' [{role, content}] – slå ihop till en systemprompt
     msgs = cfg.get("messages")
     if isinstance(msgs, list) and msgs:
@@ -133,7 +133,7 @@ def get_persona_prompt(name: str) -> str:
                 parts.append(m["content"])
         if parts:
             return "\n\n".join(parts).strip()
-    
+
     # Fallback: bygg prompt från style och rules
     style = cfg.get("style", name)
     rules = cfg.get("rules", [])
@@ -141,17 +141,20 @@ def get_persona_prompt(name: str) -> str:
         prompt = f"You are {name.title()} – style: {style}.\n"
         prompt += "Guidelines:\n" + "\n".join(f"- {r}" for r in rules)
         return prompt.strip()
-    
+
     # Sista utväg: returnera namnet
     return f"You are {name.title()}."
 
 
 # Om din nuvarande kod använder ett nytt API-namn, exponera alias:
-def load_persona(name: str) -> str: 
+def load_persona(name: str) -> str:
     return get_persona_prompt(name)
 
 
 __all__ = [
-    "load_personas_yaml", "build_agents_from_personas",
-    "get_persona_prompt", "list_personas", "load_persona"
+    "load_personas_yaml",
+    "build_agents_from_personas",
+    "get_persona_prompt",
+    "list_personas",
+    "load_persona",
 ]

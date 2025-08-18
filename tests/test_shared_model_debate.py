@@ -12,7 +12,10 @@ from pathlib import Path
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
 
-from codeconductor.debate.shared_model_agent import SharedModelAIAgent, SharedModelDebateManager
+from codeconductor.debate.shared_model_agent import (
+    SharedModelAIAgent,
+    SharedModelDebateManager,
+)
 from codeconductor.ensemble.single_model_engine import SingleModelEngine
 
 
@@ -24,14 +27,14 @@ async def test_shared_model_debate():
 
     # Create ONE shared engine for all agents
     shared_engine = SingleModelEngine("meta-llama-3.1-8b-instruct")
-    
+
     # Initialize the shared engine once
     print("🚀 Initializing shared model engine...")
     success = await shared_engine.initialize()
     if not success:
         print("❌ Failed to initialize shared model engine")
         return False
-    
+
     print("✅ Shared model engine initialized successfully")
 
     # Define code-focused agent personas (all sharing the same engine)
@@ -42,7 +45,7 @@ async def test_shared_model_debate():
             "You prioritize clean code structure, scalability, and maintainability. "
             "You think about the big picture and how different components fit together. "
             "Always provide practical, implementable solutions.",
-            shared_engine
+            shared_engine,
         ),
         SharedModelAIAgent(
             "Coder",
@@ -50,7 +53,7 @@ async def test_shared_model_debate():
             "You prioritize efficient algorithms, best practices, and readable code. "
             "You think about the details and how to make code work well. "
             "Always provide working, tested code examples.",
-            shared_engine
+            shared_engine,
         ),
         SharedModelAIAgent(
             "Tester",
@@ -58,7 +61,7 @@ async def test_shared_model_debate():
             "You prioritize robust error handling, edge case coverage, and code reliability. "
             "You think about what could go wrong and how to prevent it. "
             "Always consider error handling and edge cases.",
-            shared_engine
+            shared_engine,
         ),
         SharedModelAIAgent(
             "Reviewer",
@@ -66,7 +69,7 @@ async def test_shared_model_debate():
             "You prioritize code standards, documentation, and maintainability. "
             "You think about code quality and how others will understand the code. "
             "Always suggest improvements and best practices.",
-            shared_engine
+            shared_engine,
         ),
     ]
 
@@ -83,7 +86,7 @@ async def test_shared_model_debate():
         # Conduct debate with timeout
         result = await asyncio.wait_for(
             debate_manager.conduct_debate(test_prompt),
-            timeout=120.0  # 2 minute timeout for full debate
+            timeout=120.0,  # 2 minute timeout for full debate
         )
 
         print("\n" + "=" * 60)
@@ -99,7 +102,7 @@ async def test_shared_model_debate():
 
         return True
 
-    except asyncio.TimeoutError:
+    except TimeoutError:
         print("⏰ Debate timed out after 2 minutes")
         return False
     except Exception as e:
@@ -110,9 +113,9 @@ async def test_shared_model_debate():
 if __name__ == "__main__":
     # Run test
     success = asyncio.run(test_shared_model_debate())
-    
+
     if success:
         print("\n🎉 Shared-model debate test PASSED!")
     else:
         print("\n💥 Shared-model debate test FAILED!")
-        sys.exit(1) 
+        sys.exit(1)

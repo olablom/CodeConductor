@@ -5,12 +5,11 @@ Cursor Integration for CodeConductor MVP.
 Provides clipboard management and code extraction for manual Cursor integration.
 """
 
-import re
-import os
 import logging
-from pathlib import Path
-from typing import List, Tuple, Optional
+import os
+import re
 from dataclasses import dataclass
+from pathlib import Path
 
 try:
     import pyperclip
@@ -23,12 +22,12 @@ except ImportError:
 # Import new clipboard enhancements
 try:
     from .clipboard_monitor import ClipboardMonitor, get_global_monitor
+    from .hotkeys import get_hotkey_manager, start_global_hotkeys, stop_global_hotkeys
     from .notifications import (
         get_notification_manager,
-        notify_prompt_copied,
         notify_code_detected,
+        notify_prompt_copied,
     )
-    from .hotkeys import get_hotkey_manager, start_global_hotkeys, stop_global_hotkeys
 
     ENHANCEMENTS_AVAILABLE = True
 except ImportError:
@@ -124,7 +123,7 @@ class CodeExtractor:
         )
         self.file_counter = 0
 
-    def extract_cursor_code(self, cursor_output: str) -> List[Tuple[Path, str]]:
+    def extract_cursor_code(self, cursor_output: str) -> list[tuple[Path, str]]:
         """
         Extract code files from Cursor output.
 
@@ -295,9 +294,7 @@ class CursorIntegration:
         # Store original clipboard content
         original_content = self.clipboard_manager.read_from_clipboard()
 
-        print(
-            f"⏳ Waiting for clipboard change... (current: {len(original_content)} chars)"
-        )
+        print(f"⏳ Waiting for clipboard change... (current: {len(original_content)} chars)")
 
         # Wait for user input
         input("Press Enter when you have Cursor output ready...")
@@ -309,9 +306,7 @@ class CursorIntegration:
         if new_content == original_content:
             print("⚠️  Clipboard content hasn't changed. Did you copy Cursor's output?")
         else:
-            print(
-                f"✅ Clipboard updated: {len(original_content)} → {len(new_content)} chars"
-            )
+            print(f"✅ Clipboard updated: {len(original_content)} → {len(new_content)} chars")
 
         _log_info("Reading Cursor output from clipboard...")
         return new_content
@@ -357,9 +352,7 @@ class CursorIntegration:
             print("⚠️  Auto-detection timeout, falling back to manual mode")
             return self.wait_for_cursor_output()
 
-    def extract_and_save_files(
-        self, cursor_output: str, output_dir: Path = None
-    ) -> List[Path]:
+    def extract_and_save_files(self, cursor_output: str, output_dir: Path = None) -> list[Path]:
         """
         Extract code files from Cursor output and save them.
 
@@ -414,9 +407,7 @@ class CursorIntegration:
         if callbacks is None:
             callbacks = {
                 "copy_prompt": lambda: print("🎯 Copy prompt hotkey pressed"),
-                "paste_from_cursor": lambda: print(
-                    "🤖 Paste from Cursor hotkey pressed"
-                ),
+                "paste_from_cursor": lambda: print("🤖 Paste from Cursor hotkey pressed"),
                 "rerun_last_task": lambda: print("🔄 Re-run last task hotkey pressed"),
                 "run_tests": lambda: print("🧪 Run tests hotkey pressed"),
                 "stop_pipeline": lambda: print("🛑 Stop pipeline hotkey pressed"),
@@ -432,7 +423,7 @@ class CursorIntegration:
             stop_global_hotkeys()
             _log_info("Enhanced workflow stopped")
 
-    def run_cursor_workflow(self, prompt: str, output_dir: Path = None) -> List[Path]:
+    def run_cursor_workflow(self, prompt: str, output_dir: Path = None) -> list[Path]:
         """
         Run complete Cursor workflow.
 
@@ -479,12 +470,12 @@ def main():
     # Example prompt
     prompt = """
     Create a simple Python calculator class with the following requirements:
-    
+
     1. Support basic arithmetic operations (add, subtract, multiply, divide)
     2. Handle division by zero errors
     3. Include type hints
     4. Add comprehensive unit tests using pytest
-    
+
     Please provide the implementation and test files.
     """
 

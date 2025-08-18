@@ -8,7 +8,7 @@ import asyncio
 import json
 import time
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Any
 
 # Test cases for comparison
 COMPARISON_TEST_CASES = [
@@ -30,7 +30,7 @@ COMPARISON_TEST_CASES = [
 ]
 
 
-async def run_single_model_test(test_case: Dict[str, Any]) -> Dict[str, Any]:
+async def run_single_model_test(test_case: dict[str, Any]) -> dict[str, Any]:
     """Run test with single model"""
 
     print(f"🤖 Single Model: {test_case['name']}")
@@ -99,7 +99,7 @@ async def run_single_model_test(test_case: Dict[str, Any]) -> Dict[str, Any]:
         }
 
 
-async def run_debate_test(test_case: Dict[str, Any]) -> Dict[str, Any]:
+async def run_debate_test(test_case: dict[str, Any]) -> dict[str, Any]:
     """Run test with 2-agent debate"""
 
     print(f"🤝 Debate (2 agents): {test_case['name']}")
@@ -212,9 +212,7 @@ async def run_comparison_test():
             debate_impl = debate_result["code_quality"]["num_implementations"]
 
             print(f"   📝 Single: {single_length} chars")
-            print(
-                f"   📝 Debate: {debate_length} chars ({debate_impl} implementations)"
-            )
+            print(f"   📝 Debate: {debate_length} chars ({debate_impl} implementations)")
 
     # Calculate statistics
     single_results = [r for r in all_results if r["model_type"] == "single"]
@@ -223,12 +221,8 @@ async def run_comparison_test():
     single_success = sum(1 for r in single_results if r["success"])
     debate_success = sum(1 for r in debate_results if r["success"])
 
-    single_success_rate = (
-        (single_success / len(single_results)) * 100 if single_results else 0
-    )
-    debate_success_rate = (
-        (debate_success / len(debate_results)) * 100 if debate_results else 0
-    )
+    single_success_rate = (single_success / len(single_results)) * 100 if single_results else 0
+    debate_success_rate = (debate_success / len(debate_results)) * 100 if debate_results else 0
 
     # Quality metrics
     single_avg_length = 0
@@ -290,18 +284,10 @@ async def run_comparison_test():
     # Print final results
     print("\n" + "=" * 60)
     print("📊 COMPARISON RESULTS:")
-    print(
-        f"🤖 Single Model: {single_success}/{len(single_results)} ({single_success_rate:.1f}%)"
-    )
-    print(
-        f"🤝 Debate Model: {debate_success}/{len(debate_results)} ({debate_success_rate:.1f}%)"
-    )
-    print(
-        f"📈 Success Rate Improvement: {summary['improvement']['success_rate_improvement']:.1f}%"
-    )
-    print(
-        f"📝 Avg Code Length - Single: {single_avg_length:.0f}, Debate: {debate_avg_length:.0f}"
-    )
+    print(f"🤖 Single Model: {single_success}/{len(single_results)} ({single_success_rate:.1f}%)")
+    print(f"🤝 Debate Model: {debate_success}/{len(debate_results)} ({debate_success_rate:.1f}%)")
+    print(f"📈 Success Rate Improvement: {summary['improvement']['success_rate_improvement']:.1f}%")
+    print(f"📝 Avg Code Length - Single: {single_avg_length:.0f}, Debate: {debate_avg_length:.0f}")
     print(f"🔧 Avg Implementations - Debate: {debate_avg_implementations:.1f}")
 
     return summary, all_results

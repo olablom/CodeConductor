@@ -6,14 +6,11 @@ Tests the complete Streamlit interface without manual interaction
 
 import asyncio
 import json
-import time
 import subprocess
-import requests
-import threading
+import time
 from datetime import datetime
-from typing import Dict, List, Any
-import sys
-import os
+
+import requests
 
 
 class AutomatedStreamlitTester:
@@ -76,7 +73,7 @@ class AutomatedStreamlitTester:
         total = len(results)
         success_rate = (passed / total) * 100
 
-        print(f"\n📊 Automated Streamlit GUI Test Results:")
+        print("\n📊 Automated Streamlit GUI Test Results:")
         print(f"   Success Rate: {success_rate:.1f}% ({passed}/{total})")
 
         return {
