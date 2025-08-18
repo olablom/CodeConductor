@@ -11,6 +11,9 @@ import json
 import aiohttp
 
 
+import pytest
+
+@pytest.mark.asyncio
 async def test_direct_api():
     """Test direct API call to LM Studio"""
 

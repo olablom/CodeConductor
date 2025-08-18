@@ -24,6 +24,9 @@ PERFORMANCE_TEST_CASES = [
 ]
 
 
+import pytest
+
+@pytest.mark.asyncio
 async def test_parallel_execution():
     """Test parallel execution of agents"""
 
@@ -68,6 +71,7 @@ async def test_parallel_execution():
         }
 
 
+@pytest.mark.asyncio
 async def test_caching_optimization():
     """Test caching of model loads and responses"""
 
@@ -120,6 +124,7 @@ async def test_caching_optimization():
         }
 
 
+@pytest.mark.asyncio
 async def test_smaller_model():
     """Test with smaller model for speed"""
 
@@ -163,6 +168,7 @@ async def test_smaller_model():
         }
 
 
+@pytest.mark.asyncio
 async def test_reduced_rounds():
     """Test with reduced debate rounds"""
 

@@ -52,6 +52,14 @@ class SingleModelEngine:
         """Initialize the single model engine."""
         try:
             logger.info("🚀 Initializing Single Model Engine...")
+            
+            # Kontrollera GPU_DISABLED först
+            if os.getenv("CC_GPU_DISABLED", "0") == "1":
+                logger.info(
+                    "[MOCK] CC_GPU_DISABLED=1 active — skipping model loading (SingleModelEngine.initialize)"
+                )
+                return True
+            
             if self._quick:
                 logger.info(
                     "[MOCK] CC_QUICK_CI=1 active — skipping model loading (SingleModelEngine.initialize)"
@@ -92,6 +100,19 @@ class SingleModelEngine:
     async def process_request(self, request: SingleModelRequest) -> SingleModelResponse:
         """Process a request using a single model."""
         start_time = asyncio.get_event_loop().time()
+
+        # Kontrollera GPU_DISABLED först
+        if os.getenv("CC_GPU_DISABLED", "0") == "1":
+            logger.info(
+                "[MOCK] CC_GPU_DISABLED=1 active — returning mock content (SingleModelEngine.process_request)"
+            )
+            content = self._mock_content_for(request.task_description)
+            execution_time = asyncio.get_event_loop().time() - start_time
+            return SingleModelResponse(
+                content=content,
+                model_used=f"{self.preferred_model}-mock",
+                execution_time=execution_time,
+            )
 
         try:
             logger.info(

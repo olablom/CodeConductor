@@ -18,6 +18,9 @@ from codeconductor.debate.single_model_agent import (
 )
 
 
+import pytest
+
+@pytest.mark.asyncio
 async def test_single_model_debate():
     """Test the debate system with multiple agents on a single model"""
 

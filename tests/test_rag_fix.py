@@ -9,6 +9,9 @@ from datetime import datetime
 from src.codeconductor.context.rag_system import RAGSystem
 
 
+import pytest
+
+@pytest.mark.asyncio
 async def test_rag_system():
     """Test RAG system functionality"""
     print("🧪 Testing RAG System")

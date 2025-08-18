@@ -15,6 +15,9 @@ sys.path.append(str(Path(__file__).parent / "src"))
 from codeconductor.debate import CodeConductorDebateManager, LocalAIAgent
 
 
+import pytest
+
+@pytest.mark.asyncio
 async def test_debate_system():
     """Test the debate system with a simple coding task"""
 

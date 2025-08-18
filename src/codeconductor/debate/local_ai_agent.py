@@ -6,7 +6,8 @@ A simple agent that uses local models, following the same structure as the OpenA
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING, Any
+import os
+from typing import TYPE_CHECKING, Any, Dict
 
 if TYPE_CHECKING:  # type hints only, avoid heavy imports at runtime
     from ..ensemble.single_model_engine import SingleModelEngine
@@ -14,7 +15,10 @@ if TYPE_CHECKING:  # type hints only, avoid heavy imports at runtime
 logger = logging.getLogger(__name__)
 
 
-class LocalAIAgent:
+from .base_agent import BaseAIAgent
+
+
+class LocalAIAgent(BaseAIAgent):
     """
     Simple AI agent that uses local models, similar to the OpenAI version.
 
@@ -23,10 +27,13 @@ class LocalAIAgent:
     """
 
     def __init__(self, name: str, persona: str):
-        self.name = name
+        super().__init__(name)  # Anropa BaseAIAgent.__init__
         self.persona = persona
         self.conversation_history = [{"role": "system", "content": persona}]
         self.shared_engine = None  # Will be set by debate manager
+        
+        # VIKTIGT: Wrappa metoderna EFTER att alla är definierade
+        self._wrap_methods()
 
     def set_shared_engine(self, engine: "SingleModelEngine"):
         """Set the shared engine for this agent."""
@@ -35,6 +42,56 @@ class LocalAIAgent:
     def add_message(self, role: str, content: str):
         """Add a message to the conversation history."""
         self.conversation_history.append({"role": role, "content": content})
+
+    def propose(self, prompt: str, **kw) -> dict[str, Any]:
+        """Generate initial proposal"""
+        # Kontrollera GPU_DISABLED först
+        if self._check_gpu_disabled():
+            return {"content": f"[MOCKED] {prompt}", "agent": self.name, "type": "proposal"}
+        
+        # Riktig implementation endast om GPU är tillgänglig
+        if self.shared_engine is None:
+            return {"content": f"Error: No shared engine set for {self.name}", "agent": self.name, "type": "proposal"}
+        
+        try:
+            response = asyncio.run(self.generate_response(prompt))
+            return {"content": response, "agent": self.name, "type": "proposal"}
+        except Exception as e:
+            return {"content": f"Error: {str(e)}", "agent": self.name, "type": "proposal"}
+
+    def rebuttal(self, state: dict[str, Any], **kw) -> dict[str, Any]:
+        """Generate rebuttal based on other agents' proposals"""
+        # Kontrollera GPU_DISABLED först
+        if self._check_gpu_disabled():
+            return {"content": f"[MOCKED] rebuttal for debate state", "agent": self.name, "type": "rebuttal"}
+        
+        prompt = f"Based on the debate state: {state}, provide your rebuttal."
+        
+        if self.shared_engine is None:
+            return {"content": f"Error: No shared engine set for {self.name}", "agent": self.name, "type": "rebuttal"}
+        
+        try:
+            response = asyncio.run(self.generate_response(prompt))
+            return {"content": response, "agent": self.name, "type": "rebuttal"}
+        except Exception as e:
+            return {"content": f"Error: {str(e)}", "agent": self.name, "type": "rebuttal"}
+
+    def finalize(self, state: dict[str, Any], **kw) -> dict[str, Any]:
+        """Generate final recommendation"""
+        # Kontrollera GPU_DISABLED först
+        if self._check_gpu_disabled():
+            return {"content": f"[MOCKED] final recommendation for debate", "agent": self.name, "type": "final"}
+        
+        prompt = f"Based on the debate state: {state}, provide your final recommendation."
+        
+        if self.shared_engine is None:
+            return {"content": f"Error: No shared engine set for {self.name}", "agent": self.name, "type": "final"}
+        
+        try:
+            response = asyncio.run(self.generate_response(prompt))
+            return {"content": response, "agent": self.name, "type": "final"}
+        except Exception as e:
+            return {"content": f"Error: {str(e)}", "agent": self.name, "type": "final"}
 
     async def generate_response(self, user_prompt: str, timeout: float = 120.0) -> str:
         """
@@ -47,11 +104,13 @@ class LocalAIAgent:
         Returns:
             The generated response
         """
+        # Kontrollera GPU_DISABLED först
+        if self._check_gpu_disabled():
+            return f"[MOCKED] {self.name} response to: {user_prompt}"
+        
         try:
             # Create the full prompt with persona
-            full_prompt = (
-                f"System: {self.persona}\n\nUser: {user_prompt}\n\n{self.name}:"
-            )
+            full_prompt = f"System: {self.persona}\n\nUser: {user_prompt}\n\n{self.name}:"
 
             logger.info(
                 f"[PERSONA] {self.name}: {self.persona.splitlines()[0] if self.persona else ''}"
@@ -172,22 +231,14 @@ class LocalDebateManager:
                         for r in debate_responses
                         if r["turn"] == "proposal" and r["agent"] != agent.name
                     ]
-                    rebuttal_prompt = (
-                        f"User: {user_prompt}\n\nOther agents' proposals:\n"
-                    )
+                    rebuttal_prompt = f"User: {user_prompt}\n\nOther agents' proposals:\n"
                     for prop in other_proposals:
-                        rebuttal_prompt += (
-                            f"- {prop['agent']}: {prop['content'][:200]}...\n\n"
-                        )
-                    rebuttal_prompt += (
-                        "Please provide your rebuttal to these proposals:"
-                    )
+                        rebuttal_prompt += f"- {prop['agent']}: {prop['content'][:200]}...\n\n"
+                    rebuttal_prompt += "Please provide your rebuttal to these proposals:"
 
                     logger.info(f"{agent.name} making rebuttal...")
                     response = await asyncio.wait_for(
-                        agent.generate_response(
-                            rebuttal_prompt, timeout=timeout_per_turn
-                        ),
+                        agent.generate_response(rebuttal_prompt, timeout=timeout_per_turn),
                         timeout=timeout_per_turn,
                     )
                     debate_responses.append(

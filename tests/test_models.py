@@ -29,6 +29,9 @@ def get_vram_usage():
     return None, None
 
 
+import pytest
+
+@pytest.mark.asyncio
 async def test_models():
     """Test available models with performance metrics"""
     mm = ModelManager()

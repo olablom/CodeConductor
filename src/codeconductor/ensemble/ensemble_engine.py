@@ -532,6 +532,20 @@ class EnsembleEngine:
         Returns:
             Dict with results including generated_code, confidence, etc.
         """
+        # Kontrollera GPU_DISABLED först
+        if os.getenv("CC_GPU_DISABLED", "0") == "1":
+            logger.info(
+                "[MOCK] CC_GPU_DISABLED=1 active — returning mock content (EnsembleEngine.process_request)"
+            )
+            return {
+                "generated_code": f"[MOCKED] {task_description}",
+                "confidence": 0.95,
+                "model_used": "ensemble-mock",
+                "execution_time": 0.01,
+                "cached": False,
+                "method": "mock",
+            }
+        
         # Create EnsembleRequest from parameters
         request = EnsembleRequest(task_description=task_description, timeout=timeout)
 

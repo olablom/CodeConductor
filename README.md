@@ -10,22 +10,22 @@
 
 **Traditional AI Coding:**
 
-- Single model = single perspective
-- No validation before execution
-- Black box decision making
+-   Single model = single perspective
+-   No validation before execution
+-   Black box decision making
 
 **CodeConductor Advantage:**
 
-- Multi-agent debate = multiple perspectives
-- Consensus before coding = higher quality
-- Transparent reasoning = trustable AI
+-   Multi-agent debate = multiple perspectives
+-   Consensus before coding = higher quality
+-   Transparent reasoning = trustable AI
 
 **Proven Results:**
 
-- 3 weeks from idea to production
-- 100% test success rate
-- Enterprise-ready architecture
-- 100% local, 0% data leakage
+-   3 weeks from idea to production
+-   100% test success rate
+-   Enterprise-ready architecture
+-   100% local, 0% data leakage
 
 ---
 
@@ -33,9 +33,9 @@
 
 **Ever had a production bug at 3 AM?** You need to fix it fast, but you can't send sensitive code to ChatGPT. Your options:
 
-- **ChatGPT** - Code leaves your machine
-- **Manual debugging** - Takes hours
-- **Wake up the team** - Expensive & slow
+-   **ChatGPT** - Code leaves your machine
+-   **Manual debugging** - Takes hours
+-   **Wake up the team** - Expensive & slow
 
 ## 💡 **The Solution**
 
@@ -62,14 +62,14 @@ python -m codeconductor.cli propose --input artifacts/repo_map.json --state arti
 
 Streamlit (sidebar → Project Conductor):
 
-- Buttons: Analyze / .cursorrules / Propose
-- Preview of generated files (first lines) with file paths
+-   Buttons: Analyze / .cursorrules / Propose
+-   Preview of generated files (first lines) with file paths
 
 Purpose:
 
-- Local, zero‑upload project understanding
-- Automatic `.cursorrules` for cleaner context
-- Short, structured “next feature” prompt with constraints and test command
+-   Local, zero‑upload project understanding
+-   Automatic `.cursorrules` for cleaner context
+-   Short, structured “next feature” prompt with constraints and test command
 
 ### Single‑model baseline (LM Studio) and sampling override
 
@@ -115,13 +115,13 @@ Expected warm baseline: TTFT p50 ≈ 2.5–3.0 s (after warmup), CodeBLEU ≈ 0.
 [![Windows Tests](https://github.com/olablom/CodeConductor/actions/workflows/test-windows.yml/badge.svg)](https://github.com/olablom/CodeConductor/actions)
 [![Coverage](https://img.shields.io/codecov/c/github/olablom/CodeConductor)](https://github.com/olablom/CodeConductor/actions)
 
-- **✅ Test Suite**: 51 passed, 11 skipped (vLLM), 0 failed
-- **🔒 Deterministic**: All tests run consistently with fixed seeds
-- **🏗️ Production Grade**: Multi-agent debate system fully functional
-- **🪟 Windows Native**: Full support without WSL2 requirements
-- **⚡ Async Ready**: Complete pytest-asyncio support
-- **🔐 Local-First**: Zero data leaves your machine
-- **📊 CI/CD Ready**: Automated testing with JSON reports & coverage
+-   **✅ Test Suite**: 51 passed, 11 skipped (vLLM), 0 failed
+-   **🔒 Deterministic**: All tests run consistently with fixed seeds
+-   **🏗️ Production Grade**: Multi-agent debate system fully functional
+-   **🪟 Windows Native**: Full support without WSL2 requirements
+-   **⚡ Async Ready**: Complete pytest-asyncio support
+-   **🔐 Local-First**: Zero data leaves your machine
+-   **📊 CI/CD Ready**: Automated testing with JSON reports & coverage
 
 **Latest Achievement**: Achieved deterministic test collection and 100% test execution success!
 
@@ -159,25 +159,25 @@ Reviewer: "Documentation and maintainability are key"
 
 ### **🧪 Test Suite Performance**
 
-- **Total Tests**: 62 collected, 51 passed, 11 skipped (vLLM), 0 failed
-- **Execution Time**: ~4 min (efficient test suite)
-- **Coverage**: Generated via `pytest --cov=codeconductor`
-- **Platform**: Windows 10 native (no WSL2 required)
-- **Deterministic**: Fixed seeds ensure consistent results
+-   **Total Tests**: 62 collected, 51 passed, 11 skipped (vLLM), 0 failed
+-   **Execution Time**: ~4 min (efficient test suite)
+-   **Coverage**: Generated via `pytest --cov=codeconductor`
+-   **Platform**: Windows 10 native (no WSL2 required)
+-   **Deterministic**: Fixed seeds ensure consistent results
 
 ### **⚡ System Performance**
 
-- **Memory Management**: ✅ Smart GPU VRAM handling
-- **Model Loading**: ✅ 2 models loaded simultaneously
-- **Async Operations**: ✅ Full pytest-asyncio support
-- **Error Recovery**: ✅ Graceful fallbacks for all failures
+-   **Memory Management**: ✅ Smart GPU VRAM handling
+-   **Model Loading**: ✅ 2 models loaded simultaneously
+-   **Async Operations**: ✅ Full pytest-asyncio support
+-   **Error Recovery**: ✅ Graceful fallbacks for all failures
 
 ### **🔒 Security & Privacy**
 
-- **Data Leakage**: 0% (100% local processing)
-- **External APIs**: Disabled by default
-- **Model Access**: Local LM Studio/Ollama only
-- **Network Calls**: Zero in default mode
+-   **Data Leakage**: 0% (100% local processing)
+-   **External APIs**: Disabled by default
+-   **Model Access**: Local LM Studio/Ollama only
+-   **Network Calls**: Zero in default mode
 
 ## 🏆 **Recent Success Story**
 
@@ -187,24 +187,24 @@ CodeConductor recently underwent a massive transformation, fixing all critical i
 
 ### **The Challenge**
 
-- ❌ 5 failed tests
-- ❌ 12 skipped tests
-- ❌ Windows encoding issues
-- ❌ Async test failures
-- ❌ Missing dependencies
+-   ❌ 5 failed tests
+-   ❌ 12 skipped tests
+-   ❌ Windows encoding issues
+-   ❌ Async test failures
+-   ❌ Missing dependencies
 
 ### **The Solution**
 
-- ✅ **Sprint 0**: Fixed dependencies (gym→gymnasium, pytest-asyncio)
-- ✅ **Sprint 1**: Fixed core issues (CLI, API streaming, async support)
-- ✅ **Sprint 2**: Windows compatibility & production readiness
+-   ✅ **Sprint 0**: Fixed dependencies (gym→gymnasium, pytest-asyncio)
+-   ✅ **Sprint 1**: Fixed core issues (CLI, API streaming, async support)
+-   ✅ **Sprint 2**: Windows compatibility & production readiness
 
 ### **The Result**
 
-- 🎯 **51/51 tests passing** (100% success rate)
-- 🚀 **Production ready** for enterprise deployment
-- 🛡️ **Windows native** without WSL2 dependency
-- ⚡ **Async infrastructure** fully functional
+-   🎯 **51/51 tests passing** (100% success rate)
+-   🚀 **Production ready** for enterprise deployment
+-   🛡️ **Windows native** without WSL2 dependency
+-   ⚡ **Async infrastructure** fully functional
 
 **This demonstrates CodeConductor's robust architecture and rapid development capabilities!**
 
@@ -225,6 +225,169 @@ $env:TEMP='0.1'  # reduce stylistic drift for short prompts
 python scripts\generate_ensemble_run.py --prompt "Create a Python Fibonacci function (iterative)"
 ```
 
+## 🔒 **GPU Mock vs Real Mode**
+
+CodeConductor supports two distinct execution modes to ensure safe testing and powerful production usage.
+
+### **🔒 Mock Mode (Default) - Safe & Fast**
+
+**When:** `CC_GPU_DISABLED=1` (default for all tests)
+
+**What happens:**
+
+-   All GPU calls are blocked and mocked
+-   Agents return `[MOCKED]` responses instantly
+-   No real models are loaded
+-   Perfect for CI/CD and development testing
+-   Execution time: < 2 seconds
+
+**Use cases:**
+
+-   Unit tests
+-   CI/CD pipelines
+-   Development without GPU
+-   Quick validation of logic
+
+**Example:**
+
+```bash
+# Mock mode (default)
+CC_GPU_DISABLED=1 python -m pytest tests/test_debate_system.py::test_debate_system -q -s
+
+# Output: All responses are [MOCKED] and complete in ~1-2 seconds
+```
+
+### **🎮 Real Mode - Full GPU Power**
+
+**When:** `CC_GPU_DISABLED=0` + `@pytest.mark.gpu`
+
+**What happens:**
+
+-   Real models are loaded on GPU
+-   Actual AI inference is performed
+-   Full debate system with real responses
+-   Execution time: 30-120 seconds (depending on model size)
+
+**Use cases:**
+
+-   Performance testing
+-   Real model validation
+-   Production deployment
+-   Deep experimentation
+
+**Example:**
+
+```bash
+# Real GPU mode
+CC_GPU_DISABLED=0 python -m pytest tests/test_gpu_integration.py -m gpu -v -s
+
+# Output: Real AI responses with actual model inference
+```
+
+### **🧪 Test Markers**
+
+CodeConductor uses pytest markers to control GPU access:
+
+```python
+# Mock mode (default) - no marker needed
+def test_debate_mock():
+    """This test runs in mock mode by default"""
+    pass
+
+# Real GPU mode - explicit marker required
+@pytest.mark.gpu
+def test_debate_real():
+    """This test requires real GPU access"""
+    pass
+```
+
+**Run specific test types:**
+
+```bash
+# Only mock tests (fast, safe)
+python -m pytest tests/ -m "not gpu" -q
+
+# Only GPU tests (requires real hardware)
+python -m pytest tests/ -m gpu -v
+
+# All tests (mock by default, GPU when marked)
+python -m pytest tests/ -q
+```
+
+### **⚙️ Environment Configuration**
+
+**Mock Mode (Safe Default):**
+
+```bash
+export CC_GPU_DISABLED=1
+export CC_TESTING_MODE=1
+# No other GPU config needed
+```
+
+**Real Mode (GPU Required):**
+
+```bash
+export CC_GPU_DISABLED=0
+export ENGINE_BACKENDS=lmstudio
+export ENGINE_MODEL_ALLOWLIST=meta-llama-3.1-8b-instruct
+export SELECTOR_POLICY=fixed
+```
+
+### **🛡️ Safety Features**
+
+**Mock Mode Protections:**
+
+-   All `torch.cuda` calls are blocked
+-   `subprocess.run("nvidia-smi")` is forbidden
+-   vLLM and transformers are mocked
+-   No accidental GPU usage possible
+
+**Real Mode Safeguards:**
+
+-   Automatic VRAM cleanup after each test
+-   Memory monitoring and warnings
+-   Graceful fallbacks for GPU failures
+-   Environment reset to safe mode after GPU tests
+
+### **📊 Performance Comparison**
+
+| Mode     | Execution Time | GPU Usage | Use Case            |
+| -------- | -------------- | --------- | ------------------- |
+| **Mock** | 1-2 seconds    | 0%        | Development, CI/CD  |
+| **Real** | 30-120 seconds | 80-95%    | Production, Testing |
+
+### **🚀 Quick Start Examples**
+
+**1. Safe Development (Mock Mode):**
+
+```bash
+# Always safe, always fast
+python -m pytest tests/test_debate_system.py::test_debate_system -q -s
+```
+
+**2. GPU Validation (Real Mode):**
+
+```bash
+# Test with real models
+CC_GPU_DISABLED=0 python -m pytest tests/test_gpu_integration.py -m gpu -v -s
+```
+
+**3. Mixed Testing:**
+
+```bash
+# Run all tests (mock by default, GPU when marked)
+python -m pytest tests/ -q
+```
+
+**4. CI/CD Pipeline:**
+
+```bash
+# Safe for CI - no GPU required
+CC_GPU_DISABLED=1 python -m pytest tests/ -m "not gpu" --tb=short
+```
+
+---
+
 ## 🎯 **What is CodeConductor?**
 
 CodeConductor is a **local-first AI development assistant** that uses multiple AI agents to debate and collaborate before generating code. Think of it as having a team of expert developers discussing your problem before writing the solution.
@@ -240,9 +403,9 @@ CodeConductor is a **local-first AI development assistant** that uses multiple A
 
 ### **Prerequisites:**
 
-- Python 3.11+
-- LM Studio and/or Ollama (local models)
-- 16GB+ RAM (for model loading)
+-   Python 3.11+
+-   LM Studio and/or Ollama (local models)
+-   16GB+ RAM (for model loading)
 
 ### **Installation:**
 
@@ -274,16 +437,16 @@ See `docs/CURSOR_TROUBLESHOOTING.md` for Cursor integration issues and local-fir
 
 By default, Cursor Local API is disabled in this project. Use manual clipboard flow.
 
-- Set for current session:
-  ```powershell
-  Remove-Item Env:CURSOR_API_BASE -ErrorAction SilentlyContinue
-  $env:CURSOR_MODE='manual'
-  ```
-- Persist for new sessions:
-  ```powershell
-  setx CURSOR_MODE manual
-  setx CURSOR_API_BASE ""
-  ```
+-   Set for current session:
+    ```powershell
+    Remove-Item Env:CURSOR_API_BASE -ErrorAction SilentlyContinue
+    $env:CURSOR_MODE='manual'
+    ```
+-   Persist for new sessions:
+    ```powershell
+    setx CURSOR_MODE manual
+    setx CURSOR_API_BASE ""
+    ```
 
 You can re-enable later by setting `CURSOR_MODE=auto` and `CURSOR_API_BASE` to your Cursor Local API URL, then restarting your shell.
 
@@ -293,25 +456,25 @@ Diagnostics commands referencing the Cursor API are disabled by default.
 
 On startup (CLI and Streamlit), CodeConductor automatically prunes old artifacts by default.
 
-- Defaults:
-  - Exports: keep 20 latest full bundles; delete minimal/incomplete
-  - Runs: keep 50 latest or 7 days (whichever retains more)
-- Disable in current session:
-  ```powershell
-  $env:AUTO_PRUNE='0'
-  ```
-- Adjust thresholds:
-  ```powershell
-  $env:EXPORT_KEEP_FULL='30'
-  $env:EXPORT_DELETE_MINIMAL='1'
-  $env:RUNS_KEEP_DAYS='14'
-  $env:RUNS_KEEP='80'
-  ```
+-   Defaults:
+    -   Exports: keep 20 latest full bundles; delete minimal/incomplete
+    -   Runs: keep 50 latest or 7 days (whichever retains more)
+-   Disable in current session:
+    ```powershell
+    $env:AUTO_PRUNE='0'
+    ```
+-   Adjust thresholds:
+    ```powershell
+    $env:EXPORT_KEEP_FULL='30'
+    $env:EXPORT_DELETE_MINIMAL='1'
+    $env:RUNS_KEEP_DAYS='14'
+    $env:RUNS_KEEP='80'
+    ```
 
 ### Mock vs Real
 
-- Mock (`CC_QUICK_CI=1`): deterministic outputs, no model loading; safe for CI.
-- Real (local models): enable LM Studio/Ollama/vLLM; doctor records GPU/latency.
+-   Mock (`CC_QUICK_CI=1`): deterministic outputs, no model loading; safe for CI.
+-   Real (local models): enable LM Studio/Ollama/vLLM; doctor records GPU/latency.
 
 ### Personas pack
 
@@ -319,11 +482,11 @@ Extended roles available in `agents/personas.yaml` (e.g., `bug_hunter`, `perf_tw
 
 ### External APIs (opt‑in)
 
-- Default is private: `ALLOW_NET=0` (no external fetches)
-- Enable adapters by setting `ALLOW_NET=1` (Stack Overflow / GitHub Code Search)
-- Model backend gating:
-  - `ENGINE_BACKENDS=ollama` (disable LM Studio HTTP entirely)
-  - `LMSTUDIO_DISABLE=1` and/or `LMSTUDIO_CLI_DISABLE=1` (never touch port 1234 or `lms` CLI)
+-   Default is private: `ALLOW_NET=0` (no external fetches)
+-   Enable adapters by setting `ALLOW_NET=1` (Stack Overflow / GitHub Code Search)
+-   Model backend gating:
+    -   `ENGINE_BACKENDS=ollama` (disable LM Studio HTTP entirely)
+    -   `LMSTUDIO_DISABLE=1` and/or `LMSTUDIO_CLI_DISABLE=1` (never touch port 1234 or `lms` CLI)
 
 Env examples (optional, improves quotas and caching):
 
@@ -350,17 +513,17 @@ $env:GH_PER_PAGE='5'
 
 Notes:
 
-- Keys/tokens are optional; leave unset for anonymous mode.
-- Cached responses are stored under `artifacts/net_cache` with TTL control.
-- No repo code is uploaded; only query terms are used to fetch public info.
+-   Keys/tokens are optional; leave unset for anonymous mode.
+-   Cached responses are stored under `artifacts/net_cache` with TTL control.
+-   No repo code is uploaded; only query terms are used to fetch public info.
 
 ## 📦 Case bundle schema & KPI
 
 This project defines JSON schemas for exported case bundles and KPIs to enable deterministic, privacy‑aware sharing of results.
 
-- Schemas:
-  - `src/codeconductor/utils/schemas/kpi.schema.json`
-  - `src/codeconductor/utils/schemas/manifest.schema.json`
+-   Schemas:
+    -   `src/codeconductor/utils/schemas/kpi.schema.json`
+    -   `src/codeconductor/utils/schemas/manifest.schema.json`
 
 Bundle layout (public_safe):
 
@@ -380,9 +543,9 @@ artifacts/exports/codeconductor_case_<run_id>.zip
 
 KPI highlights:
 
-- `ttft_ms` (monotonic), `first_prompt_success`, `pass_rate_*`
-- winner model/score, `consensus_method`, `codebleu_*`, `sampling`
-- `config_digest` over key env (`ENGINE_BACKENDS`, `ALLOW_NET`, `CODEBLEU_*`, `SELECTOR_POLICY`, `EXPORT_*`)
+-   `ttft_ms` (monotonic), `first_prompt_success`, `pass_rate_*`
+-   winner model/score, `consensus_method`, `codebleu_*`, `sampling`
+-   `config_digest` over key env (`ENGINE_BACKENDS`, `ALLOW_NET`, `CODEBLEU_*`, `SELECTOR_POLICY`, `EXPORT_*`)
 
 ### Example commands
 
@@ -407,9 +570,9 @@ PYTHONIOENCODING=utf-8 python tests/test_codeconductor_2agents_focused.py
 python scripts/export_latest.py
 ```
 
-- Skapar zip under `artifacts/exports/` med namn `codeconductor_case_<run_id>.zip`.
-- Innehåller `kpi.json`, `manifest.json`, `README_case.md`, tester och diff/after (genererat från consensus‑kod om möjligt).
-- Valideras mot schema om `jsonschema` finns installerat.
+-   Skapar zip under `artifacts/exports/` med namn `codeconductor_case_<run_id>.zip`.
+-   Innehåller `kpi.json`, `manifest.json`, `README_case.md`, tester och diff/after (genererat från consensus‑kod om möjligt).
+-   Valideras mot schema om `jsonschema` finns installerat.
 
 > CI note: GitHub Actions runs a deterministic mock smoke (`CC_QUICK_CI=1`) that never calls LM Studio. Full GPU tests are intended to run locally.
 
@@ -421,28 +584,28 @@ When you hit a problem, create a local bug report bundle from the UI to share re
 
 1. Open the sidebar section “Selector & Cache”.
 2. Optional settings:
-   - Include raw outputs (default: off) – includes full model outputs. Not recommended outside your team.
-   - Redact env (default: on) – removes sensitive environment variables and paths.
-   - Generate public-safe bundle – forces a minimal, safe export for external sharing.
+    - Include raw outputs (default: off) – includes full model outputs. Not recommended outside your team.
+    - Redact env (default: on) – removes sensitive environment variables and paths.
+    - Generate public-safe bundle – forces a minimal, safe export for external sharing.
 3. Click “Export bundle”.
 4. Wait for “Verified ✓”.
 
 ### Send the bundle
 
-- Manual: open `artifacts/exports/` and share the zip `codeconductor_run_<ts>_<policy>_<hit|miss>.zip` via an approved channel.
-- Send to support (opt-in): copies the zip path to clipboard and opens a prefilled email in your default mail client.
-  - Note: mailto cannot attach the file automatically – attach the zip manually.
-  - Always use a public-safe bundle for external sharing.
+-   Manual: open `artifacts/exports/` and share the zip `codeconductor_run_<ts>_<policy>_<hit|miss>.zip` via an approved channel.
+-   Send to support (opt-in): copies the zip path to clipboard and opens a prefilled email in your default mail client.
+    -   Note: mailto cannot attach the file automatically – attach the zip manually.
+    -   Always use a public-safe bundle for external sharing.
 
 ### Retention & cleanup
 
-- Only the latest 20 exports are kept.
-- Click “Clear exports” in the UI to remove all.
+-   Only the latest 20 exports are kept.
+-   Click “Clear exports” in the UI to remove all.
 
 ## 📊 **Benchmarks (local)**
 
-- Run the suite locally and inspect artifacts under `artifacts/`.
-- Example:
+-   Run the suite locally and inspect artifacts under `artifacts/`.
+-   Example:
 
 ```bash
 python -m pytest -q tests/
@@ -473,28 +636,28 @@ sequenceDiagram
 
 ### **Core Components:**
 
-- **vLLM Backend** - High-performance model serving
-- **Debate Manager** - Orchestrates agent discussions
-- **Ensemble Engine** - Manages multiple models
-- **RAG System** - Context retrieval from past solutions
-- **Model Manager** - GPU-aware model scheduling
+-   **vLLM Backend** - High-performance model serving
+-   **Debate Manager** - Orchestrates agent discussions
+-   **Ensemble Engine** - Manages multiple models
+-   **RAG System** - Context retrieval from past solutions
+-   **Model Manager** - GPU-aware model scheduling
 
 ### **Agent Types:**
 
-- **Architect** - System design and architecture
-- **Coder** - Practical implementation
-- **Tester** - Quality assurance and validation
-- **Reviewer** - Code review and best practices
+-   **Architect** - System design and architecture
+-   **Coder** - Practical implementation
+-   **Tester** - Quality assurance and validation
+-   **Reviewer** - Code review and best practices
 
 ## 🧪 RLHF & Learning
 
-- Method: Proximal Policy Optimization (PPO)
-- Runtime: Loads a local policy from `ppo_codeconductor.zip` if present; otherwise RLHF is auto‑disabled and the system falls back gracefully.
-- Signal: Combines unit‑test results and simple heuristics into a reward used to recommend model selection and sampling parameters.
-- Scope: Lightweight policy influences selector/sampling; it does not rewrite business logic.
-- Manage:
-  - To refresh/disable quickly: temporarily move/rename `ppo_codeconductor.zip` (RLHF will log “disabled”).
-  - Training jobs and nightly self‑play are planned; current repo includes scaffolding for resets (`reset_rlhf_weights.py`).
+-   Method: Proximal Policy Optimization (PPO)
+-   Runtime: Loads a local policy from `ppo_codeconductor.zip` if present; otherwise RLHF is auto‑disabled and the system falls back gracefully.
+-   Signal: Combines unit‑test results and simple heuristics into a reward used to recommend model selection and sampling parameters.
+-   Scope: Lightweight policy influences selector/sampling; it does not rewrite business logic.
+-   Manage:
+    -   To refresh/disable quickly: temporarily move/rename `ppo_codeconductor.zip` (RLHF will log “disabled”).
+    -   Training jobs and nightly self‑play are planned; current repo includes scaffolding for resets (`reset_rlhf_weights.py`).
 
 Target: Stable, measurable gains under the local test suite without regressing latency.
 
@@ -502,9 +665,9 @@ Target: Stable, measurable gains under the local test suite without regressing l
 
 ## 📡 Monitoring (Grafana/Prometheus)
 
-- Memory watchdog runs by default and logs VRAM/cleanup events to app logs and `artifacts/`.
-- Dashboards: JSONs under `monitoring/grafana/dashboards/` (import into Grafana).
-- Prometheus: starter config under `monitoring/prometheus/` (bring your own Prometheus and point to your exporters; full OpenTelemetry pack is planned).
+-   Memory watchdog runs by default and logs VRAM/cleanup events to app logs and `artifacts/`.
+-   Dashboards: JSONs under `monitoring/grafana/dashboards/` (import into Grafana).
+-   Prometheus: starter config under `monitoring/prometheus/` (bring your own Prometheus and point to your exporters; full OpenTelemetry pack is planned).
 
 Quick Grafana (optional):
 
@@ -531,25 +694,25 @@ Example `prometheus.yml` (minimal):
 
 ```yaml
 global:
-  scrape_interval: 15s
+    scrape_interval: 15s
 
 scrape_configs:
-  - job_name: "prometheus"
-    static_configs:
-      - targets: ["localhost:9090"]
+    - job_name: "prometheus"
+      static_configs:
+          - targets: ["localhost:9090"]
 
-  - job_name: "codeconductor_local"
-    metrics_path: /metrics
-    static_configs:
-      - targets:
-          - "localhost:8000" # FastAPI metrics if instrumented
-          - "localhost:9100" # node_exporter (optional)
+    - job_name: "codeconductor_local"
+      metrics_path: /metrics
+      static_configs:
+          - targets:
+                - "localhost:8000" # FastAPI metrics if instrumented
+                - "localhost:9100" # node_exporter (optional)
 ```
 
 Tips:
 
-- To instrument FastAPI quickly: add `prometheus-fastapi-instrumentator` and mount it in `src/codeconductor/api/server.py`.
-- Keep exporters local to preserve privacy; don’t publish metrics externally.
+-   To instrument FastAPI quickly: add `prometheus-fastapi-instrumentator` and mount it in `src/codeconductor/api/server.py`.
+-   Keep exporters local to preserve privacy; don’t publish metrics externally.
 
 ### **Model Setup:**
 
@@ -573,62 +736,62 @@ FALLBACK_CONFIG = {
 
 ### **Supported Models (local):**
 
-- **meta-llama-3.1-8b-instruct** (LM Studio)
-- **google/gemma-3-12b** (LM Studio)
-- **mistral-7b-instruct-v0.1** (LM Studio)
-- **mistral:latest** (Ollama)
-- **phi3:mini** (Ollama)
+-   **meta-llama-3.1-8b-instruct** (LM Studio)
+-   **google/gemma-3-12b** (LM Studio)
+-   **mistral-7b-instruct-v0.1** (LM Studio)
+-   **mistral:latest** (Ollama)
+-   **phi3:mini** (Ollama)
 
 ## 🎯 **Use Cases**
 
 ### **Perfect for CodeConductor:**
 
-- **REST API Development** - 100% success rate
-- **React Component Creation** - 100% success rate
-- **SQL Query Optimization** - 100% success rate
-- **Bug Fixing** - 100% success rate
-- **Code Refactoring** - High success rate
+-   **REST API Development** - 100% success rate
+-   **React Component Creation** - 100% success rate
+-   **SQL Query Optimization** - 100% success rate
+-   **Bug Fixing** - 100% success rate
+-   **Code Refactoring** - High success rate
 
 ### **Skip for Single Model:**
 
-- **Simple functions** (< 10 lines)
-- **One-liners**
-- **Basic utilities**
+-   **Simple functions** (< 10 lines)
+-   **One-liners**
+-   **Basic utilities**
 
 ## 🔒 **Privacy & Security**
 
-- **Local-first by default**: `ALLOW_NET=0` disables external adapters.
-- **Backend gating**: `ENGINE_BACKENDS`, `LMSTUDIO_DISABLE`, `LMSTUDIO_CLI_DISABLE` strictly enforced.
-- **No API keys required** for local flow; cloud adapters are opt‑in.
+-   **Local-first by default**: `ALLOW_NET=0` disables external adapters.
+-   **Backend gating**: `ENGINE_BACKENDS`, `LMSTUDIO_DISABLE`, `LMSTUDIO_CLI_DISABLE` strictly enforced.
+-   **No API keys required** for local flow; cloud adapters are opt‑in.
 
 ### **Threat Model:**
 
 CodeConductor runs in a sandboxed environment that prevents malicious code from accessing your system:
 
-- **Code Execution Isolation** - Generated code runs in temporary containers
-- **Network Isolation** - No outbound connections from code execution
-- **Resource Limits** - CPU, memory, and time constraints
-- **File System Isolation** - Read-only access to project files only
+-   **Code Execution Isolation** - Generated code runs in temporary containers
+-   **Network Isolation** - No outbound connections from code execution
+-   **Resource Limits** - CPU, memory, and time constraints
+-   **File System Isolation** - Read-only access to project files only
 
 ### **Supply Chain Notes:**
 
-- Dependencies pinned where practical; anonymized telemetry disabled by default.
+-   Dependencies pinned where practical; anonymized telemetry disabled by default.
 
 ## 📋 **Requirements**
 
 ### **System Requirements:**
 
-- **Python** 3.11+ (tested with 3.11.7)
-- **CUDA** 12.1+ (for GPU acceleration)
-- **VRAM** 16GB+ (RTX 4090 or better recommended)
-- **RAM** 32GB+ (for model loading)
+-   **Python** 3.11+ (tested with 3.11.7)
+-   **CUDA** 12.1+ (for GPU acceleration)
+-   **VRAM** 16GB+ (RTX 4090 or better recommended)
+-   **RAM** 32GB+ (for model loading)
 
 ### **Dependencies:**
 
-- **vLLM** 0.4.0+ (model serving)
-- **Streamlit** 1.28.0+ (GUI)
-- **PyTorch** 2.7.0+ (CUDA 12.8)
-- **Transformers** 4.30.0+ (model loading)
+-   **vLLM** 0.4.0+ (model serving)
+-   **Streamlit** 1.28.0+ (GUI)
+-   **PyTorch** 2.7.0+ (CUDA 12.8)
+-   **Transformers** 4.30.0+ (model loading)
 
 ## 🚀 **Roadmap & Achievements**
 
@@ -647,11 +810,11 @@ CodeConductor runs in a sandboxed environment that prevents malicious code from 
 
 ### 🎯 **Recent Milestones (Q1 2025)**
 
-- **✅ Sprint 0 & 1 Complete** - Fixed all critical issues in under 1 hour
-- **✅ 100% Test Success** - All 51 tests passing, production ready
-- **✅ Windows Native Support** - No more WSL2 dependency
-- **✅ Async Infrastructure** - Full async/await support
-- **✅ Enterprise Architecture** - Ready for production deployment
+-   **✅ Sprint 0 & 1 Complete** - Fixed all critical issues in under 1 hour
+-   **✅ 100% Test Success** - All 51 tests passing, production ready
+-   **✅ Windows Native Support** - No more WSL2 dependency
+-   **✅ Async Infrastructure** - Full async/await support
+-   **✅ Enterprise Architecture** - Ready for production deployment
 
 [// marketing claims trimmed for Early Alpha accuracy]
 
@@ -678,13 +841,13 @@ curl.exe -s http://127.0.0.1:1234/v1/models
 
 ## 🔜 Later development – Privacy export hardening
 
-- Privacy levels: `public_safe` (default), `team_safe` (masked paths + selected diffs/logs), `full_internal` (raw outputs allowed).
-- RAW toggle: `EXPORT_INCLUDE_RAW=1` to include raw model outputs where allowed.
-- Redactions: always mask absolute paths and usernames in `team_safe`; normalize to relative POSIX paths and replace home with `~`.
-- Determinism: normalize line endings to `\n`, sort `files[]` lexicographically, set zip comment (run_id, privacy, schema versions).
-- Truncation: per‑file size cap with byte‑exact streaming; write `*_TRUNCATED.txt`; set `bundle_truncated=true` and list categories in `manifest.redactions` and README_case.
-- Concurrency: simple lock around export per `run_id` to avoid collisions.
-- Policy precedence: CLI > env > defaults; unknown privacy level falls back to `public_safe` and records a manifest warning.
+-   Privacy levels: `public_safe` (default), `team_safe` (masked paths + selected diffs/logs), `full_internal` (raw outputs allowed).
+-   RAW toggle: `EXPORT_INCLUDE_RAW=1` to include raw model outputs where allowed.
+-   Redactions: always mask absolute paths and usernames in `team_safe`; normalize to relative POSIX paths and replace home with `~`.
+-   Determinism: normalize line endings to `\n`, sort `files[]` lexicographically, set zip comment (run_id, privacy, schema versions).
+-   Truncation: per‑file size cap with byte‑exact streaming; write `*_TRUNCATED.txt`; set `bundle_truncated=true` and list categories in `manifest.redactions` and README_case.
+-   Concurrency: simple lock around export per `run_id` to avoid collisions.
+-   Policy precedence: CLI > env > defaults; unknown privacy level falls back to `public_safe` and records a manifest warning.
 
 ## 🤝 **Contributing**
 
@@ -710,10 +873,10 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🎉 **Acknowledgments**
 
-- **LM Studio** - For local model serving
-- **vLLM** - For high-performance inference
-- **Meta** - For Llama models
-- **Mistral AI** - For Mistral models
+-   **LM Studio** - For local model serving
+-   **vLLM** - For high-performance inference
+-   **Meta** - For Llama models
+-   **Mistral AI** - For Mistral models
 
 ---
 

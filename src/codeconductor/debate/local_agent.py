@@ -5,6 +5,8 @@ Adapts the AI Project Advisor agent system to use local models instead of OpenAI
 """
 
 import logging
+import os
+from typing import Any, Dict
 
 from ..ensemble.ensemble_engine import EnsembleEngine
 from ..ensemble.model_manager import ModelManager
@@ -28,8 +30,16 @@ class LocalAIAgent:
         """Add a message to conversation history"""
         self.conversation_history.append({"role": role, "content": content})
 
+    def _check_gpu_disabled(self) -> bool:
+        """Kontrollera om GPU är inaktiverad för tester"""
+        return os.getenv("CC_GPU_DISABLED", "0") == "1"
+
     async def generate_response(self, user_input: str) -> str:
         """Generate response using local ensemble"""
+        # Kontrollera GPU_DISABLED först
+        if self._check_gpu_disabled():
+            return f"[MOCKED] {self.name} response to: {user_input}"
+        
         self.add_message("user", user_input)
 
         try:
@@ -52,6 +62,54 @@ class LocalAIAgent:
         except Exception as e:
             logger.error(f"Error generating response for {self.name}: {e}")
             return f"Error: {str(e)}"
+
+    # Nya debate-metoder för att vara kompatibel med CodeConductorDebateManager
+    def propose(self, prompt: str, **kw) -> Dict[str, Any]:
+        """Generate initial proposal - kompatibel med nya debate-systemet"""
+        if self._check_gpu_disabled():
+            return {"content": f"[MOCKED] {prompt}", "agent": self.name, "type": "proposal"}
+        
+        # Använd generate_response som fallback
+        try:
+            import asyncio
+            response = asyncio.run(self.generate_response(prompt))
+            return {"content": response, "agent": self.name, "type": "proposal"}
+        except Exception as e:
+            return {"content": f"Error: {str(e)}", "agent": self.name, "type": "proposal"}
+
+    def rebuttal(self, state: Dict[str, Any], **kw) -> Dict[str, Any]:
+        """Generate rebuttal - kompatibel med nya debate-systemet"""
+        if self._check_gpu_disabled():
+            return {"content": f"[MOCKED] rebuttal for debate state", "agent": self.name, "type": "rebuttal"}
+        
+        # Skapa prompt från state
+        prompt = "Provide your rebuttal to the other proposals."
+        if isinstance(state, dict) and "prompt" in state:
+            prompt = state["prompt"]
+        
+        try:
+            import asyncio
+            response = asyncio.run(self.generate_response(prompt))
+            return {"content": response, "agent": self.name, "type": "rebuttal"}
+        except Exception as e:
+            return {"content": f"Error: {str(e)}", "agent": self.name, "type": "rebuttal"}
+
+    def finalize(self, state: Dict[str, Any], **kw) -> Dict[str, Any]:
+        """Generate final recommendation - kompatibel med nya debate-systemet"""
+        if self._check_gpu_disabled():
+            return {"content": f"[MOCKED] final recommendation for debate", "agent": self.name, "type": "final"}
+        
+        # Skapa prompt från state
+        prompt = "Based on the debate so far, what is your final recommendation for the code implementation?"
+        if isinstance(state, dict) and "prompt" in state:
+            prompt = state["prompt"]
+        
+        try:
+            import asyncio
+            response = asyncio.run(self.generate_response(prompt))
+            return {"content": response, "agent": self.name, "type": "final"}
+        except Exception as e:
+            return {"content": f"Error: {str(e)}", "agent": self.name, "type": "final"}
 
     def get_conversation_history(self) -> list:
         """Get full conversation history"""

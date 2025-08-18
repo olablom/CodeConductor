@@ -19,6 +19,9 @@ from codeconductor.debate.shared_model_agent import (
 from codeconductor.ensemble.single_model_engine import SingleModelEngine
 
 
+import pytest
+
+@pytest.mark.asyncio
 async def test_shared_model_debate():
     """Test the debate system with multiple agents sharing one model"""
 

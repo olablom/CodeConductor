@@ -19,6 +19,9 @@ from codeconductor.monitoring.memory_watchdog import (
 )
 
 
+import pytest
+
+@pytest.mark.asyncio
 async def test_memory_management():
     """Test the memory management system"""
 
