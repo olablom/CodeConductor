@@ -39,8 +39,8 @@ chromadb>=0.4.0
 gymnasium>=1.2.0
 stable-baselines3>=2.0.0
 
-# Windows-specific (for notifications)
-win10toast>=0.9
+# Windows-specific (for notifications) - COMMENTED OUT for Linux CI compatibility
+# win10toast>=0.9
 
 # GPU monitoring (RTX 5090 support)
 pynvml>=11.5.0
