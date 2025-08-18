@@ -27,11 +27,21 @@ jobs:
           python -m pip install -U pip
           pip install -r requirements.txt
           
+      - name: Install package in editable mode
+        run: |
+          pip install -e .
+          
       - name: Run basic smoke tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
         run: |
           python -c "import codeconductor; print('✅ CodeConductor imports successfully')"
           
       - name: Run specific tests if they exist
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
+          CC_TESTING_MODE: 1
+          CC_GPU_DISABLED: 1
         run: |
           if [ -f "tests/test_cursor_local_api.py" ]; then
             python -m pytest -q tests/test_cursor_local_api.py
@@ -42,5 +52,5 @@ jobs:
           if [ -f "tests/test_personas_loading.py" ]; then
             python -m pytest -q tests/test_personas_loading.py
           else
-            echo "⚠️ test_personas_loading.py not found, skipping"
+            echo "⚠️ test_cursor_local_api.py not found, skipping"
           fi

@@ -39,8 +39,16 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest-json-report pytest-cov pytest-timeout
+        
+    - name: Install package in editable mode
+      run: |
+        pip install -e .
 
     - name: Run tests with JSON report
+      env:
+        PYTHONPATH: ${{ github.workspace }}/src
+        CC_TESTING_MODE: 1
+        CC_GPU_DISABLED: 1
       run: |
         mkdir -p .artifacts
         python -m pytest tests/ -q --json-report --json-report-file .artifacts/report.json
@@ -74,6 +82,10 @@ jobs:
         PY
 
     - name: Run tests with coverage
+      env:
+        PYTHONPATH: ${{ github.workspace }}/src
+        CC_TESTING_MODE: 1
+        CC_GPU_DISABLED: 1
       run: |
         python -m pytest --cov=codeconductor --cov-config=.coveragerc --cov-report=term-missing --cov-report=html
 

@@ -21,6 +21,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           
+      - name: Install package in editable mode
+        run: |
+          pip install -e .
+          
       - name: Basic import test
         run: |
           python -c "import codeconductor; print('✅ CodeConductor imports successfully')"
@@ -29,5 +33,6 @@ jobs:
         env:
           CC_TESTING_MODE: 1
           CC_GPU_DISABLED: 1
+          PYTHONPATH: ${{ github.workspace }}/src
         run: |
           python -m pytest tests/ -v --tb=short --maxfail=3 -k "not vllm and not gpu"
