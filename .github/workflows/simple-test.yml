@@ -25,12 +25,12 @@ jobs:
           pip install -e .
           pip install -r requirements.txt
           
-      - name: Lint (no writes)
+      - name: Lint
         run: |
           pip install ruff black
           ruff check src tests
           black --check src tests
           
-      - name: Tests (mock: no GPU, no vLLM)
+      - name: Tests
         run: |
           python -m pytest -q -m "not gpu and not vllm" --tb=short -ra
