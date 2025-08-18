@@ -1,0 +1,22 @@
+[flake8]
+max-line-length = 88
+extend-ignore = 
+    E203,
+    E402,
+    E501,
+    F401,
+    F811,
+    F824
+exclude = 
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    build,
+    dist,
+    *.egg-info
+per-file-ignores =
+    src/codeconductor/app.py:E402
+    src/codeconductor/logger.py:E402
+    src/codeconductor/runners/test_runner.py:E402
+    src/codeconductor/ensemble/hybrid_ensemble.py:E402
