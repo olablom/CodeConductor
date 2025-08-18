@@ -21,7 +21,6 @@ except ImportError:
 
 # Import new clipboard enhancements
 try:
-    from .clipboard_monitor import ClipboardMonitor, get_global_monitor
     from .hotkeys import get_hotkey_manager, start_global_hotkeys, stop_global_hotkeys
     from .notifications import (
         get_notification_manager,
@@ -240,7 +239,6 @@ class CursorIntegration:
 
         # Initialize enhancements if available
         if self.enhancements_enabled:
-            self.clipboard_monitor = get_global_monitor()
             self.notification_manager = get_notification_manager()
             self.hotkey_manager = get_hotkey_manager()
             _log_info("Cursor integration enhancements enabled")

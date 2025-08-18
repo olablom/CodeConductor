@@ -81,7 +81,7 @@ def generate_test_report():
             print("\n🌐 Öppnar coverage report...")
             try:
                 webbrowser.open("htmlcov/index.html")
-            except:
+            except Exception:
                 print("  Kunde inte öppna browser, öppna htmlcov/index.html manuellt")
 
         return result.returncode == 0

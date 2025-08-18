@@ -99,7 +99,7 @@ class HybridEnsemble:
 
                 if self.cloud_escalator.is_available():
                     # Get suggested cloud models
-                    cloud_models = complexity.suggested_models[:2]  # Use top 2
+                    complexity.suggested_models[:2]  # Use top 2
 
                     # Escalate to cloud with timeout
                     try:
@@ -204,7 +204,7 @@ class HybridEnsemble:
         total_responses = len(local_responses)
         response_quality = 0.0
 
-        for model_id, response in local_responses.items():
+        for _model_id, response in local_responses.items():
             if isinstance(response, dict) and "error" not in response:
                 valid_responses += 1
 
@@ -289,7 +289,7 @@ class HybridEnsemble:
         all_responses = []
 
         # Add local responses - PASS ORIGINAL FORMAT TO CONSENSUS CALCULATOR
-        for model_id, response in local_responses.items():
+        for _model_id, response in local_responses.items():
             if isinstance(response, dict) and "error" not in response:
                 # Pass the original OpenAI format directly to consensus calculator
                 all_responses.append(response)
@@ -343,7 +343,7 @@ class HybridEnsemble:
         try:
             local_models = await self.model_manager.list_models()
             local_count = len(local_models) if local_models else 0
-        except:
+        except Exception:
             local_count = 0
 
         return {

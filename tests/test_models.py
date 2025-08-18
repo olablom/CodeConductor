@@ -24,7 +24,7 @@ def get_vram_usage():
         if result.returncode == 0:
             used, total = result.stdout.strip().split(", ")
             return int(used), int(total)
-    except:
+    except Exception:
         pass
     return None, None
 
@@ -70,7 +70,7 @@ async def test_models():
         "reviewer": "Review this code for security vulnerabilities",
     }
 
-    for agent_type, prompt in test_prompts.items():
+    for agent_type, _prompt in test_prompts.items():
         selected_models = await mm.get_models_for_agent(agent_type, 1)
         if selected_models:
             model = selected_models[0]

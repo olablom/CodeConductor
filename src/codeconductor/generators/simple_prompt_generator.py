@@ -148,7 +148,7 @@ Please provide the complete API implementation including necessary imports."""
             ),
         ]
 
-        for i, (task_type, approach) in enumerate(approaches[:count]):
+        for _i, (_task_type, approach) in enumerate(approaches[:count]):
             base_prompt = self._class_template(task)
             enhanced_prompt = f"{base_prompt}\n\nApproach: {approach}"
             prompts.append(enhanced_prompt)

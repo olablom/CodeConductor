@@ -112,7 +112,10 @@ async def test_debate_conduct_basic():
 
     # Mock the generate_response method to avoid actual model calls
     for agent in mgr.agents:
-        agent.generate_response = lambda prompt, timeout=30.0: f"Mock response from {agent.name}"
+        agent_name = agent.name  # Capture the name to avoid loop variable issue
+        agent.generate_response = (
+            lambda prompt, timeout=30.0, name=agent_name: f"Mock response from {name}"
+        )
 
     result = await mgr.conduct_debate("Test prompt")
 

@@ -81,7 +81,6 @@ if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
 
 
-
 def _auto_prune_on_start() -> None:
     """Optionally prune exports and runs on Streamlit app startup."""
     try:
@@ -1235,7 +1234,7 @@ class CodeConductorApp:
                     st.markdown(f"**Uptime:** {health_data.get('uptime', 'Unknown')}")
                 else:
                     st.warning("⚠️ Health API responding but status unclear")
-            except:
+            except Exception:
                 st.error("❌ Health API not reachable")
                 st.info("💡 Start health_api.py to enable monitoring")
 
@@ -1275,7 +1274,7 @@ class CodeConductorApp:
                 memory = psutil.virtual_memory()
                 st.markdown(f"**Memory:** {memory.percent:.1f}% used")
                 st.markdown(f"**Available:** {memory.available // (1024**3):.1f} GB")
-            except:
+            except Exception:
                 st.info("ℹ️ Memory info not available")
 
         # Help Section
@@ -1347,7 +1346,7 @@ class CodeConductorApp:
                         health = asyncio.run(self.model_manager.check_health(model))
                         status_icon = "✅" if health else "❌"
                         status_class = "healthy" if health else "unhealthy"
-                    except:
+                    except Exception:
                         status_icon = "⚠️"
                         status_class = "unknown"
 
@@ -1608,7 +1607,7 @@ class CodeConductorApp:
         """Run code generation with hybrid ensemble."""
         progress_bar = st.progress(0)
         status_text = st.empty()
-        start_time = time.time()
+        time.time()
 
         try:
             # Step 1: Complexity analysis

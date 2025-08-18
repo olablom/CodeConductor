@@ -71,7 +71,7 @@ class TreeSitterAnalyzer:
             self.parsers["typescript"] = ts_parser
             self.parsers["ts"] = ts_parser
             self.languages["typescript"] = TS_LANGUAGE
-        except:
+        except Exception:
             print("TypeScript parser not available")
 
     def analyze_file(self, file_path: str) -> list[CodeElement]:
@@ -341,9 +341,9 @@ class TreeSitterAnalyzer:
     def _build_cross_references(self, elements: list[CodeElement]) -> dict[str, Any]:
         """Build cross-references between code elements"""
         # Group elements by type
-        functions = [e for e in elements if e.type == "function"]
+        [e for e in elements if e.type == "function"]
         classes = [e for e in elements if e.type == "class"]
-        methods = [e for e in elements if e.type == "method"]
+        [e for e in elements if e.type == "method"]
 
         # Build import graph (simplified for now)
         cross_refs = {

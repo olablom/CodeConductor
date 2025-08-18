@@ -106,7 +106,7 @@ class SimpleRLHFAgent:
 
     def reset_weights(self):
         """Reset all weights to equal values"""
-        num_models = len(self.weights)
+        len(self.weights)
         for model in self.weights:
             self.weights[model] = 1.0
         self.save_weights()

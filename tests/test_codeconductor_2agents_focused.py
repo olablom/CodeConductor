@@ -126,7 +126,7 @@ class FocusedCodeConductorTester:
                     and binary_search(arr, 1) == 0
                     and binary_search(arr, 15) == 7
                 )
-        except:
+        except Exception:
             pass
         return False
 
@@ -146,7 +146,7 @@ class FocusedCodeConductorTester:
             if fibonacci:
                 # Test with known values
                 return fibonacci(0) == 0 and fibonacci(1) == 1 and fibonacci(5) == 5
-        except:
+        except Exception:
             # If execution fails, check if code contains fibonacci patterns
             return ("def fibonacci" in code or "def fib" in code) and ("return" in code)
         return False
@@ -201,9 +201,9 @@ class FocusedCodeConductorTester:
                 try:
                     result2 = divide(10, 0)
                     return result1 == 5 and result2 is not None  # Should handle error
-                except:
+                except Exception:
                     return result1 == 5  # Exception handling is also valid
-        except:
+        except Exception:
             # If execution fails, check if code contains error handling patterns
             return ("try:" in code and "except" in code) or (
                 "if" in code and "ZeroDivisionError" in code

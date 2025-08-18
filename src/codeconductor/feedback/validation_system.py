@@ -387,7 +387,7 @@ class CodeValidator:
                 metrics["total_functions"] += 1
             elif isinstance(node, ast.ClassDef):
                 metrics["total_classes"] += 1
-            elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            elif isinstance(node, ast.Import | ast.ImportFrom):
                 metrics["total_imports"] += 1
 
         # Simple complexity calculation

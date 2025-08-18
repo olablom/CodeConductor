@@ -158,7 +158,7 @@ def prune_exports(
     # Optional size cap for exports dir
     def _dir_size_bytes(p: Path) -> int:
         total = 0
-        for root, dirs, files in os.walk(p):
+        for root, _dirs, files in os.walk(p):
             # Skip internal temp folders
             if any(skip in root for skip in (".trash", "_unzipped")):
                 continue

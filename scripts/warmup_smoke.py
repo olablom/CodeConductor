@@ -77,10 +77,9 @@ def main() -> int:
     p.add_argument("--prompts", type=int, default=5, help="number of prompts")
     args = p.parse_args()
 
-    server_thread: threading.Thread | None = None
     if args.start_server:
         try:
-            server_thread = start_server_in_thread(args.host, args.port)
+            start_server_in_thread(args.host, args.port)
         except Exception as e:
             print(f"Failed to start server: {e}")
             return 1

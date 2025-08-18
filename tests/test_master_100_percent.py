@@ -259,7 +259,7 @@ class Master100PercentTester:
             initial_weight = rlhf.get_model_weight(model)
 
             # Simulate success updates
-            for i in range(5):
+            for _i in range(5):
                 rlhf.update_weights(model, success=True, quality=0.8)
 
             final_weight = rlhf.get_model_weight(model)

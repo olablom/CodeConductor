@@ -213,12 +213,10 @@ Examples:
         if getattr(args, "real", False) and not quick:
             try:
                 import time
-                from datetime import datetime
 
                 import requests  # type: ignore
             except Exception:
                 time = None
-                datetime = None
                 requests = None
 
             backend = None

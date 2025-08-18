@@ -182,7 +182,7 @@ def cleanup_runs(
     # Optional size cap for entire artifacts
     def _dir_size_bytes(p: Path) -> int:
         total = 0
-        for root, dirs, files in os.walk(p):
+        for root, _dirs, files in os.walk(p):
             if any(skip in root for skip in (".trash", ".prune.lock", "_unzipped")):
                 continue
             for fn in files:

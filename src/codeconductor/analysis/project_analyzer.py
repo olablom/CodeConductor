@@ -145,7 +145,7 @@ class ProjectAnalyzer:
             # Look for FastAPI route decorators
             for node in ast.walk(tree):
                 # Check both regular and async functions
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
                     # Check if function has route decorators
                     for decorator in node.decorator_list:
                         if self._is_route_decorator(decorator):

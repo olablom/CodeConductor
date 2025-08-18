@@ -25,7 +25,6 @@ except ImportError:
     print("⚠️ stable-baselines3 not available. Install with: pip install stable-baselines3")
 
 try:
-    import gymnasium as gym
     from gymnasium import Env, spaces
 
     GYM_AVAILABLE = True
@@ -102,7 +101,7 @@ class CodeConductorEnv(Env):
             valid_patterns = [
                 p
                 for p in patterns
-                if p.get("reward") is not None and isinstance(p.get("reward"), (int, float))
+                if p.get("reward") is not None and isinstance(p.get("reward"), int | float)
             ]
 
             if len(valid_patterns) > self.max_patterns:

@@ -8,6 +8,11 @@ ignore = [
   "E501",  # line-too-long, handled by black
 ]
 
+[lint.per-file-ignores]
+"src/codeconductor/app.py" = ["E402"]
+"src/codeconductor/cli.py" = ["E402"]
+"src/codeconductor/dashboard.py" = ["E402"]
+
 [format]
 quote-style = "double"
 indent-style = "space"

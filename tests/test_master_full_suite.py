@@ -343,7 +343,7 @@ class MasterTestSuite:
 
         # Test TTFT (Time To First Token)
         ttft_results = []
-        for i in range(5):
+        for _i in range(5):
             start_time = time.time()
             request = SingleModelRequest(task_description="Hello, world!")
             response = await self.single_engine.process_request(request)

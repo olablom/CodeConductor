@@ -249,7 +249,7 @@ class RAGRLHFIntegrationTester:
             initial_performance = 0.6
             final_performance = initial_performance
 
-            for i in range(iterations):
+            for _i in range(iterations):
                 # Simulate debate with current performance
                 debate_result = await self.simulate_debate_with_performance(final_performance)
 

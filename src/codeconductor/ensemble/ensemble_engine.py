@@ -262,16 +262,6 @@ class EnsembleEngine:
             )
         except Exception as e:
             logger.warning(f"Export attach failed: {e}")
-        try:
-            return self.response_cache.make_key(
-                prompt=prompt,
-                persona=persona,
-                policy=policy,
-                model=model,
-                params=sampling,
-            )
-        except Exception:
-            return ""
 
     def _initialize_rlhf(self):
         """Initialize RLHF agent if available."""

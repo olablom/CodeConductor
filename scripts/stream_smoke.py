@@ -140,10 +140,9 @@ def main() -> int:
     p.add_argument("--start-server", action="store_true", help="start uvicorn server in background")
     args = p.parse_args()
 
-    server_thread: threading.Thread | None = None
     if args.start_server:
         try:
-            server_thread = start_server_in_thread(args.host, args.port)
+            start_server_in_thread(args.host, args.port)
         except Exception as e:
             print(f"Failed to start server: {e}")
             return 1

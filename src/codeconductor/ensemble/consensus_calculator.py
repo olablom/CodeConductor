@@ -208,7 +208,7 @@ class ConsensusCalculator:
         try:
             ast.parse(code)
             score += 0.2
-        except:
+        except Exception:
             pass
 
         # 2. Check for docstrings

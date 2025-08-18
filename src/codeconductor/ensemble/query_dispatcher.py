@@ -237,15 +237,9 @@ class QueryDispatcher:
                         data = await resp.json()
                         logger.info(f"✅ Got response from {model_info.id} despite timeout")
                         return model_info.id, data
-            except:
+            except Exception:
                 pass
             return model_info.id, {"error": "timeout", "model": model_info.id}
-        except ClientError as e:
-            logger.error(f"❌ HTTP error for {model_info.id}: {e}")
-            return model_info.id, {"error": str(e), "model": model_info.id}
-        except Exception as e:
-            logger.error(f"❌ Unexpected error for {model_info.id}: {e}")
-            return model_info.id, {"error": str(e), "model": model_info.id}
 
     async def _query_ollama_model(
         self, session: ClientSession, model_info: ModelInfo, prompt: str

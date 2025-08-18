@@ -462,7 +462,7 @@ class ValidationDashboard:
         avg_confidence = cc_data["Model_Confidence"].astype(float).mean() * 100
         avg_agreement = cc_data["Ensemble_Agreement"].astype(float).mean() * 100
         avg_reward = cc_data["RLHF_Reward"].astype(float).mean() * 100
-        avg_cognitive = cc_data["Cognitive_Load"].astype(float).mean()
+        cc_data["Cognitive_Load"].astype(float).mean()
         avg_satisfaction = cc_data["Satisfaction_Score"].astype(float).mean()
 
         # Create simple bar chart

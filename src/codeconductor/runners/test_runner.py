@@ -149,7 +149,6 @@ class PytestRunner:
                     dt_out = dt_proc.stdout + dt_proc.stderr
                     # Parse doctest summary
                     tests = 0
-                    fails = 0
                     for line in dt_out.strip().splitlines()[::-1]:
                         if "failed," in line and "passed" in line:
                             # e.g., 1 items had failures: ... 1 tests in ...
@@ -159,7 +158,7 @@ class PytestRunner:
                             m = re.search(r"(\d+)\s+passed\s+and\s+(\d+)\s+failed", line)
                             if m:
                                 tests = int(m.group(1)) + int(m.group(2))
-                                fails = int(m.group(2))
+                                int(m.group(2))
                             break
                         if re.search(r"(\d+)\s+tests?\s+in", line):
                             # fallback: not strictly needed

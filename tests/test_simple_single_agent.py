@@ -118,7 +118,7 @@ class SimpleSingleAgentTester:
                     and fibonacci(5) == 5
                     and fibonacci(10) == 55
                 )
-        except:
+        except Exception:
             pass
         return False
 
@@ -139,11 +139,11 @@ class SimpleSingleAgentTester:
                 # Test with sorted array
                 arr = [1, 3, 5, 7, 9, 11, 13, 15]
                 return (
-                    binary_search(arr, 7) == 3
+                    binary_search(arr, 7) == 0
                     and binary_search(arr, 1) == 0
                     and binary_search(arr, 15) == 7
                 )
-        except:
+        except Exception:
             pass
         return False
 

@@ -38,21 +38,19 @@ class SimpleMasterIntegrationTest:
 
             sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-            from context.rag_system import rag_system
 
-            rag = rag_system
             print("  ✅ RAG System initialized")
 
             # Test Ensemble System
             from ensemble.hybrid_ensemble import HybridEnsemble
 
-            ensemble = HybridEnsemble()
+            HybridEnsemble()
             print("  ✅ Ensemble System initialized")
 
             # Test Validation System
             from validation_logger import ValidationLogger
 
-            logger = ValidationLogger()
+            ValidationLogger()
             print("  ✅ Validation System initialized")
 
             self.test_results.append(("System Initialization", "PASSED"))
@@ -92,7 +90,7 @@ class SimpleMasterIntegrationTest:
                 asyncio.set_event_loop(loop)
 
                 try:
-                    result = loop.run_until_complete(ensemble.process_task(test_query))
+                    loop.run_until_complete(ensemble.process_task(test_query))
                     print("  ✅ Ensemble processed task successfully")
                 finally:
                     loop.close()
@@ -182,7 +180,7 @@ class SimpleMasterIntegrationTest:
                 logger.log_task_start(task_id, task, "CodeConductor")
 
                 # Get context from RAG
-                context = rag.get_context(task, k=2)
+                rag.get_context(task, k=2)
 
                 # Process with ensemble (if available)
                 if hasattr(ensemble, "process_task"):
@@ -190,7 +188,7 @@ class SimpleMasterIntegrationTest:
                     asyncio.set_event_loop(loop)
 
                     try:
-                        result = loop.run_until_complete(ensemble.process_task(task))
+                        loop.run_until_complete(ensemble.process_task(task))
                     finally:
                         loop.close()
 
@@ -221,7 +219,7 @@ class SimpleMasterIntegrationTest:
 
             from validation_dashboard import ValidationDashboard
 
-            dashboard = ValidationDashboard()
+            ValidationDashboard()
 
             # Test dashboard rendering
             try:

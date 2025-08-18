@@ -691,10 +691,7 @@ class ComprehensiveStressTester:
         await asyncio.sleep(0.05)
         return True
 
-    async def simulate_error_handling(self, error):
-        """Simulate error handling"""
-        await asyncio.sleep(0.05)
-        return True
+
 
     async def simulate_edge_case_handling(self, case):
         """Simulate edge case handling"""

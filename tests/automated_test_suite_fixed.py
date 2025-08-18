@@ -240,7 +240,6 @@ class ValidationSystemTestSuite(unittest.TestCase):
         for i in range(20):
             task_id = f"Metrics_{i}"
             mode = "Manual" if i % 2 == 0 else "CodeConductor"
-            duration = 300 if mode == "Manual" else 30  # 5 min vs 30 sec
 
             logger.log_task_start(task_id, f"Metrics task {i}", mode)
             time.sleep(0.01)
@@ -401,7 +400,7 @@ class ValidationSystemTestSuite(unittest.TestCase):
 
         # Test complete workflow
         logger = ValidationLogger()
-        dashboard = ValidationDashboard()
+        ValidationDashboard()
 
         # Log realistic data
         tasks = [

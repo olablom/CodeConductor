@@ -278,7 +278,7 @@ class LearningSystem:
             pattern_time = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
             now = datetime.now(pattern_time.tzinfo)
             return (now - pattern_time).days <= days
-        except:
+        except Exception:
             return False
 
     def delete_pattern(self, index: int) -> bool:

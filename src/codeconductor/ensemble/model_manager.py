@@ -705,7 +705,7 @@ class ModelManager:
             logger.info(f"🎯 Specialty: {model_info['specialty']}")
 
             # Start download in background
-            process = subprocess.Popen(
+            subprocess.Popen(
                 download_cmd.split(),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -1231,32 +1231,7 @@ class ModelManager:
             logger.error(f"🎮 PowerShell GPU memory check failed: {e}")
             return None
 
-    async def emergency_unload_all(self):
-        """Emergency unload all models to free GPU memory"""
-        try:
-            logger.info("🚨 Starting emergency unload...")
 
-            # Get currently loaded models
-            loaded_status = await self.get_loaded_models_status()
-            logger.info(f"🚨 loaded_status: {loaded_status}")
-
-            loaded_models = loaded_status.get("loaded_models", [])
-            logger.info(f"🚨 Found {len(loaded_models)} models to unload: {loaded_models}")
-
-            unloaded_count = 0
-            for model in loaded_models:
-                logger.info(f"🚨 Attempting to unload: {model}")
-                if await self.unload_model_via_cli(model):
-                    unloaded_count += 1
-                    logger.info(f"🚨 Successfully unloaded: {model}")
-                else:
-                    logger.warning(f"🚨 Failed to unload: {model}")
-
-            logger.info(f"🚨 Emergency unloaded {unloaded_count} models")
-            return unloaded_count
-        except Exception as e:
-            logger.error(f"❌ Emergency unload failed: {e}")
-            return 0
 
     async def smart_memory_cleanup(self, target_vram_percent: float = 60) -> int:
         """
@@ -1380,51 +1355,7 @@ class ModelManager:
             logger.error(f"❌ Memory check failed: {e}")
             return False
 
-    async def ensure_models_loaded_with_memory_check(self, config_name="medium_load"):
-        """Load models with memory safety checks for RTX 5090"""
-        # Strict guard: if strict selector/force is enabled, bypass profiles and load only the forced model
-        if self._strict_selector:
-            forced = (
-                os.getenv("FORCE_MODEL")
-                or os.getenv("WINNER_MODEL")
-                or os.getenv("ENGINE_MODEL_ALLOWLIST")
-            )
-            if forced:
-                forced = forced.strip()
-                logger.info(
-                    f"🔒 Strict selector active — bypassing '{config_name}' profile, targeting only: {forced}"
-                )
-                return await self.ensure_models_loaded([forced])
 
-        config = MEMORY_CONFIGS.get(config_name, MEMORY_CONFIGS["medium_load"])
-
-        # Check and cleanup memory before loading
-        await self.check_and_cleanup_memory(config_name)
-
-        # Check available memory
-        gpu_info = await self.get_gpu_memory_info()
-        if gpu_info:
-            logger.info(
-                f"🎮 RTX 5090 Memory: {gpu_info['used_gb']:.1f}GB used, {gpu_info['free_gb']:.1f}GB free"
-            )
-
-            # Check if we have enough VRAM for the config
-            if gpu_info["usage_percent"] > config.get("max_vram_percent", 60):
-                logger.warning(
-                    f"⚠️ VRAM usage ({gpu_info['usage_percent']:.1f}%) exceeds config limit ({config.get('max_vram_percent', 60)}%)"
-                )
-                # Try to cleanup and reload
-                await self.smart_memory_cleanup(config.get("max_vram_percent", 60) - 10)
-
-                # Check again after cleanup
-                gpu_info = await self.get_gpu_memory_info()
-                if gpu_info and gpu_info["usage_percent"] > config.get("max_vram_percent", 60):
-                    logger.warning("⚠️ Still insufficient VRAM after cleanup, using fallback")
-                    return await self.smart_memory_fallback(gpu_info["free_gb"])
-
-        # Proceed with loading
-        logger.info(f"🚀 Loading {config_name} config: {config['description']}")
-        return await self.ensure_models_loaded(config["models"])
 
     async def smart_memory_fallback(self, available_gb: float):
         """Smart fallback based on available GPU memory for RTX 5090"""

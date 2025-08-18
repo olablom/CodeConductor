@@ -145,7 +145,7 @@ class CodeConductorTester:
             if "fibonacci" in exec_globals:
                 fib = exec_globals["fibonacci"]
                 return fib(5) == 5 and fib(10) == 55
-        except:
+        except Exception:
             pass
         return False
 
@@ -158,7 +158,7 @@ class CodeConductorTester:
             if "validate_email" in exec_globals:
                 validate = exec_globals["validate_email"]
                 return validate("test@example.com") and not validate("invalid-email")
-        except:
+        except Exception:
             pass
         return False
 
@@ -180,7 +180,7 @@ class CodeConductorTester:
                 # Test basic CRUD operations
                 todo.add("Test task")
                 return len(todo.tasks) > 0
-        except:
+        except Exception:
             pass
         return False
 

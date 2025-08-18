@@ -72,7 +72,7 @@ class PlannerAgent:
             "tests": [],
         }
 
-        for root, dirs, files in os.walk(self.project_path):
+        for root, _dirs, files in os.walk(self.project_path):
             for file in files:
                 if file.endswith(".py"):
                     rel_path = os.path.relpath(os.path.join(root, file), self.project_path)
