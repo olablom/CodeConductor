@@ -15,8 +15,7 @@ plotly>=5.17.0
 numpy>=1.23.0
 
 # LLM and AI dependencies
-torch==2.7.0+cu128; sys_platform=="linux" and platform_machine=="x86_64"
-torch==2.7.0; sys_platform!="linux" or platform_machine!="x86_64"
+torch>=2.0.0
 torchvision
 torchaudio
 transformers>=4.40.0
