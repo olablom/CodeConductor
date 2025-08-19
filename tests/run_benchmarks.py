@@ -33,6 +33,9 @@ def main():
         "agent_count": args.agent_count,
         "mode": "quick" if args.quick else "full",
     }
+    # Write to file for CI artifacts
+    with open("benchmark_results.json", "w") as f:
+        json.dump(out, f, indent=2)
     print(json.dumps(out, indent=2))
 
 
