@@ -7,7 +7,7 @@ import asyncio
 import os
 import subprocess
 
-from src.codeconductor.ensemble.model_manager import ModelManager
+from codeconductor.ensemble.model_manager import ModelManager
 
 
 def get_vram_usage():
