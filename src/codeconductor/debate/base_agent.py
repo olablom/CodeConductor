@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # filename: src/codeconductor/debate/base_agent.py
 from __future__ import annotations
+
 import os
-from typing import Any, Dict
+from typing import Any
+
 from ..utils.async_tools import ensure_async
 
 
@@ -30,7 +32,7 @@ class BaseAIAgent:
         return os.getenv("CC_GPU_DISABLED", "0") == "1"
 
     # Subklasser definierar dessa (sync eller async går bra)
-    def propose(self, prompt: str, **kw) -> Dict[str, Any]:
+    def propose(self, prompt: str, **kw) -> dict[str, Any]:
         if self._check_gpu_disabled():
             return {
                 "content": "[MOCKED] " + str(prompt),
@@ -39,7 +41,7 @@ class BaseAIAgent:
             }
         raise NotImplementedError("Subklasser måste implementera propose")
 
-    def rebuttal(self, state: Dict[str, Any], **kw) -> Dict[str, Any]:
+    def rebuttal(self, state: dict[str, Any], **kw) -> dict[str, Any]:
         if self._check_gpu_disabled():
             return {
                 "content": "[MOCKED] rebuttal for " + str(state),
@@ -48,7 +50,7 @@ class BaseAIAgent:
             }
         raise NotImplementedError("Subklasser måste implementera rebuttal")
 
-    def finalize(self, state: Dict[str, Any], **kw) -> Dict[str, Any]:
+    def finalize(self, state: dict[str, Any], **kw) -> dict[str, Any]:
         if self._check_gpu_disabled():
             return {
                 "content": "[MOCKED] final for " + str(state),

@@ -6,7 +6,7 @@ Adapts the AI Project Advisor agent system to use local models instead of OpenAI
 
 import logging
 import os
-from typing import Any, Dict
+from typing import Any
 
 from ..ensemble.ensemble_engine import EnsembleEngine
 from ..ensemble.model_manager import ModelManager
@@ -64,7 +64,7 @@ class LocalAIAgent:
             return "Error: " + str(e)
 
     # Nya debate-metoder för att vara kompatibel med CodeConductorDebateManager
-    def propose(self, prompt: str, **kw) -> Dict[str, Any]:
+    def propose(self, prompt: str, **kw) -> dict[str, Any]:
         """Generate initial proposal - kompatibel med nya debate-systemet"""
         if self._check_gpu_disabled():
             return {
@@ -86,7 +86,7 @@ class LocalAIAgent:
                 "type": "proposal",
             }
 
-    def rebuttal(self, state: Dict[str, Any], **kw) -> Dict[str, Any]:
+    def rebuttal(self, state: dict[str, Any], **kw) -> dict[str, Any]:
         """Generate rebuttal - kompatibel med nya debate-systemet"""
         if self._check_gpu_disabled():
             return {
@@ -112,7 +112,7 @@ class LocalAIAgent:
                 "type": "rebuttal",
             }
 
-    def finalize(self, state: Dict[str, Any], **kw) -> Dict[str, Any]:
+    def finalize(self, state: dict[str, Any], **kw) -> dict[str, Any]:
         """Generate final recommendation - kompatibel med nya debate-systemet"""
         if self._check_gpu_disabled():
             return {

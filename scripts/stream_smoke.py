@@ -116,7 +116,9 @@ def run_smoke(host: str, port: int, prompt: str, timeout: float) -> int:
         "tps": round(tps, 2),
         "sample": token_text[:80],
     }
-    out_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    out_path.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     print("SSE smoke: OK")
     print(f"  TTFT: {ttft_ms if ttft_ms is not None else 'n/a'} ms")
@@ -136,8 +138,12 @@ def main() -> int:
         default=["Hello from streaming test"],
         help="Prompt(s) to stream; can be repeated",
     )
-    p.add_argument("--timeout", type=float, default=5.0, help="overall read timeout (s)")
-    p.add_argument("--start-server", action="store_true", help="start uvicorn server in background")
+    p.add_argument(
+        "--timeout", type=float, default=5.0, help="overall read timeout (s)"
+    )
+    p.add_argument(
+        "--start-server", action="store_true", help="start uvicorn server in background"
+    )
     args = p.parse_args()
 
     if args.start_server:

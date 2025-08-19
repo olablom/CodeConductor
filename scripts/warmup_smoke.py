@@ -92,7 +92,9 @@ def main() -> int:
         "warmup: sql select 1",
     ]
     if args.prompts > 0 and args.prompts != len(prompts):
-        prompts = (prompts * ((args.prompts + len(prompts) - 1) // len(prompts)))[: args.prompts]
+        prompts = (prompts * ((args.prompts + len(prompts) - 1) // len(prompts)))[
+            : args.prompts
+        ]
 
     ttfts: list[int] = []
     for pr in prompts:
@@ -117,8 +119,12 @@ def main() -> int:
         "ttft_ms": ttfts,
         "median_ttft_ms": med,
     }
-    out_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({"median_ttft_ms": med, "path": str(out_path)}, ensure_ascii=False))
+    out_path.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    print(
+        json.dumps({"median_ttft_ms": med, "path": str(out_path)}, ensure_ascii=False)
+    )
     return 0
 
 

@@ -89,7 +89,9 @@ def classify_bundle(zip_path: Path) -> BundleInfo:
                 )
 
             # Consider as full if required files exist; tests/diffs may be optional v1
-            return BundleInfo(zip_path, is_full=True, reason="ok", run_id=manifest.get("run_id"))
+            return BundleInfo(
+                zip_path, is_full=True, reason="ok", run_id=manifest.get("run_id")
+            )
 
     except Exception as e:
         return BundleInfo(zip_path, is_full=False, reason=f"zip_error:{e}", run_id=None)
@@ -135,7 +137,9 @@ def prune_exports(
         print(json.dumps({"locked": True, "where": str(lock_dir)}))
         return {"locked": True}
 
-    zips = sorted(exports_dir.glob("*.zip"), key=lambda p: p.stat().st_mtime, reverse=True)
+    zips = sorted(
+        exports_dir.glob("*.zip"), key=lambda p: p.stat().st_mtime, reverse=True
+    )
     infos: list[BundleInfo] = [classify_bundle(p) for p in zips]
 
     full = [b for b in infos if b.is_full]
@@ -302,7 +306,9 @@ def main() -> int:
         action="store_true",
         help="Delete minimal/incomplete bundles as well",
     )
-    parser.add_argument("--dry-run", action="store_true", help="Show actions without deleting")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show actions without deleting"
+    )
 
     args = parser.parse_args()
     artifacts = Path(args.artifacts_dir).resolve()

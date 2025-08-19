@@ -13,7 +13,9 @@ def test_closed_to_open_on_consec_fails(monkeypatch):
     mid = "m1"
     assert mgr.should_allow(mid) is True
     for _ in range(3):
-        mgr.update(mid, success=False, total_ms=1000, ttft_ms=None, error_class="timeout")
+        mgr.update(
+            mid, success=False, total_ms=1000, ttft_ms=None, error_class="timeout"
+        )
     st = mgr.get_state(mid)
     assert st.state == "Open"
     assert st.reason in ("CONSEC_FAILS", "timeout")

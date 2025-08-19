@@ -26,6 +26,7 @@ PERFORMANCE_TEST_CASES = [
 
 import pytest
 
+
 @pytest.mark.asyncio
 async def test_parallel_execution():
     """Test parallel execution of agents"""
@@ -241,10 +242,14 @@ async def run_performance_optimization_tests():
     successful_optimizations = sum(1 for r in results if r["success"])
     total_optimizations = len(results)
     success_rate = (
-        (successful_optimizations / total_optimizations) * 100 if total_optimizations > 0 else 0
+        (successful_optimizations / total_optimizations) * 100
+        if total_optimizations > 0
+        else 0
     )
 
-    avg_time = sum(r["execution_time"] for r in results) / len(results) if results else 0
+    avg_time = (
+        sum(r["execution_time"] for r in results) / len(results) if results else 0
+    )
 
     # Find best optimization
     successful_results = [r for r in results if r["success"]]
@@ -292,7 +297,9 @@ async def run_performance_optimization_tests():
     # Print final results
     print("\n" + "=" * 60)
     print("📊 PERFORMANCE OPTIMIZATION RESULTS:")
-    print(f"✅ Successful: {successful_optimizations}/{total_optimizations} ({success_rate:.1f}%)")
+    print(
+        f"✅ Successful: {successful_optimizations}/{total_optimizations} ({success_rate:.1f}%)"
+    )
     print(f"⏱️  Average time: {avg_time:.1f}s")
 
     if best_optimization:

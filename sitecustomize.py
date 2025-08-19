@@ -1,30 +1,41 @@
 # sitecustomize.py  — laddas automatiskt av Python om den ligger på sys.path
-import os, sys, types
+import os
+import sys
+import types
 
 # 1) Hårda CPU-only flaggor (innan allt annat)
 os.environ.setdefault("CC_ULTRA_MOCK", "1")
 os.environ.setdefault("CC_HARD_CPU_ONLY", "1")
 os.environ.setdefault("CC_GPU_DISABLED", "1")
 os.environ.setdefault("CC_TESTING_MODE", "1")
-os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")      # döljer GPU helt
-os.environ.setdefault("HF_HUB_OFFLINE", "1")          # inga modelldownloads
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")  # döljer GPU helt
+os.environ.setdefault("HF_HUB_OFFLINE", "1")  # inga modelldownloads
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 os.environ.setdefault("TORCH_USE_CUDA_DISABLED", "1")
 os.environ.setdefault("VLLM_NO_CUDA", "1")
 os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "0")
+
 
 # 2) Lätta stubbar som ersätter GPU-tunga paket
 def _make_stub(name: str):
     mod = types.ModuleType(name)
     # Minimalt API som ofta anropas
     if name == "torch":
+
         class _Cuda:
             @staticmethod
-            def is_available(): return False
-            def __getattr__(self, _): return False
+            def is_available():
+                return False
+
+            def __getattr__(self, _):
+                return False
+
         mod.cuda = _Cuda()
         mod.device = lambda *_a, **_k: "cpu"
-        def _no(*_a, **_k): return None
+
+        def _no(*_a, **_k):
+            return None
+
         mod.no_grad = _no
         mod.inference_mode = _no
         mod.__version__ = "2.0.0+mock"
@@ -42,8 +53,9 @@ def _make_stub(name: str):
     elif name == "GPUtil":
         mod.getGPUs = lambda: []
         mod.GPUtil = type("MockGPUtil", (), {})
-    
+
     sys.modules[name] = mod
+
 
 # 3) Pre-populera sys.modules med stubbar OCH override befintliga
 for pkg in ["torch", "torch.cuda", "transformers", "sentence_transformers", "GPUtil"]:
@@ -59,11 +71,13 @@ try:
             original_is_available = torch_mod.cuda.is_available
             # Override med False
             torch_mod.cuda.is_available = lambda: False
-            print(f"🔒 Overrode torch.cuda.is_available from {original_is_available} to False")
+            print(
+                f"🔒 Overrode torch.cuda.is_available from {original_is_available} to False"
+            )
         else:
-            print(f"🔒 torch.cuda.is_available not found, created stub")
+            print("🔒 torch.cuda.is_available not found, created stub")
     else:
-        print(f"🔒 torch not in sys.modules yet")
+        print("🔒 torch not in sys.modules yet")
 except Exception as e:
     print(f"⚠️  Error overriding torch.cuda.is_available: {e}")
 
@@ -80,8 +94,8 @@ try:
             result = torch_mod.cuda.is_available()
             print(f"   VERIFICATION: torch.cuda.is_available() = {result}")
         else:
-            print(f"   VERIFICATION: torch.cuda.is_available not accessible")
+            print("   VERIFICATION: torch.cuda.is_available not accessible")
     else:
-        print(f"   VERIFICATION: torch not in sys.modules")
+        print("   VERIFICATION: torch not in sys.modules")
 except Exception as e:
     print(f"   VERIFICATION ERROR: {e}")

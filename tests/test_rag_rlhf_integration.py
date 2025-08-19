@@ -80,7 +80,9 @@ class RAGRLHFIntegrationTester:
             # Check if search returns relevant results
             relevant_results = 0
             for query, results in search_results.items():
-                if len(results) > 0 and any(self.is_relevant(query, result) for result in results):
+                if len(results) > 0 and any(
+                    self.is_relevant(query, result) for result in results
+                ):
                     relevant_results += 1
 
             relevance_rate = (relevant_results / len(queries)) * 100
@@ -166,7 +168,9 @@ class RAGRLHFIntegrationTester:
 
             context_success = 0
             for scenario in scenarios:
-                context = await self.simulate_rag_context_retrieval(scenario["current_task"])
+                context = await self.simulate_rag_context_retrieval(
+                    scenario["current_task"]
+                )
                 if self.validate_context(context, scenario["expected_context"]):
                     context_success += 1
 
@@ -227,7 +231,9 @@ class RAGRLHFIntegrationTester:
             # Simulate feedback that should change weights
             feedback = {"success": True, "quality": 0.9, "model_used": "model1"}
 
-            updated_weights = await self.simulate_rlhf_weight_update(initial_weights, feedback)
+            updated_weights = await self.simulate_rlhf_weight_update(
+                initial_weights, feedback
+            )
 
             # Check if weights changed appropriately
             if updated_weights["model1"] > initial_weights["model1"]:
@@ -251,7 +257,9 @@ class RAGRLHFIntegrationTester:
 
             for _i in range(iterations):
                 # Simulate debate with current performance
-                debate_result = await self.simulate_debate_with_performance(final_performance)
+                debate_result = await self.simulate_debate_with_performance(
+                    final_performance
+                )
 
                 # Simulate feedback
                 feedback = self.generate_feedback(debate_result["quality"])
@@ -284,7 +292,9 @@ class RAGRLHFIntegrationTester:
             context = await self.simulate_rag_search("user authentication")
 
             # Step 2: Generate debate with context
-            debate = await self.simulate_debate_with_context("Create login API", context)
+            debate = await self.simulate_debate_with_context(
+                "Create login API", context
+            )
 
             # Step 3: Generate code
             code = await self.simulate_code_generation(debate)

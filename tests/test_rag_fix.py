@@ -6,10 +6,10 @@ Test RAG System Fix
 import asyncio
 from datetime import datetime
 
+import pytest
+
 from codeconductor.context.rag_system import RAGSystem
 
-
-import pytest
 
 @pytest.mark.asyncio
 async def test_rag_system():
@@ -62,7 +62,9 @@ print(fibonacci(10))  # Should print 55
 
     # Test 4: Context retrieval
     print("\n4. Testing context retrieval...")
-    context = rag.retrieve_context("Create a function to calculate fibonacci numbers", k=3)
+    context = rag.retrieve_context(
+        "Create a function to calculate fibonacci numbers", k=3
+    )
     print(f"   Context documents: {len(context)}")
     for i, doc in enumerate(context):
         print(

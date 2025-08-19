@@ -114,7 +114,9 @@ def test_kpi_first_prompt_success_logic():
     assert kpi_ok["first_prompt_success"] is True
 
     # Case 2: After has no tests -> success False
-    after_none = TestSummary(suite_name="pytest", total=0, passed=0, failed=0, skipped=0)
+    after_none = TestSummary(
+        suite_name="pytest", total=0, passed=0, failed=0, skipped=0
+    )
     kpi_no = build_kpi(
         run_id="r2",
         artifacts_dir=Path("artifacts/runs/r2"),

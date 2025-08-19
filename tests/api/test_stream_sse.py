@@ -55,6 +55,7 @@ def test_stream_basic_order_and_done():
         if "unexpected keyword argument 'app'" in str(e):
             # Skip this test if TestClient is not compatible
             import pytest
+
             pytest.skip("TestClient not compatible with current httpx version")
         else:
             raise

@@ -59,7 +59,12 @@ class SimpleSingleAgentTester:
         in_code = False
 
         for line in lines:
-            if "def " in line or "import " in line or "from " in line or "class " in line:
+            if (
+                "def " in line
+                or "import " in line
+                or "from " in line
+                or "class " in line
+            ):
                 in_code = True
             if in_code and line.strip():
                 code_lines.append(line)
@@ -279,7 +284,9 @@ class SimpleSingleAgentTester:
                 )
                 / len(self.results),
                 "syntax_success_rate": sum(
-                    1 for r in self.results if r.get("validation", {}).get("syntax_check", False)
+                    1
+                    for r in self.results
+                    if r.get("validation", {}).get("syntax_check", False)
                 )
                 / len(self.results)
                 * 100,
@@ -338,10 +345,13 @@ class SimpleSingleAgentTester:
         # Code quality metrics
         print("\n📈 Code Quality Metrics:")
         syntax_success = sum(
-            1 for r in self.results if r.get("validation", {}).get("syntax_check", False)
+            1
+            for r in self.results
+            if r.get("validation", {}).get("syntax_check", False)
         )
         avg_code_length = (
-            sum(r.get("validation", {}).get("code_length", 0) for r in self.results) / total_tests
+            sum(r.get("validation", {}).get("code_length", 0) for r in self.results)
+            / total_tests
         )
         print(
             f"  Syntax success rate: {syntax_success}/{total_tests} ({syntax_success/total_tests*100:.1f}%)"

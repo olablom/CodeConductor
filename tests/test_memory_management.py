@@ -12,14 +12,14 @@ from pathlib import Path
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
 
+import pytest
+
 from codeconductor.ensemble.model_manager import ModelManager
 from codeconductor.monitoring.memory_watchdog import (
     start_memory_watchdog,
     stop_memory_watchdog,
 )
 
-
-import pytest
 
 @pytest.mark.asyncio
 async def test_memory_management():
@@ -69,7 +69,9 @@ async def test_memory_management():
 
         # Test model loading with memory check
         print("\n🚀 Testing Model Loading with Memory Check:")
-        loaded_models = await model_manager.ensure_models_loaded_with_memory_check("light_load")
+        loaded_models = await model_manager.ensure_models_loaded_with_memory_check(
+            "light_load"
+        )
         print(f"✅ Loaded {len(loaded_models)} models: {loaded_models}")
 
         # Wait a bit for watchdog to run

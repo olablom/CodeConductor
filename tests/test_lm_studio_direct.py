@@ -25,7 +25,9 @@ class DirectLMStudioTester:
         try:
             async with aiohttp.ClientSession() as session:
                 # Test basic endpoint
-                async with session.get(f"{self.base_url}/v1/models", timeout=10) as response:
+                async with session.get(
+                    f"{self.base_url}/v1/models", timeout=10
+                ) as response:
                     if response.status == 200:
                         print("✅ Server is running and responding")
                         return True
@@ -64,7 +66,11 @@ class DirectLMStudioTester:
 
                     if response.status == 200:
                         data = await response.json()
-                        content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                        content = (
+                            data.get("choices", [{}])[0]
+                            .get("message", {})
+                            .get("content", "")
+                        )
 
                         print(f"✅ Success! Response in {execution_time:.1f}s")
                         print(f"📄 Response length: {len(content)} characters")
@@ -141,7 +147,9 @@ class DirectLMStudioTester:
 
         # Test 2: Simple completion
         print("\n🧪 Testing simple completion...")
-        simple_result = await self.test_simple_completion("Hello, how are you?", timeout=30.0)
+        simple_result = await self.test_simple_completion(
+            "Hello, how are you?", timeout=30.0
+        )
 
         if not simple_result["success"]:
             print("\n❌ COMPLETION ISSUE DETECTED!")
@@ -163,7 +171,9 @@ class DirectLMStudioTester:
         total_tests = len(code_results)
 
         print(f"Server connectivity: {'✅ OK' if server_ok else '❌ FAILED'}")
-        print(f"Simple completion: {'✅ OK' if simple_result['success'] else '❌ FAILED'}")
+        print(
+            f"Simple completion: {'✅ OK' if simple_result['success'] else '❌ FAILED'}"
+        )
         print(f"Code generation: {successful_tests}/{total_tests} tests passed")
 
         if server_ok and simple_result["success"] and successful_tests > 0:

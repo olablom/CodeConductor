@@ -4,8 +4,8 @@ Test full test suite safely with GPU protection
 """
 
 import os
-import sys
 import subprocess
+import sys
 
 
 def set_gpu_blockers():

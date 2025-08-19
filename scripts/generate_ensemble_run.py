@@ -32,7 +32,9 @@ async def run_once(prompt: str, timeout: float) -> dict:
     os.environ.setdefault("MODEL_SELECTOR_STRICT", "1")
     os.environ.setdefault("MAX_PARALLEL_MODELS", "1")
     # Prefer a small single model if caller didn't force one
-    os.environ.setdefault("FORCE_MODEL", os.getenv("FORCE_MODEL", "meta-llama-3.1-8b-instruct"))
+    os.environ.setdefault(
+        "FORCE_MODEL", os.getenv("FORCE_MODEL", "meta-llama-3.1-8b-instruct")
+    )
 
     eng = EnsembleEngine(use_rlhf=False)
     await eng.initialize()
@@ -72,7 +74,9 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                 )
 
                                 extracted = extract_code(cons, lang_hint="python")
-                                cleaned = normalize_python(extracted, preserve_doctest=True)
+                                cleaned = normalize_python(
+                                    extracted, preserve_doctest=True
+                                )
                                 # Heuristic trim: keep up to last code-like line
                                 lines = cleaned.splitlines()
 
@@ -104,13 +108,17 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                     if _is_code_like(ln):
                                         last = i
                                 final_code = (
-                                    "\n".join(lines[: last + 1]).rstrip() if last >= 0 else cleaned
+                                    "\n".join(lines[: last + 1]).rstrip()
+                                    if last >= 0
+                                    else cleaned
                                 )
                                 after_dir = Path(run_dir) / "after"
                                 after_dir.mkdir(parents=True, exist_ok=True)
                                 # Size cap (200 KB) to avoid dumping giant chat text
                                 try:
-                                    cap_bytes = int(os.getenv("MATERIALIZE_MAX_BYTES", "204800"))
+                                    cap_bytes = int(
+                                        os.getenv("MATERIALIZE_MAX_BYTES", "204800")
+                                    )
                                 except Exception:
                                     cap_bytes = 204800
                                 encoded = final_code.encode("utf-8")
@@ -123,7 +131,8 @@ async def run_once(prompt: str, timeout: float) -> dict:
 
                                 # Auto-enable doctest when present
                                 enable_doctest = (
-                                    os.getenv("MATERIALIZE_ENABLE_DOCTEST", "1").strip() == "1"
+                                    os.getenv("MATERIALIZE_ENABLE_DOCTEST", "1").strip()
+                                    == "1"
                                 )
                                 if (
                                     enable_doctest
@@ -151,7 +160,10 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                         ),
                                         None,
                                     )
-                                    if first_code_idx is not None and first_code_idx > 0:
+                                    if (
+                                        first_code_idx is not None
+                                        and first_code_idx > 0
+                                    ):
                                         header = "\n".join(lines_hdr[:first_code_idx])
                                         body = "\n".join(lines_hdr[first_code_idx:])
                                         blocks = _re.findall(
@@ -177,7 +189,10 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                 ]
                                 gen_path = after_dir / "generated.py"
                                 gen_path.write_text(
-                                    "\n".join(header_lines) + "\n\n" + final_code + "\n",
+                                    "\n".join(header_lines)
+                                    + "\n\n"
+                                    + final_code
+                                    + "\n",
                                     encoding="utf-8",
                                 )
 
@@ -199,7 +214,9 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                     except Exception as e:
                                         return False, str(e)
 
-                                strict = os.getenv("MATERIALIZE_STRICT", "1").strip() == "1"
+                                strict = (
+                                    os.getenv("MATERIALIZE_STRICT", "1").strip() == "1"
+                                )
                                 ok_ast = _ast_ok(final_code)
                                 ok_comp, err_comp = _compile_ok(gen_path)
                                 if strict and (not ok_ast or not ok_comp):
@@ -212,7 +229,12 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                             if _is_code_like(ln):
                                                 last_idx = i
                                         if last_idx >= 0:
-                                            txt = "\n".join(tlines[: last_idx + 1]).rstrip() + "\n"
+                                            txt = (
+                                                "\n".join(
+                                                    tlines[: last_idx + 1]
+                                                ).rstrip()
+                                                + "\n"
+                                            )
                                         # Close unterminated triple quotes
                                         for delim in ('"""', "'''"):
                                             if txt.count(delim) % 2 != 0:
@@ -221,12 +243,16 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                     except Exception:
                                         pass
                                     # Re-validate
-                                    ok_ast2 = _ast_ok(gen_path.read_text(encoding="utf-8"))
+                                    ok_ast2 = _ast_ok(
+                                        gen_path.read_text(encoding="utf-8")
+                                    )
                                     ok_comp2, err_comp2 = _compile_ok(gen_path)
                                     if not (ok_ast2 and ok_comp2):
                                         # Write raw for inspection and mark syntax invalid in consensus
                                         try:
-                                            (after_dir / "logs").mkdir(parents=True, exist_ok=True)
+                                            (after_dir / "logs").mkdir(
+                                                parents=True, exist_ok=True
+                                            )
                                             (after_dir / "logs" / "raw.txt").write_text(
                                                 cons, encoding="utf-8"
                                             )
@@ -234,13 +260,15 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                             pass
                                         try:
                                             cdata = _json.loads(
-                                                Path(run_dir, "consensus.json").read_text(
-                                                    encoding="utf-8"
-                                                )
+                                                Path(
+                                                    run_dir, "consensus.json"
+                                                ).read_text(encoding="utf-8")
                                             )
                                             if isinstance(cdata, dict):
                                                 cdata["syntax_valid"] = False
-                                                Path(run_dir, "consensus.json").write_text(
+                                                Path(
+                                                    run_dir, "consensus.json"
+                                                ).write_text(
                                                     _json.dumps(
                                                         cdata,
                                                         ensure_ascii=False,
@@ -266,14 +294,20 @@ async def run_once(prompt: str, timeout: float) -> dict:
                             )
 
                             report = validate_python_code(
-                                (after_dir / "generated.py").read_text(encoding="utf-8"),
+                                (after_dir / "generated.py").read_text(
+                                    encoding="utf-8"
+                                ),
                                 run_doctests=True,
                             )
                             iter_count = 0
                             while (not report.ok) and iter_count < 2:
-                                ok_dt, dt_out = run_doctest_on_file(after_dir / "generated.py")
+                                ok_dt, dt_out = run_doctest_on_file(
+                                    after_dir / "generated.py"
+                                )
                                 repair_prompt = build_repair_prompt(
-                                    (after_dir / "generated.py").read_text(encoding="utf-8"),
+                                    (after_dir / "generated.py").read_text(
+                                        encoding="utf-8"
+                                    ),
                                     report,
                                     dt_out if not ok_dt else None,
                                 )
@@ -282,13 +316,17 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                     fix_req = EnsembleRequest(
                                         task_description=f"Return ONLY a single fenced python code block that fixes the module.\n{repair_prompt}"
                                     )
-                                    fix_res = await eng._process_request_internal(fix_req)
+                                    fix_res = await eng._process_request_internal(
+                                        fix_req
+                                    )
                                     # Extract best-effort consensus
                                     fixed_raw = ""
                                     try:
                                         cpath = Path(run_dir) / "consensus.json"
                                         data_fix = (
-                                            json.loads(cpath.read_text(encoding="utf-8"))
+                                            json.loads(
+                                                cpath.read_text(encoding="utf-8")
+                                            )
                                             if cpath.exists()
                                             else {}
                                         )
@@ -296,7 +334,9 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                     except Exception:
                                         pass
                                     if not fixed_raw:
-                                        fixed_raw = str(getattr(fix_res, "consensus", ""))
+                                        fixed_raw = str(
+                                            getattr(fix_res, "consensus", "")
+                                        )
                                     fixed_code = normalize_python(
                                         extract_code(fixed_raw, lang_hint="python"),
                                         preserve_doctest=True,
@@ -308,7 +348,9 @@ async def run_once(prompt: str, timeout: float) -> dict:
                                     break
                                 # Re-validate
                                 report = validate_python_code(
-                                    (after_dir / "generated.py").read_text(encoding="utf-8"),
+                                    (after_dir / "generated.py").read_text(
+                                        encoding="utf-8"
+                                    ),
                                     run_doctests=True,
                                 )
                                 iter_count += 1

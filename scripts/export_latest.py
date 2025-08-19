@@ -50,8 +50,16 @@ def main() -> int:
         import jsonschema  # type: ignore
 
         # Load schemas
-        base = _Path(__file__).resolve().parents[1] / "src" / "codeconductor" / "utils" / "schemas"
-        man_schema = json.loads((base / "manifest.schema.json").read_text(encoding="utf-8"))
+        base = (
+            _Path(__file__).resolve().parents[1]
+            / "src"
+            / "codeconductor"
+            / "utils"
+            / "schemas"
+        )
+        man_schema = json.loads(
+            (base / "manifest.schema.json").read_text(encoding="utf-8")
+        )
         kpi_schema = json.loads((base / "kpi.schema.json").read_text(encoding="utf-8"))
 
         # Validate manifest
@@ -59,7 +67,9 @@ def main() -> int:
 
         # Validate KPI from latest run dir
         # best-effort: read artifacts/runs/<latest>/kpi.json
-        runs = sorted((_Path(os.getenv("ARTIFACTS_DIR", "artifacts")) / "runs").glob("*"))
+        runs = sorted(
+            (_Path(os.getenv("ARTIFACTS_DIR", "artifacts")) / "runs").glob("*")
+        )
         if runs:
             kpi_path = runs[-1] / "kpi.json"
             if kpi_path.exists():
@@ -130,7 +140,11 @@ def main() -> int:
     except Exception:
         pass
 
-    print(json.dumps({"zip": zip_path, "verified": verified, **details}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {"zip": zip_path, "verified": verified, **details}, ensure_ascii=False
+        )
+    )
     return 0
 
 

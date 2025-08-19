@@ -158,12 +158,18 @@ def cleanup_runs(
                     name = (
                         "manifest.json"
                         if "manifest.json" in zf.namelist()
-                        else ("MANIFEST.json" if "MANIFEST.json" in zf.namelist() else None)
+                        else (
+                            "MANIFEST.json"
+                            if "MANIFEST.json" in zf.namelist()
+                            else None
+                        )
                     )
                     if not name:
                         continue
                     try:
-                        manifest = json.loads(zf.read(name).decode("utf-8", errors="ignore"))
+                        manifest = json.loads(
+                            zf.read(name).decode("utf-8", errors="ignore")
+                        )
                         rid = manifest.get("run_id")
                         if isinstance(rid, str) and rid:
                             refs.add(rid)
@@ -204,7 +210,8 @@ def cleanup_runs(
                 exports_dir = artifacts_dir / "exports"
                 try:
                     for z in exports_dir.glob("codeconductor_case_*.zip"):
-                        # Prefer not to parse zip here for speed; fallback to run_id in filename
+                        # Prefer not to parse zip here for speed;
+                        # fallback to run_id in filename
                         try:
                             rid = z.stem.split("_")[-1]
                             if rid:
@@ -216,7 +223,9 @@ def cleanup_runs(
                 # Candidates: oldest lex first among to_delete, skipping pinned and referenced
                 pin_runs = set([x for x in os.getenv("PIN_RUNS", "").split(";") if x])
                 cands = [
-                    p for p in to_delete if p.name not in pin_runs and p.name not in referenced
+                    p
+                    for p in to_delete
+                    if p.name not in pin_runs and p.name not in referenced
                 ]
                 cands.sort(key=lambda p: p.name)  # oldest first
                 remaining = before_bytes

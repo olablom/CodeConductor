@@ -319,7 +319,9 @@ class CodeConductorTester:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         # Save detailed results
-        with open(f"codeconductor_test_results_{timestamp}.json", "w", encoding="utf-8") as f:
+        with open(
+            f"codeconductor_test_results_{timestamp}.json", "w", encoding="utf-8"
+        ) as f:
             json.dump(self.results, f, indent=2, ensure_ascii=False)
 
         # Save summary
@@ -350,7 +352,9 @@ class CodeConductorTester:
             if result.get("success", False):
                 summary["tests_by_type"][test_type]["successful"] += 1
 
-        with open(f"codeconductor_summary_{timestamp}.yaml", "w", encoding="utf-8") as f:
+        with open(
+            f"codeconductor_summary_{timestamp}.yaml", "w", encoding="utf-8"
+        ) as f:
             yaml.dump(summary, f, default_flow_style=False, allow_unicode=True)
 
         print(f"📁 Results saved to codeconductor_test_results_{timestamp}.json")
@@ -403,7 +407,9 @@ class CodeConductorTester:
 
         for test_type, stats in type_stats.items():
             success_rate = stats["successful"] / stats["total"] * 100
-            print(f"  {test_type}: {stats['successful']}/{stats['total']} ({success_rate:.1f}%)")
+            print(
+                f"  {test_type}: {stats['successful']}/{stats['total']} ({success_rate:.1f}%)"
+            )
 
     async def cleanup(self):
         """Cleanup resources"""

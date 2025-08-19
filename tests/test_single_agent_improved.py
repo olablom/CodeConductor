@@ -48,7 +48,9 @@ class ImprovedSingleAgentTester:
         start_time = time.time()
 
         # Generate improved prompt
-        prompt = improved_prompt_generator.generate_improved_prompt(task_type, description)
+        prompt = improved_prompt_generator.generate_improved_prompt(
+            task_type, description
+        )
 
         # First attempt
         request = SingleModelRequest(task_description=prompt)
@@ -64,15 +66,21 @@ class ImprovedSingleAgentTester:
             print(f"🔄 Self-reflection iteration {iterations + 1}")
 
             # Generate fix prompt
-            fix_prompt = improved_prompt_generator.generate_fix_prompt(code, error, task_type)
+            fix_prompt = improved_prompt_generator.generate_fix_prompt(
+                code, error, task_type
+            )
 
             # Get improved code
             fix_request = SingleModelRequest(task_description=fix_prompt)
             improved_response = await self.engine.process_request(fix_request)
-            improved_code = self_reflection_agent.extract_code(improved_response.content)
+            improved_code = self_reflection_agent.extract_code(
+                improved_response.content
+            )
 
             # Test improved code
-            success, error = self_reflection_agent.validate_code(improved_code, task_type)
+            success, error = self_reflection_agent.validate_code(
+                improved_code, task_type
+            )
 
             if success:
                 code = improved_code
@@ -156,9 +164,15 @@ class ImprovedSingleAgentTester:
         successful_tests = sum(1 for r in self.results if r["success"])
         success_rate = (successful_tests / total_tests) * 100 if total_tests > 0 else 0
 
-        avg_time = sum(r["duration"] for r in self.results) / total_tests if total_tests > 0 else 0
+        avg_time = (
+            sum(r["duration"] for r in self.results) / total_tests
+            if total_tests > 0
+            else 0
+        )
         avg_iterations = (
-            sum(r["iterations"] for r in self.results) / total_tests if total_tests > 0 else 0
+            sum(r["iterations"] for r in self.results) / total_tests
+            if total_tests > 0
+            else 0
         )
 
         print("=" * 50)

@@ -12,10 +12,10 @@ from pathlib import Path
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
 
+import pytest
+
 from codeconductor.debate import CodeConductorDebateManager, LocalAIAgent
 
-
-import pytest
 
 @pytest.mark.asyncio
 async def test_debate_system():
@@ -99,7 +99,10 @@ async def test_debate_system():
             # Get the ensemble engine from the first agent
             if hasattr(debate_manager, "agents") and debate_manager.agents:
                 first_agent = debate_manager.agents[0]
-                if hasattr(first_agent, "ensemble_engine") and first_agent.ensemble_engine:
+                if (
+                    hasattr(first_agent, "ensemble_engine")
+                    and first_agent.ensemble_engine
+                ):
                     await first_agent.ensemble_engine.cleanup()
                     print("✅ Ensemble engine cleanup completed")
 

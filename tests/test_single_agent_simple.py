@@ -45,7 +45,9 @@ async def main():
     try:
         # Generate response
         print("🤖 Generating response...")
-        response = await agent.generate_response(user_prompt, timeout=300.0)  # 5 minutes
+        response = await agent.generate_response(
+            user_prompt, timeout=300.0
+        )  # 5 minutes
 
         print("\n✅ Response generated successfully!")
         print(f"📝 Response: {response}")

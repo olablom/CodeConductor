@@ -138,7 +138,9 @@ class ComprehensiveStressTester:
             end_time = time.time()
             total_time = end_time - start_time
 
-            success_rate = (successful_interactions / (interactions * len(operations))) * 100
+            success_rate = (
+                successful_interactions / (interactions * len(operations))
+            ) * 100
             avg_time = total_time / interactions
 
             metrics = {
@@ -231,7 +233,9 @@ class ComprehensiveStressTester:
                             "quality": 0.8,
                         }
                     )
-                    await self.simulate_rag_context_retrieval(f"Stress test context {i}")
+                    await self.simulate_rag_context_retrieval(
+                        f"Stress test context {i}"
+                    )
                     successful_operations += 3
                 except Exception:
                     pass
@@ -390,7 +394,9 @@ class ComprehensiveStressTester:
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 end_time = time.time()
 
-                successful_tasks = sum(1 for r in results if not isinstance(r, Exception))
+                successful_tasks = sum(
+                    1 for r in results if not isinstance(r, Exception)
+                )
                 total_time = end_time - start_time
 
                 performance_results[load] = {
@@ -405,7 +411,10 @@ class ComprehensiveStressTester:
 
             performance_acceptable = True
             for load, metrics in performance_results.items():
-                if load > 1 and metrics["avg_time"] > baseline_time * max_acceptable_degradation:
+                if (
+                    load > 1
+                    and metrics["avg_time"] > baseline_time * max_acceptable_degradation
+                ):
                     performance_acceptable = False
                     break
 
@@ -690,8 +699,6 @@ class ComprehensiveStressTester:
         """Simulate RLHF learning update"""
         await asyncio.sleep(0.05)
         return True
-
-
 
     async def simulate_edge_case_handling(self, case):
         """Simulate edge case handling"""

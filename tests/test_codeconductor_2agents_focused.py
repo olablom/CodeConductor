@@ -87,7 +87,9 @@ class FocusedCodeConductorTester:
         except SyntaxError as se:
             validation["syntax_check"] = False
             # Include a short error message for debugging
-            validation["syntax_error"] = str(se).splitlines()[0] if str(se) else "SyntaxError"
+            validation["syntax_error"] = (
+                str(se).splitlines()[0] if str(se) else "SyntaxError"
+            )
 
         # Test-specific validation
         if test_type == "binary_search":
@@ -163,7 +165,12 @@ class FocusedCodeConductorTester:
 
     def _test_react_hook(self, code: str) -> bool:
         """Test if React hook code has basic structure"""
-        return "useState" in code or "useEffect" in code or "const [" in code or "setState" in code
+        return (
+            "useState" in code
+            or "useEffect" in code
+            or "const [" in code
+            or "setState" in code
+        )
 
     def _test_sql_query(self, code: str) -> bool:
         """Test if SQL query has basic structure"""
@@ -346,7 +353,9 @@ class FocusedCodeConductorTester:
                 )
                 / len(self.results),
                 "syntax_success_rate": sum(
-                    1 for r in self.results if r.get("validation", {}).get("syntax_check", False)
+                    1
+                    for r in self.results
+                    if r.get("validation", {}).get("syntax_check", False)
                 )
                 / len(self.results)
                 * 100,
@@ -405,10 +414,13 @@ class FocusedCodeConductorTester:
         # Code quality metrics
         print("\nCode Quality Metrics:")
         syntax_success = sum(
-            1 for r in self.results if r.get("validation", {}).get("syntax_check", False)
+            1
+            for r in self.results
+            if r.get("validation", {}).get("syntax_check", False)
         )
         avg_code_length = (
-            sum(r.get("validation", {}).get("code_length", 0) for r in self.results) / total_tests
+            sum(r.get("validation", {}).get("code_length", 0) for r in self.results)
+            / total_tests
         )
         print(
             f"  Syntax success rate: {syntax_success}/{total_tests} ({syntax_success / total_tests * 100:.1f}%)"

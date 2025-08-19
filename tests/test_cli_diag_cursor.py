@@ -8,7 +8,9 @@ def run_cli_in_cwd(argv, cwd: Path):
     env = os.environ.copy()
     env["PYTHONWARNINGS"] = "ignore"
     repo_root = Path(__file__).resolve().parents[1]
-    env["PYTHONPATH"] = str((repo_root / "src").resolve()) + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = (
+        str((repo_root / "src").resolve()) + os.pathsep + env.get("PYTHONPATH", "")
+    )
     cli_path = (repo_root / "src" / "codeconductor" / "cli.py").resolve()
     code = (
         "import runpy, sys;"

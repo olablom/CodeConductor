@@ -17,6 +17,7 @@ import psutil
 # Soft import GPUtil - optional dependency
 try:
     import GPUtil
+
     GPUTIL_AVAILABLE = True
 except ImportError:
     GPUTIL_AVAILABLE = False
@@ -59,13 +60,19 @@ class MasterTestSuite:
         from codeconductor.debate.local_agent import LocalAIAgent
 
         agents = [
-            LocalAIAgent("coder", "You are a coding expert who focuses on implementation."),
+            LocalAIAgent(
+                "coder", "You are a coding expert who focuses on implementation."
+            ),
             LocalAIAgent(
                 "architect",
                 "You are a software architect who focuses on design patterns.",
             ),
-            LocalAIAgent("tester", "You are a testing expert who focuses on quality assurance."),
-            LocalAIAgent("reviewer", "You are a code reviewer who focuses on best practices."),
+            LocalAIAgent(
+                "tester", "You are a testing expert who focuses on quality assurance."
+            ),
+            LocalAIAgent(
+                "reviewer", "You are a code reviewer who focuses on best practices."
+            ),
         ]
         self.debate_manager = CodeConductorDebateManager(agents)
 
@@ -94,7 +101,8 @@ class MasterTestSuite:
                             "gpu_load": gpu.load * 100,
                             "gpu_memory_used": gpu.memoryUsed,
                             "gpu_memory_total": gpu.memoryTotal,
-                            "gpu_memory_percent": (gpu.memoryUsed / gpu.memoryTotal) * 100,
+                            "gpu_memory_percent": (gpu.memoryUsed / gpu.memoryTotal)
+                            * 100,
                         }
                 except Exception as e:
                     print(f"GPU metrics unavailable: {e}")
@@ -139,7 +147,9 @@ class MasterTestSuite:
             start_time = time.time()
 
             # Generate improved prompt
-            prompt = improved_prompt_generator.generate_improved_prompt(task_type, description)
+            prompt = improved_prompt_generator.generate_improved_prompt(
+                task_type, description
+            )
 
             # Get response
             request = SingleModelRequest(task_description=prompt)
@@ -156,10 +166,16 @@ class MasterTestSuite:
                         code, error, task_type
                     )
                     fix_request = SingleModelRequest(task_description=fix_prompt)
-                    improved_response = await self.single_engine.process_request(fix_request)
-                    improved_code = self_reflection_agent.extract_code(improved_response.content)
+                    improved_response = await self.single_engine.process_request(
+                        fix_request
+                    )
+                    improved_code = self_reflection_agent.extract_code(
+                        improved_response.content
+                    )
 
-                    success, error = self_reflection_agent.validate_code(improved_code, task_type)
+                    success, error = self_reflection_agent.validate_code(
+                        improved_code, task_type
+                    )
                     if success:
                         code = improved_code
                         break
@@ -184,7 +200,9 @@ class MasterTestSuite:
             results.append(result)
 
             status = "✅ PASS" if success else "❌ FAIL"
-            print(f"  {task_type}: {status} - {duration:.1f}s ({iterations} iterations)")
+            print(
+                f"  {task_type}: {status} - {duration:.1f}s ({iterations} iterations)"
+            )
 
         success_rate = sum(1 for r in results if r["success"]) / len(results) * 100
         avg_time = total_time / len(results)
@@ -239,7 +257,9 @@ class MasterTestSuite:
                 duration = end_time - start_time
                 total_time += duration
 
-                success = debate_result.get("success", True)  # Assume success if no error
+                success = debate_result.get(
+                    "success", True
+                )  # Assume success if no error
                 code_count = len(debate_result.get("implementations", []))
 
                 result = {
@@ -252,7 +272,9 @@ class MasterTestSuite:
                 results.append(result)
 
                 status = "✅ PASS" if success else "❌ FAIL"
-                print(f"  {task_type}: {status} - {duration:.1f}s ({code_count} implementations)")
+                print(
+                    f"  {task_type}: {status} - {duration:.1f}s ({code_count} implementations)"
+                )
 
             except Exception as e:
                 print(f"  {task_type}: ❌ ERROR - {str(e)}")
@@ -319,7 +341,9 @@ class MasterTestSuite:
                 results.append(result)
 
                 status = "✅ PASS" if success else "❌ FAIL"
-                print(f"  {query[:50]}...: {status} - {duration:.1f}s ({result_count} results)")
+                print(
+                    f"  {query[:50]}...: {status} - {duration:.1f}s ({result_count} results)"
+                )
 
             except Exception as e:
                 print(f"  {query[:50]}...: ❌ ERROR - {str(e)}")
@@ -467,12 +491,16 @@ class MasterTestSuite:
         # Single Agent
         if "single_agent" in self.results:
             sa = self.results["single_agent"]
-            print(f"  Single Agent: {sa['success_rate']:.1f}% success, {sa['avg_time']:.1f}s avg")
+            print(
+                f"  Single Agent: {sa['success_rate']:.1f}% success, {sa['avg_time']:.1f}s avg"
+            )
 
         # Debate System
         if "debate_system" in self.results:
             ds = self.results["debate_system"]
-            print(f"  Debate System: {ds['success_rate']:.1f}% success, {ds['avg_time']:.1f}s avg")
+            print(
+                f"  Debate System: {ds['success_rate']:.1f}% success, {ds['avg_time']:.1f}s avg"
+            )
 
         # RAG
         if "rag_functionality" in self.results:
@@ -527,7 +555,9 @@ async def main():
         default="coder architect tester reviewer",
         help="Space-separated list of agents",
     )
-    parser.add_argument("--tokens", type=int, default=100, help="Maximum tokens per response")
+    parser.add_argument(
+        "--tokens", type=int, default=100, help="Maximum tokens per response"
+    )
     parser.add_argument(
         "--self_reflection", action="store_true", help="Enable self-reflection loop"
     )

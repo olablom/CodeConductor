@@ -145,8 +145,6 @@ def _hard_gpu_guard(request):
     is_gpu_test = request.node.get_closest_marker("gpu") is not None
 
     if os.getenv("CC_GPU_DISABLED") == "1" and not is_gpu_test:
-        import subprocess
-        import pytest
 
         # Blockera alla subprocess-anrop (nvidia-smi, etc.)
         def _forbid_subprocess(*args, **kwargs):
@@ -175,7 +173,9 @@ def _hard_gpu_guard(request):
 
             # Mocka vLLM till att alltid returnera mock
             vllm.LLM = lambda *args, **kwargs: type(
-                "MockLLM", (), {"generate": lambda *a, **k: [{"outputs": [{"text": "[MOCKED]"}]}]}
+                "MockLLM",
+                (),
+                {"generate": lambda *a, **k: [{"outputs": [{"text": "[MOCKED]"}]}]},
             )()
         except Exception:
             pass
@@ -185,11 +185,17 @@ def _hard_gpu_guard(request):
             import transformers
 
             # Mocka AutoModelForCausalLM till att alltid returnera mock
-            transformers.AutoModelForCausalLM.from_pretrained = lambda *args, **kwargs: type(
-                "MockModel",
-                (),
-                {"generate": lambda *a, **k: type("MockOutput", (), {"sequences": [[0, 1, 2]]})()},
-            )()
+            transformers.AutoModelForCausalLM.from_pretrained = (
+                lambda *args, **kwargs: type(
+                    "MockModel",
+                    (),
+                    {
+                        "generate": lambda *a, **k: type(
+                            "MockOutput", (), {"sequences": [[0, 1, 2]]}
+                        )()
+                    },
+                )()
+            )
         except Exception:
             pass
 
@@ -278,7 +284,9 @@ def pytest_sessionstart(session):
         try:
             import torch
 
-            assert not torch.cuda.is_available(), "CUDA blev tillgänglig i HARD CPU mode"
+            assert (
+                not torch.cuda.is_available()
+            ), "CUDA blev tillgänglig i HARD CPU mode"
         except Exception:
             pass
 
@@ -286,21 +294,20 @@ def pytest_sessionstart(session):
 # ---- Ultra-mock: stäng av embeddings + vector store helt i testläge ----
 import os
 import types
-from typing import List, Any
 
 import pytest
 
 
-def _dummy_embed(texts: List[str]) -> List[List[float]]:
+def _dummy_embed(texts: list[str]) -> list[list[float]]:
     dim = 384  # neutral standarddim; koden ska inte bero på exakt värde
     return [[0.0] * dim for _ in texts]
 
 
 class _DummyEmbeddings:
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
         return _dummy_embed(texts)
 
-    def embed_query(self, text: str) -> List[float]:
+    def embed_query(self, text: str) -> list[float]:
         return _dummy_embed([text])[0]
 
 
@@ -310,7 +317,7 @@ class _DummyDoc:
         self.metadata = metadata or {}
 
 
-def _dummy_sim_search(query: str, k: int = 5, **_) -> List[tuple[_DummyDoc, float]]:
+def _dummy_sim_search(query: str, k: int = 5, **_) -> list[tuple[_DummyDoc, float]]:
     # Liten, deterministisk, helt CPU-fri "träfflista"
     return [(_DummyDoc(f"[MOCK] {query} #{i + 1}"), 0.75) for i in range(k)]
 
@@ -379,7 +386,6 @@ def ultra_mock_vector_and_embeddings(monkeypatch):
 
         # 3) Om något i er kod skapar "egna" embeddings eller vector stores, försök hooka generiska namn
         try:
-            import codeconductor
 
             # Exempel: codeconductor.rag.embeddings.get_embedder -> dummy
             for path, name in [
@@ -390,7 +396,10 @@ def ultra_mock_vector_and_embeddings(monkeypatch):
                     mod = __import__(path, fromlist=[name])
                     if hasattr(mod, "get_embedder"):
                         monkeypatch.setattr(
-                            mod, "get_embedder", lambda *a, **k: _DummyEmbeddings(), raising=False
+                            mod,
+                            "get_embedder",
+                            lambda *a, **k: _DummyEmbeddings(),
+                            raising=False,
                         )
                     # vector store kan vara fabrik; returnera enkelt objekt med sökmetoder
                     if hasattr(mod, "get_vector_store"):
@@ -401,7 +410,10 @@ def ultra_mock_vector_and_embeddings(monkeypatch):
                             similarity_search_with_relevance_scores=_dummy_sim_search,
                         )
                         monkeypatch.setattr(
-                            mod, "get_vector_store", lambda *a, **k: dummy_vs, raising=False
+                            mod,
+                            "get_vector_store",
+                            lambda *a, **k: dummy_vs,
+                            raising=False,
                         )
                 except Exception:
                     pass

@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 # filename: src/codeconductor/utils/async_tools.py
 from __future__ import annotations
-import asyncio, inspect
-from typing import Any, Awaitable, Callable
+
+import asyncio
+import inspect
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 
 def is_awaitable(x: Any) -> bool:

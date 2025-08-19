@@ -4,8 +4,8 @@ Test single test safely to isolate GPU trigger
 """
 
 import os
-import sys
 import subprocess
+import sys
 
 
 def set_gpu_blockers():

@@ -4,13 +4,13 @@ CodeConductor Debate Manager - Multi-Agent Debate System (FIXED VERSION)
 """
 
 import asyncio
+import inspect
 import json
 import logging
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-import inspect
 
 import yaml
 

@@ -14,7 +14,9 @@ class FakeClock:
 
 def test_lru_cache_basic_hit_miss_and_ttl():
     clock = FakeClock(100.0)
-    cache = LRUCacheTTL(max_entries=2, ttl_seconds=10, time_provider=clock.now, namespace="ns")
+    cache = LRUCacheTTL(
+        max_entries=2, ttl_seconds=10, time_provider=clock.now, namespace="ns"
+    )
     key = cache.make_key(
         prompt="p",
         persona="coder",
@@ -32,10 +34,18 @@ def test_lru_cache_basic_hit_miss_and_ttl():
 
 def test_lru_cache_evicts_oldest():
     clock = FakeClock(0.0)
-    cache = LRUCacheTTL(max_entries=2, ttl_seconds=1000, time_provider=clock.now, namespace="ns")
-    k1 = cache.make_key(prompt="p1", persona="coder", policy="latency", model="m1", params={})
-    k2 = cache.make_key(prompt="p2", persona="coder", policy="latency", model="m2", params={})
-    k3 = cache.make_key(prompt="p3", persona="coder", policy="latency", model="m3", params={})
+    cache = LRUCacheTTL(
+        max_entries=2, ttl_seconds=1000, time_provider=clock.now, namespace="ns"
+    )
+    k1 = cache.make_key(
+        prompt="p1", persona="coder", policy="latency", model="m1", params={}
+    )
+    k2 = cache.make_key(
+        prompt="p2", persona="coder", policy="latency", model="m2", params={}
+    )
+    k3 = cache.make_key(
+        prompt="p3", persona="coder", policy="latency", model="m3", params={}
+    )
     cache.set(k1, 1)
     cache.set(k2, 2)
     # This should evict k1 when adding k3

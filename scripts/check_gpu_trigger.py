@@ -42,7 +42,6 @@ def test_simple_imports():
 
     try:
         print("Testing: import codeconductor")
-        import codeconductor
 
         print("  ✅ codeconductor imported successfully")
     except Exception as e:
@@ -50,7 +49,6 @@ def test_simple_imports():
 
     try:
         print("Testing: import tests")
-        import tests
 
         print("  ✅ tests imported successfully")
     except Exception as e:

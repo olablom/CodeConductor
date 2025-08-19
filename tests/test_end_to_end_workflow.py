@@ -66,14 +66,20 @@ class EndToEndWorkflowTester:
         try:
             # Step 1: User Input
             user_input = "Create a REST API for user authentication"
-            steps.append({"step": 1, "description": "User input received", "status": "✅ PASS"})
+            steps.append(
+                {"step": 1, "description": "User input received", "status": "✅ PASS"}
+            )
 
             # Step 2: Debate Generation
             debate_result = await self.simulate_debate(user_input)
             if debate_result["success"]:
-                steps.append({"step": 2, "description": "Debate generated", "status": "✅ PASS"})
+                steps.append(
+                    {"step": 2, "description": "Debate generated", "status": "✅ PASS"}
+                )
             else:
-                steps.append({"step": 2, "description": "Debate failed", "status": "❌ FAIL"})
+                steps.append(
+                    {"step": 2, "description": "Debate failed", "status": "❌ FAIL"}
+                )
                 return {
                     "success": False,
                     "message": "Debate generation failed",
@@ -83,7 +89,9 @@ class EndToEndWorkflowTester:
             # Step 3: Code Generation
             code_result = await self.simulate_code_generation(debate_result["debate"])
             if code_result["success"]:
-                steps.append({"step": 3, "description": "Code generated", "status": "✅ PASS"})
+                steps.append(
+                    {"step": 3, "description": "Code generated", "status": "✅ PASS"}
+                )
             else:
                 steps.append(
                     {
@@ -120,7 +128,9 @@ class EndToEndWorkflowTester:
             # Step 5: Code Validation
             validation_result = await self.simulate_code_validation(code_result["code"])
             if validation_result["success"]:
-                steps.append({"step": 5, "description": "Code validation", "status": "✅ PASS"})
+                steps.append(
+                    {"step": 5, "description": "Code validation", "status": "✅ PASS"}
+                )
             else:
                 steps.append(
                     {
@@ -135,9 +145,13 @@ class EndToEndWorkflowTester:
                 user_input, code_result["code"], validation_result["success"]
             )
             if rag_result["success"]:
-                steps.append({"step": 6, "description": "RAG save", "status": "✅ PASS"})
+                steps.append(
+                    {"step": 6, "description": "RAG save", "status": "✅ PASS"}
+                )
             else:
-                steps.append({"step": 6, "description": "RAG save failed", "status": "❌ FAIL"})
+                steps.append(
+                    {"step": 6, "description": "RAG save failed", "status": "❌ FAIL"}
+                )
 
             success = all(step["status"] == "✅ PASS" for step in steps)
             return {
@@ -158,14 +172,20 @@ class EndToEndWorkflowTester:
         try:
             # Step 1: User Input
             user_input = "Create a React todo component with add/remove functionality"
-            steps.append({"step": 1, "description": "User input received", "status": "✅ PASS"})
+            steps.append(
+                {"step": 1, "description": "User input received", "status": "✅ PASS"}
+            )
 
             # Step 2: Debate Generation
             debate_result = await self.simulate_debate(user_input)
             if debate_result["success"]:
-                steps.append({"step": 2, "description": "Debate generated", "status": "✅ PASS"})
+                steps.append(
+                    {"step": 2, "description": "Debate generated", "status": "✅ PASS"}
+                )
             else:
-                steps.append({"step": 2, "description": "Debate failed", "status": "❌ FAIL"})
+                steps.append(
+                    {"step": 2, "description": "Debate failed", "status": "❌ FAIL"}
+                )
                 return {
                     "success": False,
                     "message": "Debate generation failed",
@@ -175,7 +195,9 @@ class EndToEndWorkflowTester:
             # Step 3: Code Generation
             code_result = await self.simulate_code_generation(debate_result["debate"])
             if code_result["success"]:
-                steps.append({"step": 3, "description": "Code generated", "status": "✅ PASS"})
+                steps.append(
+                    {"step": 3, "description": "Code generated", "status": "✅ PASS"}
+                )
             else:
                 steps.append(
                     {
@@ -193,7 +215,9 @@ class EndToEndWorkflowTester:
             # Step 4: Component Testing
             test_result = await self.simulate_component_testing(code_result["code"])
             if test_result["success"]:
-                steps.append({"step": 4, "description": "Component testing", "status": "✅ PASS"})
+                steps.append(
+                    {"step": 4, "description": "Component testing", "status": "✅ PASS"}
+                )
             else:
                 steps.append(
                     {
@@ -208,9 +232,13 @@ class EndToEndWorkflowTester:
                 user_input, code_result["code"], test_result["success"]
             )
             if rag_result["success"]:
-                steps.append({"step": 5, "description": "RAG save", "status": "✅ PASS"})
+                steps.append(
+                    {"step": 5, "description": "RAG save", "status": "✅ PASS"}
+                )
             else:
-                steps.append({"step": 5, "description": "RAG save failed", "status": "❌ FAIL"})
+                steps.append(
+                    {"step": 5, "description": "RAG save failed", "status": "❌ FAIL"}
+                )
 
             success = all(step["status"] == "✅ PASS" for step in steps)
             return {
@@ -231,7 +259,9 @@ class EndToEndWorkflowTester:
         try:
             # Step 1: Bug Report
             bug_report = "The login function crashes when password is empty"
-            steps.append({"step": 1, "description": "Bug report received", "status": "✅ PASS"})
+            steps.append(
+                {"step": 1, "description": "Bug report received", "status": "✅ PASS"}
+            )
 
             # Step 2: Initial Fix Attempt
             initial_fix = await self.simulate_bug_fix_attempt(bug_report)
@@ -290,7 +320,9 @@ class EndToEndWorkflowTester:
                     )
 
                     # Step 5: Test Iteration
-                    iteration_test = await self.simulate_fix_testing(iteration_fix["code"])
+                    iteration_test = await self.simulate_fix_testing(
+                        iteration_fix["code"]
+                    )
                     if iteration_test["success"]:
                         steps.append(
                             {
@@ -317,12 +349,18 @@ class EndToEndWorkflowTester:
                     )
 
             # Step 6: RAG Save
-            final_code = iteration_fix["code"] if len(steps) > 4 else initial_fix["code"]
+            final_code = (
+                iteration_fix["code"] if len(steps) > 4 else initial_fix["code"]
+            )
             rag_result = await self.simulate_rag_save(bug_report, final_code, True)
             if rag_result["success"]:
-                steps.append({"step": 6, "description": "RAG save", "status": "✅ PASS"})
+                steps.append(
+                    {"step": 6, "description": "RAG save", "status": "✅ PASS"}
+                )
             else:
-                steps.append({"step": 6, "description": "RAG save failed", "status": "❌ FAIL"})
+                steps.append(
+                    {"step": 6, "description": "RAG save failed", "status": "❌ FAIL"}
+                )
 
             success = len([s for s in steps if s["status"] == "✅ PASS"]) >= 4
             return {
@@ -342,7 +380,9 @@ class EndToEndWorkflowTester:
 
         try:
             # Step 1: Complex Requirement
-            requirement = "Build a complete e-commerce cart system with payment integration"
+            requirement = (
+                "Build a complete e-commerce cart system with payment integration"
+            )
             steps.append(
                 {
                     "step": 1,
@@ -402,7 +442,9 @@ class EndToEndWorkflowTester:
                 }
 
             # Step 4: Integration Testing
-            integration_test = await self.simulate_integration_testing(code_result["files"])
+            integration_test = await self.simulate_integration_testing(
+                code_result["files"]
+            )
             if integration_test["success"]:
                 steps.append(
                     {
@@ -425,9 +467,13 @@ class EndToEndWorkflowTester:
                 requirement, code_result["files"], integration_test["success"]
             )
             if rag_result["success"]:
-                steps.append({"step": 5, "description": "RAG save", "status": "✅ PASS"})
+                steps.append(
+                    {"step": 5, "description": "RAG save", "status": "✅ PASS"}
+                )
             else:
-                steps.append({"step": 5, "description": "RAG save failed", "status": "❌ FAIL"})
+                steps.append(
+                    {"step": 5, "description": "RAG save failed", "status": "❌ FAIL"}
+                )
 
             success = len([s for s in steps if s["status"] == "✅ PASS"]) >= 4
             return {
@@ -459,7 +505,9 @@ class EndToEndWorkflowTester:
             # Step 2: First Iteration
             first_iteration = await self.simulate_debate(initial_request)
             if first_iteration["success"]:
-                steps.append({"step": 2, "description": "First iteration", "status": "✅ PASS"})
+                steps.append(
+                    {"step": 2, "description": "First iteration", "status": "✅ PASS"}
+                )
             else:
                 steps.append(
                     {
@@ -489,7 +537,9 @@ class EndToEndWorkflowTester:
                 first_iteration["debate"], user_feedback
             )
             if second_iteration["success"]:
-                steps.append({"step": 4, "description": "Second iteration", "status": "✅ PASS"})
+                steps.append(
+                    {"step": 4, "description": "Second iteration", "status": "✅ PASS"}
+                )
             else:
                 steps.append(
                     {
@@ -501,14 +551,18 @@ class EndToEndWorkflowTester:
 
             # Step 5: More Feedback
             more_feedback = "Add responsive design for mobile"
-            steps.append({"step": 5, "description": "Additional feedback", "status": "✅ PASS"})
+            steps.append(
+                {"step": 5, "description": "Additional feedback", "status": "✅ PASS"}
+            )
 
             # Step 6: Third Iteration
             third_iteration = await self.simulate_iteration_with_feedback(
                 second_iteration["debate"], more_feedback
             )
             if third_iteration["success"]:
-                steps.append({"step": 6, "description": "Third iteration", "status": "✅ PASS"})
+                steps.append(
+                    {"step": 6, "description": "Third iteration", "status": "✅ PASS"}
+                )
             else:
                 steps.append(
                     {
@@ -523,9 +577,13 @@ class EndToEndWorkflowTester:
                 initial_request, third_iteration["code"], True
             )
             if rag_result["success"]:
-                steps.append({"step": 7, "description": "RAG save", "status": "✅ PASS"})
+                steps.append(
+                    {"step": 7, "description": "RAG save", "status": "✅ PASS"}
+                )
             else:
-                steps.append({"step": 7, "description": "RAG save failed", "status": "❌ FAIL"})
+                steps.append(
+                    {"step": 7, "description": "RAG save failed", "status": "❌ FAIL"}
+                )
 
             success = len([s for s in steps if s["status"] == "✅ PASS"]) >= 6
             return {

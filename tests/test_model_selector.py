@@ -51,7 +51,9 @@ def test_selector_forced_env(monkeypatch):
     b = make_model_simple("mixtral-8x7b", latency_p95=0.2)
     monkeypatch.setenv("FORCE_MODEL", "deepseek-v3")
     try:
-        out = sel.select(SelectionInput(models=[a, b], prompt_len=100, policy="latency"))
+        out = sel.select(
+            SelectionInput(models=[a, b], prompt_len=100, policy="latency")
+        )
     finally:
         monkeypatch.delenv("FORCE_MODEL", raising=False)
     assert out.selected_model == "deepseek-v3"

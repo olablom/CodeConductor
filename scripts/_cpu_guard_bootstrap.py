@@ -1,5 +1,7 @@
 # CPU Guard Bootstrap: runs very early via .pth to enforce CPU-only and stub GPU modules
-import os, sys, types
+import os
+import sys
+import types
 
 # 1) Environment hardening
 os.environ.setdefault("CC_ULTRA_MOCK", "1")
@@ -85,11 +87,14 @@ class BlockGPUFinder:
             stub = _make_stub(fullname)
             module.__dict__.update(stub.__dict__)
 
-        return ModuleSpec(fullname, type("_CPUGuardLoader", (), {"exec_module": _loader_exec}))
+        return ModuleSpec(
+            fullname, type("_CPUGuardLoader", (), {"exec_module": _loader_exec})
+        )
 
 
 # Install finder at highest priority
 sys.meta_path.insert(0, BlockGPUFinder())
 
 # Minimal log (avoid emojis for PS compatibility)
-print(f"CPUGuard: enabled (CUDA_VISIBLE_DEVICES='{os.environ.get('CUDA_VISIBLE_DEVICES', '')}')")
+cuda_devices = os.environ.get("CUDA_VISIBLE_DEVICES", "")
+print(f"CPUGuard: enabled (CUDA_VISIBLE_DEVICES='{cuda_devices}')")

@@ -30,7 +30,9 @@ def test_debate_run_persists_when_flag(monkeypatch):
     class _DM(CodeConductorDebateManager):
         def run_debate(self, prompt: str, rounds: int = 1, agents=None):
             # build a minimal transcript then delegate to parent persist logic
-            self.full_transcript.append({"turn": 1, "agent": "Architect", "message": prompt})
+            self.full_transcript.append(
+                {"turn": 1, "agent": "Architect", "message": prompt}
+            )
             result = {"ok": True}
             if hasattr(self, "save_transcript_flag") and self.save_transcript_flag:
                 from datetime import datetime

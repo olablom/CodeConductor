@@ -219,7 +219,9 @@ class Master100PercentTester:
             rag = RAGSystem()
 
             # Add test content
-            rag.add_document("test_fibonacci", "def fibonacci(n): return n", {"type": "function"})
+            rag.add_document(
+                "test_fibonacci", "def fibonacci(n): return n", {"type": "function"}
+            )
 
             # Search for content
             results = rag.search("fibonacci")

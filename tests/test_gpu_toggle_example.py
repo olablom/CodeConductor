@@ -6,9 +6,10 @@ Minimal example to demonstrate mock vs GPU-marked tests.
 - test_real_gpu_marked: runs only when selecting -m gpu
 """
 
-import os
-import pytest
 import asyncio
+import os
+
+import pytest
 
 
 def test_mock_default():
@@ -32,7 +33,9 @@ def test_mock_default():
 @pytest.mark.gpu
 def test_real_gpu_marked():
     """GPU-marked: only runs when selecting -m gpu and CC_GPU_DISABLED is 0."""
-    assert os.getenv("CC_GPU_DISABLED") == "0", "GPU tests must run with CC_GPU_DISABLED=0"
+    assert (
+        os.getenv("CC_GPU_DISABLED") == "0"
+    ), "GPU tests must run with CC_GPU_DISABLED=0"
 
     # Optional: if torch is available, assert CUDA visibility; otherwise skip gracefully
     try:

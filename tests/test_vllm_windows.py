@@ -7,7 +7,11 @@ import pytest
 
 def _is_wsl() -> bool:
     rel = platform.release().lower()
-    ver = getattr(platform, "version", lambda: "")().lower() if hasattr(platform, "version") else ""
+    ver = (
+        getattr(platform, "version", lambda: "")().lower()
+        if hasattr(platform, "version")
+        else ""
+    )
     return ("microsoft" in rel) or ("microsoft" in ver)
 
 
@@ -22,7 +26,9 @@ def test_vllm_availability():
 
     # Native Windows (ej WSL): alltid skip
     if system == "Windows" and not in_wsl:
-        pytest.skip("vLLM not supported on native Windows (use LM Studio/Ollama instead)")
+        pytest.skip(
+            "vLLM not supported on native Windows (use LM Studio/Ollama instead)"
+        )
 
     # WSL2: försök importera; om ej installerat → skip (optional dep)
     if in_wsl:

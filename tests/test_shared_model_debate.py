@@ -12,14 +12,14 @@ from pathlib import Path
 # Add src to path
 sys.path.append(str(Path(__file__).parent / "src"))
 
+import pytest
+
 from codeconductor.debate.shared_model_agent import (
     SharedModelAIAgent,
     SharedModelDebateManager,
 )
 from codeconductor.ensemble.single_model_engine import SingleModelEngine
 
-
-import pytest
 
 @pytest.mark.asyncio
 async def test_shared_model_debate():

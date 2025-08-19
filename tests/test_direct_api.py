@@ -9,9 +9,8 @@ import asyncio
 import json
 
 import aiohttp
-
-
 import pytest
+
 
 @pytest.mark.asyncio
 async def test_direct_api():
@@ -24,7 +23,9 @@ async def test_direct_api():
 
     payload = {
         "model": "meta-llama-3.1-8b-instruct",
-        "messages": [{"role": "user", "content": "Hello! Please respond with a simple greeting."}],
+        "messages": [
+            {"role": "user", "content": "Hello! Please respond with a simple greeting."}
+        ],
         "max_tokens": 100,
         "temperature": 0.2,
         "top_p": 0.9,
@@ -47,7 +48,9 @@ async def test_direct_api():
                     print(f"📊 Response data: {json.dumps(data, indent=2)}")
 
                     if "choices" in data and data["choices"]:
-                        content = data["choices"][0].get("message", {}).get("content", "")
+                        content = (
+                            data["choices"][0].get("message", {}).get("content", "")
+                        )
                         print(f"✅ Content: {content}")
                         return True
                     else:

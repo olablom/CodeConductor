@@ -32,6 +32,7 @@ def get_vram_usage():
 
 import pytest
 
+
 @pytest.mark.asyncio
 async def test_models():
     """Test available models with performance metrics"""

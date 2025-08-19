@@ -38,7 +38,6 @@ class SimpleMasterIntegrationTest:
 
             sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-
             print("  ✅ RAG System initialized")
 
             # Test Ensemble System
@@ -119,7 +118,9 @@ class SimpleMasterIntegrationTest:
 
             # Test manual task logging
             task_id_manual = "Manual_Integration_001"
-            logger.log_task_start(task_id_manual, "Manual integration test task", "Manual")
+            logger.log_task_start(
+                task_id_manual, "Manual integration test task", "Manual"
+            )
             time.sleep(0.1)  # Simulate task execution
             logger.log_task_complete(task_id_manual, satisfaction=0.85)
 
@@ -272,7 +273,9 @@ class SimpleMasterIntegrationTest:
             def concurrent_task(task_id):
                 """Simulate concurrent task execution"""
                 try:
-                    logger.log_task_start(task_id, f"Concurrent task {task_id}", "CodeConductor")
+                    logger.log_task_start(
+                        task_id, f"Concurrent task {task_id}", "CodeConductor"
+                    )
                     time.sleep(0.01)  # Simulate work
                     logger.log_task_complete(task_id, satisfaction=0.85)
                     return True
@@ -303,7 +306,9 @@ class SimpleMasterIntegrationTest:
                 self.test_results.append(("Concurrent Operations", "PASSED"))
                 return True
             else:
-                self.test_results.append(("Concurrent Operations", "FAILED: Too many failures"))
+                self.test_results.append(
+                    ("Concurrent Operations", "FAILED: Too many failures")
+                )
                 return False
 
         except Exception as e:
@@ -346,7 +351,9 @@ class SimpleMasterIntegrationTest:
                 except Exception as e:
                     print(f"    ❌ {test_name} failed: {e}")
 
-            print(f"  ✅ {successful_tests}/{len(test_cases)} error handling tests passed")
+            print(
+                f"  ✅ {successful_tests}/{len(test_cases)} error handling tests passed"
+            )
 
             if successful_tests >= len(test_cases) - 1:  # Allow 1 failure
                 self.test_results.append(("Error Handling", "PASSED"))

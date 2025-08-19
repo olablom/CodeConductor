@@ -4,19 +4,12 @@ Model Manager for CodeConductor MVP
 Discovers and health-checks local LLM models (LM Studio & Ollama)
 """
 
-import os
-import sys
-import time
 import asyncio
 import logging
+import os
 import subprocess
-import platform
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, Tuple
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-import json
-import re
+from dataclasses import dataclass
+from typing import Any
 
 import aiohttp
 
