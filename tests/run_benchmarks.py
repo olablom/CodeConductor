@@ -4,7 +4,7 @@ import asyncio
 import json
 from datetime import datetime
 
-from test_master_simple import SimpleMasterTest
+from master_integration_test_simple import SimpleMasterTest
 
 
 async def run_quick_bench():
