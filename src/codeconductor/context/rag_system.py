@@ -1,6 +1,11 @@
 # --- HARD CPU-ONLY GUARD (måste ligga allra först) ---
 import os
-if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+
+if (
+    os.getenv("CC_HARD_CPU_ONLY", "0") == "1"
+    or os.getenv("CC_GPU_DISABLED", "0") == "1"
+    or os.getenv("CC_ULTRA_MOCK", "0") == "1"
+):
     # Tvinga RAG till mock-läge
     os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
     os.environ.setdefault("VLLM_NO_CUDA", "1")
@@ -96,7 +101,11 @@ class RAGSystem:
         self.vector_db_path.mkdir(exist_ok=True)
 
         # FORCE MOCK MODE IN TEST ENVIRONMENT
-        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+        if (
+            os.getenv("CC_HARD_CPU_ONLY", "0") == "1"
+            or os.getenv("CC_GPU_DISABLED", "0") == "1"
+            or os.getenv("CC_ULTRA_MOCK", "0") == "1"
+        ):
             logger.info("RAG system forced to mock mode for testing")
             self.embedding_model = None
             self.text_splitter = None
@@ -139,11 +148,15 @@ class RAGSystem:
     def _initialize_vector_store(self):
         """Initialize or load existing vector store."""
         # FORCE MOCK MODE IN TEST ENVIRONMENT
-        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+        if (
+            os.getenv("CC_HARD_CPU_ONLY", "0") == "1"
+            or os.getenv("CC_GPU_DISABLED", "0") == "1"
+            or os.getenv("CC_ULTRA_MOCK", "0") == "1"
+        ):
             logger.info("Vector store initialization skipped - test mode")
             self.vector_store = None
             return
-            
+
         if not RAG_AVAILABLE or not self.embedding_model:
             logger.warning("Vector store initialization skipped - RAG not available")
             self.vector_store = None
@@ -171,10 +184,14 @@ class RAGSystem:
     def _index_project_files(self):
         """Index project files for context retrieval."""
         # FORCE MOCK MODE IN TEST ENVIRONMENT
-        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+        if (
+            os.getenv("CC_HARD_CPU_ONLY", "0") == "1"
+            or os.getenv("CC_GPU_DISABLED", "0") == "1"
+            or os.getenv("CC_ULTRA_MOCK", "0") == "1"
+        ):
             logger.info("Project indexing skipped - test mode")
             return
-            
+
         if not self.vector_store or not self.text_splitter:
             logger.warning("Project indexing skipped - RAG not available")
             return
@@ -247,7 +264,11 @@ class RAGSystem:
             List of relevant documents with metadata
         """
         # FORCE MOCK MODE IN TEST ENVIRONMENT
-        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+        if (
+            os.getenv("CC_HARD_CPU_ONLY", "0") == "1"
+            or os.getenv("CC_GPU_DISABLED", "0") == "1"
+            or os.getenv("CC_ULTRA_MOCK", "0") == "1"
+        ):
             logger.info("Context retrieval returning mock data - test mode")
             return [
                 {
@@ -262,7 +283,7 @@ class RAGSystem:
                 }
                 for _ in range(min(k, 3))
             ]
-            
+
         context_docs = []
 
         # Retrieve from local vectorstore
@@ -461,10 +482,14 @@ class RAGSystem:
             metadata: Optional metadata dictionary
         """
         # FORCE MOCK MODE IN TEST ENVIRONMENT
-        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+        if (
+            os.getenv("CC_HARD_CPU_ONLY", "0") == "1"
+            or os.getenv("CC_GPU_DISABLED", "0") == "1"
+            or os.getenv("CC_ULTRA_MOCK", "0") == "1"
+        ):
             logger.info(f"Document addition skipped - test mode (would add: {doc_id})")
             return
-            
+
         if not self.vector_store or not RAG_AVAILABLE:
             logger.warning("Document addition skipped - RAG not available")
             return
@@ -501,7 +526,11 @@ class RAGSystem:
             List of relevant documents with metadata
         """
         # FORCE MOCK MODE IN TEST ENVIRONMENT
-        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+        if (
+            os.getenv("CC_HARD_CPU_ONLY", "0") == "1"
+            or os.getenv("CC_GPU_DISABLED", "0") == "1"
+            or os.getenv("CC_ULTRA_MOCK", "0") == "1"
+        ):
             logger.info("Search returning mock data - test mode")
             return [
                 {
@@ -516,7 +545,7 @@ class RAGSystem:
                 }
                 for i in range(min(top_k, 3))
             ]
-            
+
         if not self.vector_store:
             logger.warning("Search skipped - RAG not available")
             return []
@@ -558,13 +587,17 @@ class RAGSystem:
             List of external content strings
         """
         # FORCE MOCK MODE IN TEST ENVIRONMENT
-        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+        if (
+            os.getenv("CC_HARD_CPU_ONLY", "0") == "1"
+            or os.getenv("CC_GPU_DISABLED", "0") == "1"
+            or os.getenv("CC_ULTRA_MOCK", "0") == "1"
+        ):
             logger.info("External search returning mock data - test mode")
             return [
                 f"[MOCK] External result for query: {query} - Result {i+1}"
                 for i in range(min(max_results, 2))
             ]
-            
+
         try:
             return self.fetch_external_context(query, max_results=max_results)
         except Exception as e:
@@ -592,10 +625,14 @@ class RAGSystem:
             pattern: Pattern data from learning system
         """
         # FORCE MOCK MODE IN TEST ENVIRONMENT
-        if os.getenv("CC_HARD_CPU_ONLY", "0") == "1" or os.getenv("CC_GPU_DISABLED", "0") == "1" or os.getenv("CC_ULTRA_MOCK", "0") == "1":
+        if (
+            os.getenv("CC_HARD_CPU_ONLY", "0") == "1"
+            or os.getenv("CC_GPU_DISABLED", "0") == "1"
+            or os.getenv("CC_ULTRA_MOCK", "0") == "1"
+        ):
             logger.info("Pattern addition skipped - test mode")
             return
-            
+
         if not self.vector_store or not RAG_AVAILABLE:
             logger.info("Pattern addition skipped - RAG not available")
             return

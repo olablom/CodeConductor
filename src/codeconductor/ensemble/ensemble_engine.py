@@ -545,7 +545,7 @@ class EnsembleEngine:
                 "cached": False,
                 "method": "mock",
             }
-        
+
         # Create EnsembleRequest from parameters
         request = EnsembleRequest(task_description=task_description, timeout=timeout)
 

@@ -79,10 +79,7 @@ class LocalAIAgent(BaseAIAgent):
                 "type": "rebuttal",
             }
 
-        prompt = (
-            "Based on the debate state: " + str(state) +
-            ", provide your rebuttal."
-        )
+        prompt = "Based on the debate state: " + str(state) + ", provide your rebuttal."
 
         if self.shared_engine is None:
             return {
@@ -359,9 +356,9 @@ class LocalDebateManager:
                             "agent": agent.name,
                             "turn": "final_recommendation",
                             "content": (
-                            f"{agent.name} timed out during final recommendation "
-                            f"generation."
-                        ),
+                                f"{agent.name} timed out during final recommendation "
+                                f"generation."
+                            ),
                         }
                     )
                 except Exception as e:
