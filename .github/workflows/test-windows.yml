@@ -75,32 +75,7 @@ jobs:
 
             - name: Verify Windows-specific test results
               run: |
-                  python - <<'PY'
-                  import json, sys
-                  try:
-                      d = json.load(open(".artifacts/report.json", "r", encoding="utf-8"))
-                      tests = d.get("tests", [])
-                      passed = len([t for t in tests if t.get("outcome") == "passed"])
-                      failed = len([t for t in tests if t.get("outcome") == "failed"])
-                      skipped = len([t for t in tests if t.get("outcome") == "skipped"])
-                      xfailed = len([t for t in tests if t.get("outcome") == "xfailed"])
-
-                      print(f"Windows Test Results: {passed} passed, {failed} failed, {skipped} skipped, {xfailed} xfailed")
-
-                      # On Windows, we expect some vLLM skips (but be flexible)
-                      if skipped > 0:
-                          print(f"ℹ️ {skipped} tests skipped (expected on Windows due to vLLM dependencies)")
-
-                      if failed > 0:
-                          print("❌ Tests failed!")
-                          sys.exit(1)
-
-                      print("✅ Windows tests: All passed!")
-
-                  except Exception as e:
-                      print(f"❌ Error reading test report: {e}")
-                      sys.exit(1)
-                  PY
+                  python -c "import json, sys; d = json.load(open('.artifacts/report.json', 'r', encoding='utf-8')); tests = d.get('tests', []); passed = len([t for t in tests if t.get('outcome') == 'passed']); failed = len([t for t in tests if t.get('outcome') == 'failed']); skipped = len([t for t in tests if t.get('outcome') == 'skipped']); xfailed = len([t for t in tests if t.get('outcome') == 'xfailed']); print(f'Windows Test Results: {passed} passed, {failed} failed, {skipped} skipped, {xfailed} xfailed'); print(f'ℹ️ {skipped} tests skipped (expected on Windows due to vLLM dependencies)' if skipped > 0 else ''); sys.exit(1) if failed > 0 else print('✅ Windows tests: All passed!')"
 
             - name: Run CPU-locked tests with coverage
               env:
