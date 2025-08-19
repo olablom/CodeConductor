@@ -6,6 +6,10 @@ on:
     push:
         branches: [main]
 
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
 env:
     PYTHONHASHSEED: 0
     CODECONDUCTOR_SEED: 1337
@@ -35,6 +39,9 @@ jobs:
 
         steps:
             - uses: actions/checkout@v4
+              with:
+                  ref: ${{ github.sha }}
+                  fetch-depth: 0
 
             - name: Set up Python ${{ matrix.python-version }}
               uses: actions/setup-python@v4

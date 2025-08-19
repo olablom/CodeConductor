@@ -60,14 +60,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pytest>=7.4.0",
+test = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.0.0",
-    "pytest-asyncio>=0.21.0",
-    "black>=23.0.0",
-    "flake8>=6.0.0",
-    "coverage>=7.0.0",
     "ruff>=0.1.0",
+    "black>=23.0.0",
+    "coverage>=7.0.0",
+]
+dev = [
+    "codeconductor[test]",
+    "flake8>=6.0.0",
 ]
 gpu = [
     "torch>=2.0.0",
@@ -93,24 +96,7 @@ where = ["src"]
 [tool.setuptools.package-data]
 codeconductor = ["*.md", "*.txt", "*.json", "*.yaml", "*.yml"]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-asyncio_mode = "auto"
-addopts = [
-    "-v",
-    "--tb=short",
-    "--strict-markers",
-    "--disable-warnings",
-    "--capture=no",
-]
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-    "integration: marks tests as integration tests",
-    "gpu: marks tests that require GPU",
-]
+
 
 [tool.coverage.run]
 source = ["src/codeconductor"]

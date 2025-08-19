@@ -62,7 +62,7 @@ jobs:
                   pip install -r requirements.txt
                   pip install pytest-json-report pytest-cov pytest-timeout
 
-            - name: Install package in editable mode
+            - name: Install package in editable mode (with test extras)
               run: |
                   pip install -e .[test]
 
