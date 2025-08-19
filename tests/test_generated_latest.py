@@ -2,6 +2,11 @@ import doctest
 import glob
 import importlib.util
 import os
+from pathlib import Path
+import pytest
+
+ART_ROOT = Path("artifacts/runs")
+IS_CI = os.getenv("CI", "").lower() == "true"
 
 
 def _latest_generated():
@@ -21,10 +26,7 @@ def _load_module(path):
     return mod
 
 
-import pytest
-
-
-@pytest.mark.skip(reason="Requires local artifacts/runs directory with generated.py files")
+@pytest.mark.skipif(IS_CI, reason="Generated artifacts are produced locally; not present in CI.")
 def test_doctest_passes():
     path = _latest_generated()
     mod = _load_module(path)
@@ -32,7 +34,7 @@ def test_doctest_passes():
     assert failed == 0
 
 
-@pytest.mark.skip(reason="Requires local artifacts/runs directory with generated.py files")
+@pytest.mark.skipif(IS_CI, reason="Generated artifacts are produced locally; not present in CI.")
 def test_print_output(capsys):
     path = _latest_generated()
     mod = _load_module(path)
