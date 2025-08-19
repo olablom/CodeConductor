@@ -1,5 +1,11 @@
 # --- HARD CPU-ONLY GUARD (måste ligga allra först) ---
-import os
+import logging  # noqa: E402
+import os  # noqa: E402
+from pathlib import Path  # noqa: E402
+from typing import Any  # noqa: E402
+from urllib.parse import quote_plus  # noqa: E402
+
+import requests  # noqa: E402
 
 if (
     os.getenv("CC_HARD_CPU_ONLY", "0") == "1"
@@ -20,15 +26,6 @@ RAG (Retrieval-Augmented Generation) System for CodeConductor
 This module provides context-aware code generation by retrieving relevant
 documentation, code examples, and patterns based on task descriptions.
 """
-
-import json
-import logging
-import os
-from pathlib import Path
-from typing import Any
-from urllib.parse import quote_plus
-
-import requests
 
 # Graceful fallback for optional dependencies
 try:
