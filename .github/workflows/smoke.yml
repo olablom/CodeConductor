@@ -3,6 +3,10 @@ on:
     push:
         branches: [main]
     pull_request:
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
 jobs:
     smoke:
         runs-on: ubuntu-latest
@@ -24,6 +28,9 @@ jobs:
             ENGINE_DISCOVERY_MODE: "preloaded_only"
         steps:
             - uses: actions/checkout@v4
+              with:
+                  ref: ${{ github.sha }}
+                  fetch-depth: 0
 
             - uses: actions/setup-python@v5
               with:
