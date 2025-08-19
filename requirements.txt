@@ -8,6 +8,7 @@ PyYAML>=6.0
 flask==2.3.0
 prometheus_client==0.17.0
 prometheus-fastapi-instrumentator>=6.0.0
+fastapi>=0.100.0
 
 # Data processing and visualization
 pandas>=2.0.0
