@@ -220,7 +220,8 @@ def cleanup_runs(
                             pass
                 except Exception:
                     pass
-                # Candidates: oldest lex first among to_delete, skipping pinned and referenced
+                # Candidates: oldest lex first among to_delete,
+                # skipping pinned and referenced
                 pin_runs = set([x for x in os.getenv("PIN_RUNS", "").split(";") if x])
                 cands = [
                     p

@@ -155,11 +155,13 @@ def _check_required_trailer(code: str, require_trailer: bool) -> tuple[bool, lis
         lines.pop()
     if len(lines) < 2:
         return False, [
-            "invalid trailer: missing required last two lines '# SYNTAX_ERROR BELOW' and '('",
+            "invalid trailer: missing required last two lines "
+            "'# SYNTAX_ERROR BELOW' and '('",
         ]
     if lines[-2] != "# SYNTAX_ERROR BELOW" or lines[-1] != "(":
         return False, [
-            "invalid trailer: expected last two lines to be exactly '# SYNTAX_ERROR BELOW' and '('",
+            "invalid trailer: expected last two lines to be exactly "
+            "'# SYNTAX_ERROR BELOW' and '('",
         ]
     return True, []
 
@@ -205,7 +207,8 @@ def validate_python_code(
         doctest_passed = (fails == 0) and (tests >= 1)
         if tests == 0:
             errors.append(
-                "No doctests executed (test_count=0). Ensure >>> doctest examples are present in the module docstring."
+                "No doctests executed (test_count=0). "
+                "Ensure >>> doctest examples are present in the module docstring."
             )
         if fails > 0:
             errors.append(f"Doctest failures: {fails}")
@@ -229,7 +232,8 @@ def validate_python_code(
         if "# SYNTAX_ERROR BELOW" in (code or ""):
             trailer_ok = False
             errors.append(
-                "trailer present when not required: remove '# SYNTAX_ERROR BELOW' and '(' from EOF"
+                "trailer present when not required: remove "
+                "'# SYNTAX_ERROR BELOW' and '(' from EOF"
             )
 
     ok = (

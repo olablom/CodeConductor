@@ -1796,9 +1796,8 @@ class CodeConductorApp:
                             print(
                                 f"DEBUG: Task content: {task[:200] if task else 'None'}"
                             )
-                            print(
-                                f"DEBUG: Looking for SYNTAX_ERROR in task: {('# SYNTAX_ERROR BELOW' in (task or ''))}"
-                            )
+                            syntax_error_in_task = "# SYNTAX_ERROR BELOW" in (task or "")
+                            print(f"DEBUG: Looking for SYNTAX_ERROR in task: {syntax_error_in_task}")
                             requires_trailer = "# SYNTAX_ERROR BELOW" in (task or "")
                             if requires_trailer:
                                 lines = code_txt.splitlines()
@@ -1831,12 +1830,10 @@ class CodeConductorApp:
                         )
                         print("DEBUG: About to enter repair loop")
                         print(f"DEBUG: report.ok = {report.ok}")
-                        print(
-                            f"DEBUG: report.syntax_ok = {getattr(report, 'syntax_ok', 'N/A')}"
-                        )
-                        print(
-                            f"DEBUG: report.doctest_failures = {getattr(report, 'doctest_failures', 'N/A')}"
-                        )
+                        syntax_ok = getattr(report, "syntax_ok", "N/A")
+                        print(f"DEBUG: report.syntax_ok = {syntax_ok}")
+                        doctest_failures = getattr(report, "doctest_failures", "N/A")
+                        print(f"DEBUG: report.doctest_failures = {doctest_failures}")
                         iter_count = 0
                         try:
                             max_iters = int(os.getenv("SELF_REPAIR_MAX", "3").strip())
