@@ -17,14 +17,15 @@ root_src = Path(__file__).resolve().parents[1]
 if str(root_src) not in sys.path:
     sys.path.insert(0, str(root_src))
 
-from codeconductor.ensemble.complexity_analyzer import (
+# noqa: E402 - Imports must come after sys.path manipulation
+from codeconductor.ensemble.complexity_analyzer import (  # noqa: E402
     ComplexityAnalyzer,
     ComplexityResult,
 )
-from codeconductor.ensemble.consensus_calculator import ConsensusCalculator
-from codeconductor.ensemble.model_manager import ModelManager
-from codeconductor.ensemble.query_dispatcher import QueryDispatcher
-from codeconductor.integrations.cloud_escalator import CloudEscalator, CloudResponse
+from codeconductor.ensemble.consensus_calculator import ConsensusCalculator  # noqa: E402
+from codeconductor.ensemble.model_manager import ModelManager  # noqa: E402
+from codeconductor.ensemble.query_dispatcher import QueryDispatcher  # noqa: E402
+from codeconductor.integrations.cloud_escalator import CloudEscalator, CloudResponse  # noqa: E402
 
 logger = logging.getLogger(__name__)
 

@@ -24,13 +24,14 @@ Validation Logger - Empirical Data Collection System
 Not tested directly - excluded from coverage
 """
 
-import csv
-import time
-from datetime import datetime
-from typing import Any
+# noqa: E402 - Imports must come after docstring
+import csv  # noqa: E402
+import time  # noqa: E402
+from datetime import datetime  # noqa: E402
+from typing import Any  # noqa: E402
 
-import pandas as pd
-import streamlit as st  # pragma: no cover
+import pandas as pd  # noqa: E402
+import streamlit as st  # pragma: no cover  # noqa: E402
 
 
 class ValidationLogger:
