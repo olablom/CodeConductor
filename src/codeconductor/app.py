@@ -1796,8 +1796,12 @@ class CodeConductorApp:
                             print(
                                 f"DEBUG: Task content: {task[:200] if task else 'None'}"
                             )
-                            syntax_error_in_task = "# SYNTAX_ERROR BELOW" in (task or "")
-                            print(f"DEBUG: Looking for SYNTAX_ERROR in task: {syntax_error_in_task}")
+                            syntax_error_in_task = "# SYNTAX_ERROR BELOW" in (
+                                task or ""
+                            )
+                            print(
+                                f"DEBUG: Looking for SYNTAX_ERROR in task: {syntax_error_in_task}"
+                            )
                             requires_trailer = "# SYNTAX_ERROR BELOW" in (task or "")
                             if requires_trailer:
                                 lines = code_txt.splitlines()
