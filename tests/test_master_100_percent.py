@@ -214,7 +214,7 @@ class Master100PercentTester:
         """Testa RAG search functionality (target: 80%)"""
         try:
             # Test RAG search
-            from src.codeconductor.context.rag_system import RAGSystem
+            from codeconductor.context.rag_system import RAGSystem
 
             rag = RAGSystem()
 
@@ -250,7 +250,7 @@ class Master100PercentTester:
         """Testa RLHF learning improvement (target: +10%)"""
         try:
             # Test RLHF learning with simple system
-            from src.codeconductor.feedback.simple_rlhf import SimpleRLHFAgent
+            from codeconductor.feedback.simple_rlhf import SimpleRLHFAgent
 
             rlhf = SimpleRLHFAgent()
 

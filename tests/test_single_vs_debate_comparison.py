@@ -39,7 +39,7 @@ async def run_single_model_test(test_case: dict[str, Any]) -> dict[str, Any]:
 
     try:
         # Import single model system
-        from src.codeconductor.ensemble.single_model_engine import SingleModelEngine
+        from codeconductor.ensemble.single_model_engine import SingleModelEngine
 
         # Create single model engine
         engine = SingleModelEngine(
@@ -108,7 +108,7 @@ async def run_debate_test(test_case: dict[str, Any]) -> dict[str, Any]:
 
     try:
         # Import debate system
-        from src.codeconductor.debate.debate_manager import DebateManager
+        from codeconductor.debate.debate_manager import DebateManager
 
         # Create debate manager
         debate_manager = DebateManager(

@@ -6,7 +6,7 @@ Test RAG System Fix
 import asyncio
 from datetime import datetime
 
-from src.codeconductor.context.rag_system import RAGSystem
+from codeconductor.context.rag_system import RAGSystem
 
 
 import pytest

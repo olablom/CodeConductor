@@ -35,7 +35,7 @@ async def test_parallel_execution():
     start_time = time.time()
 
     try:
-        from src.codeconductor.debate.debate_manager import DebateManager
+        from codeconductor.debate.debate_manager import DebateManager
 
         # Create debate manager with parallel execution
         debate_manager = DebateManager(
@@ -80,7 +80,7 @@ async def test_caching_optimization():
     start_time = time.time()
 
     try:
-        from src.codeconductor.debate.debate_manager import DebateManager
+        from codeconductor.debate.debate_manager import DebateManager
 
         # Create debate manager with caching
         debate_manager = DebateManager(
@@ -133,7 +133,7 @@ async def test_smaller_model():
     start_time = time.time()
 
     try:
-        from src.codeconductor.debate.debate_manager import DebateManager
+        from codeconductor.debate.debate_manager import DebateManager
 
         # Try with smaller model
         debate_manager = DebateManager(
@@ -177,7 +177,7 @@ async def test_reduced_rounds():
     start_time = time.time()
 
     try:
-        from src.codeconductor.debate.debate_manager import DebateManager
+        from codeconductor.debate.debate_manager import DebateManager
 
         # Create debate manager with reduced rounds
         debate_manager = DebateManager(

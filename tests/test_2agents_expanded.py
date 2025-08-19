@@ -65,7 +65,7 @@ async def run_2agent_test(test_case: dict[str, Any]) -> dict[str, Any]:
 
     try:
         # Import the debate system
-        from src.codeconductor.debate.debate_manager import DebateManager
+        from codeconductor.debate.debate_manager import DebateManager
 
         # Create debate manager with 2 agents
         debate_manager = DebateManager(
