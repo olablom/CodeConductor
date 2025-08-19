@@ -1,5 +1,8 @@
 # CodeConductor
 
+[![CI](https://github.com/olablom/CodeConductor/workflows/CodeConductor%20Tests/badge.svg)](https://github.com/olablom/CodeConductor/actions/workflows/test.yml)
+[![CodeQL](https://github.com/olablom/CodeConductor/workflows/CodeQL/badge.svg)](https://github.com/olablom/CodeConductor/actions/workflows/codeql-analysis.yml)
+
 # CodeConductor
 
 **🩹 Fix bugs in 30s – privately**
