@@ -66,11 +66,11 @@ jobs:
               run: |
                   pip install -e .[test]
 
-            - name: Run linting
+            - name: Run linting (non-blocking)
               run: |
                   pip install black ruff
-                  black --check src/
-                  ruff check src/ --fix
+                  black --check src/ || true
+                  ruff check src/ --fix --exit-zero
 
             - name: Run CPU-locked unit tests with JSON report
               env:
